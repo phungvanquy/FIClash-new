@@ -256,14 +256,20 @@ dart run tool/check_coverage.dart coverage/lcov.info 75
 
 Run `flutter analyze` locally before committing when practical.
 
-Release builds run only for `v*` tag pushes; pull requests trigger nothing.
+Pushes to `main` and manual `build` workflow runs produce Android and Windows AMD64
+test artifacts without publishing a release. Download `artifact-android` and
+`artifact-windows-amd64` from the Actions run. Test builds use the `pre` application
+environment and Android debug signing; backing up an installed release before
+testing avoids data loss if its different signing key requires a reinstall.
+`v*` tag pushes also build Linux AMD64 and publish a release/prerelease. Pull
+requests trigger nothing, and other branch pushes run validation only.
 Root analysis excludes `plugins/**`, and root tests do not discover nested
 plugin packages, so parallel jobs validate the rest from their own package
 directories: `plugins` (local Flutter packages and the setup build tool), `go`
 (the Core wrapper, plus an NDK-backed vet of the Android files), `android`
 (JVM unit tests for `:common`, `:service` and `:app`, with the Flutter compile
 tasks excluded so no native build hook runs), `rust` (both crates), and a
-Windows runner for the helper's `windows-service` feature. Release builds start
+Windows runner for the helper's `windows-service` feature. Artifact builds start
 once all of them pass.
 
 `bash tool/check_plugins.sh` is that plugin gate, and CI runs the same script.

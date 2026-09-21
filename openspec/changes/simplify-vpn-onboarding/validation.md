@@ -8,12 +8,12 @@ On 2026-09-21 the user approved continuing with this VPS as a development-only h
 
 The current `.github/workflows/build.yaml` provides this handoff:
 
-- Branch pushes run validation jobs, including Android JVM tests; packaged application builds require a `v*` tag push and successful prerequisite jobs. There is no manual `workflow_dispatch` trigger.
-- Tag builds upload `artifact-android`, `artifact-windows-amd64`, and `artifact-linux-amd64` from `dist/`. The matrix has no macOS build, so macOS verification needs a separate host/build.
-- A successful tag build also runs the release job. Tags containing a hyphen publish a prerelease; other matching tags publish a regular release. This is not an artifact-only test workflow. Do not create or push a tag just to obtain test binaries without explicit approval for that publication.
-- The implementation includes uncommitted `core/Clash.Meta` changes. Before a remote build can include them, commit the fork changes, make that commit available to CI's configured submodule checkout, and update the parent repository's submodule reference together with the app changes. A parent commit alone does not capture a dirty submodule's files. Publishing either repository remains a separate authorized action.
+- Branch pushes run validation jobs, including Android JVM tests. Pushes to `main` and manual `workflow_dispatch` runs additionally build Android and Windows after every prerequisite job succeeds.
+- Test builds upload `artifact-android` and `artifact-windows-amd64` from `dist/`, use the `pre` application environment, and do not publish a release. Android test APKs use debug signing, so they may not install over an existing release with a different signing key; export a backup before changing installations.
+- `v*` tag pushes retain Android, Windows AMD64, and Linux AMD64 artifacts and release publication. Tags containing a hyphen publish a prerelease; other matching tags publish a regular release. Manual runs never publish, even when targeting a tag. The matrix has no macOS build, so macOS verification needs a separate host/build.
+- On 2026-09-22 the user provided `phungvanquy/FlClash-core` for the modified Core. The app pins Core commit `10a96da7b65faf1f1c4afd764ec115c333021c1d`; `.gitmodules` uses the public HTTPS repository URL and `main` branch so CI can fetch it without a cross-repository SSH key. Future Core changes must be pushed there before the app's new submodule reference is pushed.
 
-After a build is available, record the parent and submodule commit IDs, CI run/artifact, device/OS, and results for A1/A2, D1/D2 per tested desktop platform, and R1 below. A green build establishes compilation, not successful device behavior. Keep untested paths explicit and complete native validation before treating the redesign as production-ready. No workflow changes or remote actions were performed for this handoff.
+After a build is available, record the parent and submodule commit IDs, CI run/artifact, device/OS, and results for A1/A2, D1/D2 per tested desktop platform, and R1 below. A green build establishes compilation, not successful device behavior. Keep untested paths explicit and complete native validation before treating the redesign as production-ready.
 
 ## Single-profile import
 

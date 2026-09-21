@@ -1,18 +1,22 @@
 name: build
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - '**'
     tags:
       - 'v*'
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/v') }}
 
 env:
-  IS_STABLE: ${{ !contains(github.ref, '-') }}
+  IS_STABLE: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-') }}
   FLUTTER_VERSION: '3.47.1'
   GO_VERSION: '1.26.4'
   NDK_VERSION: r28c
@@ -130,7 +134,6 @@ jobs:
         env:
           ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
         run: |
-          # Nothing else compiles the `android && cgo` files before a `v*` tag.
           CC="$(echo "$ANDROID_NDK_HOME"/toolchains/llvm/prebuilt/*/bin/aarch64-linux-android21-clang)"
           test -x "$CC" || { echo "NDK clang not found at $CC" >&2; exit 1; }
           tags="$(sed -n 's/^tags: *//p' ../build_config.yaml)"
@@ -231,20 +234,18 @@ jobs:
         run: cargo test --manifest-path services/helper/Cargo.toml --features windows-service
 
   build:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')))
     needs: [ dart, plugins, go, android, rust, windows-helper-test ]
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        include:
-          - platform: android
-            os: ubuntu-latest
-          - platform: windows
-            os: Windows-2022
-            arch: amd64
-          - platform: linux
-            os: ubuntu-22.04
-            arch: amd64
+        include: >-
+          ${{ fromJSON(
+            github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') &&
+            '[{"platform":"android","os":"ubuntu-latest"},{"platform":"windows","os":"windows-2022","arch":"amd64"},{"platform":"linux","os":"ubuntu-22.04","arch":"amd64"}]' ||
+            '[{"platform":"android","os":"ubuntu-latest"},{"platform":"windows","os":"windows-2022","arch":"amd64"}]'
+          ) }}
 
     steps:
       - name: Checkout
@@ -253,7 +254,7 @@ jobs:
           submodules: recursive
 
       - name: Setup Android Signing
-        if: startsWith(matrix.platform,'android')
+        if: matrix.platform == 'android' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
         env:
           KEYSTORE: ${{ secrets.KEYSTORE }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
@@ -333,8 +334,10 @@ jobs:
           name: artifact-${{ matrix.platform }}${{ matrix.arch && format('-{0}', matrix.arch) }}
           path: ./dist
           overwrite: true
+          if-no-files-found: error
 
   release:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
     needs: [ build ]
