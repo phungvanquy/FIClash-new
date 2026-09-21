@@ -112,31 +112,6 @@ class Dialogs {
     );
   }
 
-  Future<bool> showDisclaimer() async {
-    return await showCommonDialog<bool>(
-          dismissible: false,
-          child: CommonDialog(
-            title: currentAppLocalizations.disclaimer,
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(_context).pop<bool>(false);
-                },
-                child: Text(currentAppLocalizations.exit),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.of(_context).pop<bool>(true);
-                },
-                child: Text(currentAppLocalizations.agree),
-              ),
-            ],
-            child: Text(currentAppLocalizations.disclaimerDesc),
-          ),
-        ) ??
-        false;
-  }
-
   void showNotifier(
     String text, {
     MessageLevel level = MessageLevel.info,

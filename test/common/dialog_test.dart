@@ -199,24 +199,6 @@ void main() {
     expect(await result, isTrue);
   });
 
-  testWidgets('showDisclaimer maps agree and exit to a boolean', (
-    tester,
-  ) async {
-    await _pumpHost(tester);
-
-    final agreed = dialogs.showDisclaimer();
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Agree'));
-    await tester.pumpAndSettle();
-    expect(await agreed, isTrue);
-
-    final declined = dialogs.showDisclaimer();
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Exit'));
-    await tester.pumpAndSettle();
-    expect(await declined, isFalse);
-  });
-
   testWidgets('showNotifier delivers text through the StatusManager host', (
     tester,
   ) async {

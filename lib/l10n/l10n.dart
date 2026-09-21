@@ -1960,26 +1960,6 @@ class AppLocalizations {
     return Intl.message('TUN', name: 'actionTun', desc: '', args: []);
   }
 
-  /// `Disclaimer`
-  String get disclaimer {
-    return Intl.message('Disclaimer', name: 'disclaimer', desc: '', args: []);
-  }
-
-  /// `This software is intended only for non-commercial uses such as learning and research. Using it for any commercial purpose is strictly prohibited; any commercial activity is unrelated to this software.`
-  String get disclaimerDesc {
-    return Intl.message(
-      'This software is intended only for non-commercial uses such as learning and research. Using it for any commercial purpose is strictly prohibited; any commercial activity is unrelated to this software.',
-      name: 'disclaimerDesc',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `Agree`
-  String get agree {
-    return Intl.message('Agree', name: 'agree', desc: '', args: []);
-  }
-
   /// `Hotkey management`
   String get hotkeyManagement {
     return Intl.message(
