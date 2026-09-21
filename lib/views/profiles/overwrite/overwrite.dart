@@ -22,28 +22,75 @@ class OverwriteView extends ConsumerStatefulWidget {
 }
 
 class _OverwriteViewState extends ConsumerState<OverwriteView> {
-  late SetupAction _setupAction;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _setupAction = ref.read(setupActionProvider.notifier);
+    ref.listenManual(profileDraftProvider(widget.profileId), (_, _) {});
     ref.listenManual(clashConfigProvider(widget.profileId), (_, _) {});
+    WidgetsBinding.instance.addPostFrameCallback((_) => _open());
+  }
+
+  Future<void> _open() async {
+    if (!mounted) return;
+    setState(() => _error = null);
+    try {
+      await ref.read(profileDraftProvider(widget.profileId).notifier).open();
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _error = context.appLocalizations.vpnSettingsActionFailed,
+        );
+      }
+    }
+  }
+
+  Future<void> _save() async {
+    setState(() => _error = null);
+    try {
+      final result = await ref
+          .read(profileDraftProvider(widget.profileId).notifier)
+          .save();
+      if (!mounted) return;
+      if (result.outcome != VpnImportOutcome.success) {
+        setState(
+          () => _error = result.outcome == VpnImportOutcome.recoveryRequired
+              ? context.appLocalizations.vpnRecoveryRequired
+              : context.appLocalizations.vpnDraftSaveFailed,
+        );
+        return;
+      }
+      Navigator.of(context).pop();
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = context.appLocalizations.vpnDraftSaveFailed);
+      }
+    }
   }
 
   Future<void> _handlePreview() async {
-    final profile = ref.read(profileProvider(widget.profileId));
-    if (profile == null) {
+    final draft = ref.read(profileDraftProvider(widget.profileId));
+    if (draft == null) {
       return;
     }
     unawaited(
-      BaseNavigator.push<String>(context, PreviewProfileView(profile: profile)),
+      BaseNavigator.push<String>(
+        context,
+        PreviewProfileView(
+          profile: draft.profile,
+          loadContent: () =>
+              ref.read(vpnActionProvider.notifier).previewDraft(draft),
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final appLocalizations = context.appLocalizations;
+    final draft = ref.watch(profileDraftProvider(widget.profileId));
+    final enabled = draft != null && !draft.saving;
     return ProfileIdProvider(
       profileId: widget.profileId,
       child: CommonScaffold(
@@ -51,24 +98,57 @@ class _OverwriteViewState extends ConsumerState<OverwriteView> {
         actions: [
           CommonMinFilledButtonTheme(
             child: FilledButton(
-              onPressed: _handlePreview,
+              onPressed: enabled ? _handlePreview : null,
               child: Text(appLocalizations.preview),
+            ),
+          ),
+          CommonMinFilledButtonTheme(
+            child: FilledButton(
+              key: const Key('vpn-save-overrides'),
+              onPressed: enabled ? _save : null,
+              child: Text(appLocalizations.save),
             ),
           ),
           const SizedBox(width: 8),
         ],
-        body: const ScrollConfiguration(
-          behavior: ShowBarScrollBehavior(),
-          child: CustomScrollView(slivers: [_Title(), _Content()]),
+        body: Column(
+          children: [
+            if (draft == null && _error == null || draft?.saving == true)
+              const LinearProgressIndicator(),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(appLocalizations.vpnDraftDescription),
+            ),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    _error!,
+                    style: TextStyle(color: context.colorScheme.error),
+                  ),
+                ),
+              ),
+            if (draft == null && _error != null)
+              TextButton(
+                onPressed: _open,
+                child: Text(appLocalizations.vpnRetry),
+              ),
+            if (draft != null)
+              Expanded(
+                child: AbsorbPointer(
+                  absorbing: !enabled,
+                  child: const ScrollConfiguration(
+                    behavior: ShowBarScrollBehavior(),
+                    child: CustomScrollView(slivers: [_Title(), _Content()]),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _setupAction.autoApplyProfile();
-    super.dispose();
   }
 }
 
@@ -100,7 +180,7 @@ class _Title extends ConsumerWidget {
   }
 
   void _handleChangeType(WidgetRef ref, int profileId, OverwriteType type) {
-    ref.read(profilesProvider.notifier).updateProfile(profileId, (state) {
+    ref.read(profileDraftProvider(profileId).notifier).updateProfile((state) {
       return state.copyWith(overwriteType: type);
     });
   }

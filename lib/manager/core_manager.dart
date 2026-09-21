@@ -35,10 +35,9 @@ class _CoreContainerState extends ConsumerState<CoreManager>
     super.initState();
     coreEventManager.addListener(this);
     ref.read(updatingActionProvider.notifier);
-    // A rejected profile stays selected on purpose: silently reverting to
-    // the previous one hides the error and looks like the switch was lost.
     ref.listenManual(currentProfileIdProvider, (prev, next) {
       if (prev == next) return;
+      if (ref.read(currentProfileProvider)?.snapshot.generation != null) return;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         unawaited(ref.read(setupActionProvider.notifier).fullSetup());
       });
@@ -97,9 +96,20 @@ class _CoreContainerState extends ConsumerState<CoreManager>
   }
 
   @override
+  void onRunState(CoreRunObservation observation) {
+    ref.read(setupActionProvider.notifier).observeCore(observation);
+  }
+
+  @override
   Future<void> onLoaded(String providerName) async {
+    final profile = ref.read(currentProfileProvider);
+    if (profile?.snapshot.generation != null) return;
     final provider = await _core.getExternalProvider(providerName);
     if (!mounted) {
+      return;
+    }
+    final current = ref.read(currentProfileProvider);
+    if (current?.id != profile?.id || current?.snapshot != profile?.snapshot) {
       return;
     }
     ref.read(providersProvider.notifier).setProvider(provider);
@@ -118,6 +128,7 @@ class _CoreContainerState extends ConsumerState<CoreManager>
       return;
     }
     ref.read(coreStatusProvider.notifier).value = CoreStatus.disconnected;
+    ref.read(setupActionProvider.notifier).coreUnavailable();
     if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
       context.showNotifier(message, level: MessageLevel.error);
     }

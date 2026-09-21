@@ -16,6 +16,8 @@ type InitParams struct {
 }
 
 type SetupParams struct {
+	Generation  string            `json:"generation,omitempty"`
+	Revision    int64             `json:"revision,omitempty"`
 	SelectedMap map[string]string `json:"selected-map"`
 	TestURL     string            `json:"test-url"`
 }
@@ -85,9 +87,13 @@ const (
 	messageMethod                  CoreMethod = "message"
 	initClashMethod                CoreMethod = "initClash"
 	getIsInitMethod                CoreMethod = "getIsInit"
+	getRunStateMethod              CoreMethod = "getRunState"
 	forceGcMethod                  CoreMethod = "forceGc"
 	shutdownMethod                 CoreMethod = "shutdown"
 	validateConfigMethod           CoreMethod = "validateConfig"
+	prepareConfigMethod            CoreMethod = "prepareConfig"
+	activateConfigMethod           CoreMethod = "activateConfig"
+	discardConfigMethod            CoreMethod = "discardConfig"
 	updateConfigMethod             CoreMethod = "updateConfig"
 	getProxiesMethod               CoreMethod = "getProxies"
 	changeProxyMethod              CoreMethod = "changeProxy"
@@ -137,6 +143,7 @@ const (
 	RequestMessage   MessageType = "request"
 	LoadedMessage    MessageType = "loaded"
 	GeoUpdateMessage MessageType = "geoUpdate"
+	RunStateMessage  MessageType = "runState"
 )
 
 type GeoUpdateStatus struct {

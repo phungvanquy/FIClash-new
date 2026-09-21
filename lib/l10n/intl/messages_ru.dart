@@ -1224,12 +1224,109 @@ class MessageLookup extends MessageLookupByLibrary {
     "value": MessageLookupByLibrary.simpleMessage("Значение"),
     "vibrantScheme": MessageLookupByLibrary.simpleMessage("Яркая"),
     "view": MessageLookupByLibrary.simpleMessage("Просмотр"),
+    "vpnApplySettings": MessageLookupByLibrary.simpleMessage(
+      "Применить сохранённую конфигурацию",
+    ),
+    "vpnApplySettingsDescription": MessageLookupByLibrary.simpleMessage(
+      "Пересобрать конфигурацию с сохранёнными DNS, правилами и скриптами. Текущая конфигурация заменяется только после успешной проверки.",
+    ),
+    "vpnAutoDescription": MessageLookupByLibrary.simpleMessage(
+      "Автоматически выбирать отзывчивый сервер",
+    ),
+    "vpnCameraUnavailable": MessageLookupByLibrary.simpleMessage(
+      "Камера недоступна. Разрешите доступ в настройках системы, повторите попытку или выберите изображение QR-кода.",
+    ),
     "vpnConfigChangeDetected": MessageLookupByLibrary.simpleMessage(
       "Обнаружено изменение настроек VPN",
+    ),
+    "vpnConfiguration": MessageLookupByLibrary.simpleMessage(
+      "Конфигурация VPN",
+    ),
+    "vpnConnect": MessageLookupByLibrary.simpleMessage("Подключить"),
+    "vpnConnectionFailed": MessageLookupByLibrary.simpleMessage(
+      "Требуется проверка подключения",
+    ),
+    "vpnCustomRouting": MessageLookupByLibrary.simpleMessage(
+      "Пользовательская маршрутизация",
+    ),
+    "vpnCustomRoutingDescription": MessageLookupByLibrary.simpleMessage(
+      "Использовать правила конфигурации. Выбор сервера на главной возвращает простую маршрутизацию.",
+    ),
+    "vpnDisconnect": MessageLookupByLibrary.simpleMessage("Отключить"),
+    "vpnDisconnecting": MessageLookupByLibrary.simpleMessage("Отключение…"),
+    "vpnDraftDescription": MessageLookupByLibrary.simpleMessage(
+      "Изменения остаются черновиком до сохранения. Возврат отменяет несохранённые правки; текущий VPN продолжает работать.",
+    ),
+    "vpnDraftSaveFailed": MessageLookupByLibrary.simpleMessage(
+      "Не удалось сохранить черновик. Текущая конфигурация не изменена. Повторите попытку или откройте редактор заново, если конфигурация была изменена в другом месте.",
     ),
     "vpnEnableDesc": MessageLookupByLibrary.simpleMessage(
       "Автоматически направляет весь системный трафик через VpnService",
     ),
+    "vpnFallbackDescription": MessageLookupByLibrary.simpleMessage(
+      "Использовать первый доступный сервер по порядку",
+    ),
+    "vpnHome": MessageLookupByLibrary.simpleMessage("Главная"),
+    "vpnImportDescription": MessageLookupByLibrary.simpleMessage(
+      "Импортируйте ссылку на подписку от вашего VPN-провайдера.",
+    ),
+    "vpnImportFailed": MessageLookupByLibrary.simpleMessage(
+      "Не удалось импортировать конфигурацию. Сохранённая конфигурация не заменена. Проверьте URL и подключение и повторите попытку.",
+    ),
+    "vpnImportTitle": MessageLookupByLibrary.simpleMessage("Настройка VPN"),
+    "vpnImporting": MessageLookupByLibrary.simpleMessage(
+      "Импорт конфигурации…",
+    ),
+    "vpnInvalidUrl": MessageLookupByLibrary.simpleMessage(
+      "Введите корректную ссылку на подписку HTTP или HTTPS.",
+    ),
+    "vpnLocalProxy": MessageLookupByLibrary.simpleMessage(
+      "Только локальный прокси · VPN не активен",
+    ),
+    "vpnPasteClipboard": MessageLookupByLibrary.simpleMessage(
+      "Вставить из буфера обмена",
+    ),
+    "vpnPermissionDenied": MessageLookupByLibrary.simpleMessage(
+      "Разрешение не предоставлено. Подключитесь снова или проверьте системные настройки.",
+    ),
+    "vpnProxyFailure": MessageLookupByLibrary.simpleMessage(
+      "Не удалось изменить системный прокси. Проверьте настройки сети.",
+    ),
+    "vpnProxyOnly": MessageLookupByLibrary.simpleMessage(
+      "Подключено · только системный прокси",
+    ),
+    "vpnQrImage": MessageLookupByLibrary.simpleMessage(
+      "Импорт QR-кода из изображения",
+    ),
+    "vpnQrImageTooLarge": MessageLookupByLibrary.simpleMessage(
+      "Выберите изображение QR-кода меньшего размера (до 16 МБ и 16 мегапикселей).",
+    ),
+    "vpnRecoveryExport": MessageLookupByLibrary.simpleMessage(
+      "Экспорт резервной копии миграции",
+    ),
+    "vpnRecoveryExportDescription": MessageLookupByLibrary.simpleMessage(
+      "Сохранить копию профилей и настроек, созданную перед обновлением.",
+    ),
+    "vpnRecoveryRequired": MessageLookupByLibrary.simpleMessage(
+      "Сохранённая конфигурация не повреждена, но восстановить VPN не удалось. Повторите восстановление в настройках.",
+    ),
+    "vpnReplace": MessageLookupByLibrary.simpleMessage("Заменить конфигурацию"),
+    "vpnRetry": MessageLookupByLibrary.simpleMessage("Повторить"),
+    "vpnScanQr": MessageLookupByLibrary.simpleMessage("Сканировать QR-код"),
+    "vpnSelectFailed": MessageLookupByLibrary.simpleMessage(
+      "Не удалось сменить сервер. Предыдущий выбор сохранён.",
+    ),
+    "vpnServerUnavailableAuto": MessageLookupByLibrary.simpleMessage(
+      "Выбранный сервер больше недоступен. Включён автоматический выбор.",
+    ),
+    "vpnServers": MessageLookupByLibrary.simpleMessage("Серверы"),
+    "vpnSettingsActionFailed": MessageLookupByLibrary.simpleMessage(
+      "Не удалось выполнить действие. Попробуйте ещё раз.",
+    ),
+    "vpnSubscriptionUrl": MessageLookupByLibrary.simpleMessage(
+      "Ссылка на подписку",
+    ),
+    "vpnSuspended": MessageLookupByLibrary.simpleMessage("Приостановлено"),
     "vpnTip": MessageLookupByLibrary.simpleMessage(
       "Изменения вступят в силу после перезапуска VPN",
     ),

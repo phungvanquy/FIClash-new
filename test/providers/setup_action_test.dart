@@ -20,6 +20,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:riverpod/riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/test_profiles.dart';
 
@@ -80,6 +81,9 @@ class TestSetupAction extends SetupAction {
   int trafficResets = 0;
   int applyProfileCalls = 0;
   bool blockCoreCalls = false;
+  bool publishObservation = true;
+  bool coreRunningResult = true;
+  int observationRevision = 0;
   Error? coreRunningError;
   int authorizeCalls = 0;
   AuthorizeCode authorizeResult = AuthorizeCode.none;
@@ -102,7 +106,18 @@ class TestSetupAction extends SetupAction {
     if (error != null) {
       throw error;
     }
-    return true;
+    if (publishObservation && coreRunningResult) {
+      observeCore(
+        CoreRunObservation(
+          session: 'test-core',
+          revision: ++observationRevision,
+          requested: running,
+          active: running,
+          mixedPort: running ? 7890 : 0,
+        ),
+      );
+    }
+    return coreRunningResult;
   }
 
   @override
@@ -122,8 +137,11 @@ class TestSetupAction extends SetupAction {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  setUpAll(() {
+  setUpAll(() async {
     registerFallbackValue(const SetupParams(selectedMap: {}, testUrl: ''));
+    SharedPreferences.setMockInitialValues({});
+    await preferences.isInit;
+    await AppLocalizations.load(const Locale('en'));
   });
 
   late TestSetupAction action;
@@ -146,6 +164,7 @@ void main() {
   tearDown(() async {
     action.blockCoreCalls = false;
     action.coreRunningError = null;
+    action.coreRunningResult = true;
     for (final gate in action.pendingCoreCalls) {
       if (!gate.isCompleted) {
         gate.complete();
@@ -156,11 +175,148 @@ void main() {
     globalState.needInitStatus = true;
   });
 
+  test(
+    'failed recovery blocks starting without hiding the recovery state',
+    () async {
+      container.read(initProvider.notifier).value = true;
+      container.read(vpnFailureProvider.notifier).value = 'recovery_required';
+      await expectLater(
+        action.setRunning(true),
+        throwsA(isA<MessageException>()),
+      );
+      expect(action.coreRunningCalls, isEmpty);
+      expect(container.read(vpnFailureProvider), 'recovery_required');
+      await action.setRunning(false);
+      expect(action.coreRunningCalls, [false]);
+      expect(container.read(vpnFailureProvider), 'recovery_required');
+    },
+  );
+
   void markInitialized() {
     container.read(initProvider.notifier).value = true;
   }
 
+  test(
+    'failed default persistence keeps the first-connect flag retryable',
+    () async {
+      markInitialized();
+      container
+          .read(appSettingProvider.notifier)
+          .update((value) => value.copyWith(vpnDefaultsPending: true));
+      final original = preferences.sharedPreferencesCompleter;
+      preferences.sharedPreferencesCompleter = Completer<SharedPreferences?>()
+        ..complete(null);
+      try {
+        await expectLater(action.setRunning(true), throwsStateError);
+        expect(container.read(appSettingProvider).vpnDefaultsPending, isTrue);
+        expect(action.coreRunningCalls, isEmpty);
+      } finally {
+        preferences.sharedPreferencesCompleter = original;
+      }
+    },
+  );
+
   group('setRunning gating', () {
+    test(
+      'desktop restart preserves intent but never overrides a newer stop',
+      () async {
+        markInitialized();
+        await action.setRunning(true);
+        final previous = action.restartIntent;
+        action.observeCore(
+          const CoreRunObservation(
+            session: 'test-core',
+            revision: 100,
+            requested: false,
+            active: false,
+          ),
+        );
+        expect(action.shouldResumeAfterRestart(previous), isTrue);
+        await action.setRunning(false);
+        expect(action.shouldResumeAfterRestart(previous), isFalse);
+      },
+    );
+
+    test(
+      'fresh desktop defaults are applied on connect, not profile import',
+      () async {
+        final keepAlive = container.listen(configProvider, (_, _) {});
+        addTearDown(keepAlive.close);
+        markInitialized();
+        container
+            .read(appSettingProvider.notifier)
+            .update((value) => value.copyWith(vpnDefaultsPending: true));
+        await action.applyProfile();
+        expect(container.read(patchClashConfigProvider).tun.enable, isFalse);
+        await action.setRunning(true);
+        expect(container.read(patchClashConfigProvider).tun.enable, isTrue);
+        expect(container.read(appSettingProvider).vpnDefaultsPending, isFalse);
+        expect(
+          (await preferences.getConfig())!.patchClashConfig.tun.enable,
+          isTrue,
+        );
+      },
+    );
+
+    test(
+      'migrated desktop capture preferences are retained on connect',
+      () async {
+        markInitialized();
+        await action.setRunning(true);
+        expect(container.read(patchClashConfigProvider).tun.enable, isFalse);
+      },
+    );
+
+    test(
+      'a false listener result is a failed start, not a running timer',
+      () async {
+        markInitialized();
+        action.coreRunningResult = false;
+        await expectLater(action.setRunning(true), throwsStateError);
+        expect(container.read(runTimeProvider), isNull);
+        expect(
+          container.read(vpnConnectionProvider).phase,
+          VpnConnectionPhase.failed,
+        );
+        expect(container.read(vpnPendingProvider), isNull);
+      },
+    );
+
+    test(
+      'observed external stop clears runtime and ignores stale start events',
+      () async {
+        const running = CoreRunObservation(
+          session: 'external',
+          revision: 1,
+          active: true,
+          requested: true,
+        );
+        action.observeCore(running);
+        expect(container.read(runTimeProvider), isNotNull);
+        action.observeCore(
+          running.copyWith(revision: 2, active: false, requested: false),
+        );
+        action.observeCore(running);
+        expect(container.read(runTimeProvider), isNull);
+        expect(action.runningRequested, isFalse);
+      },
+    );
+
+    test(
+      'an acknowledged command does not invent a running observation',
+      () async {
+        markInitialized();
+        action.publishObservation = false;
+        await action.setRunning(true);
+        expect(container.read(runTimeProvider), isNull);
+        expect(container.read(coreRunStateProvider), isNull);
+        expect(
+          container.read(vpnConnectionProvider).phase,
+          VpnConnectionPhase.disconnected,
+        );
+      },
+    );
+
     test('ignores a start request before initialization completes', () async {
       await container.read(setupActionProvider.notifier).setRunning(true);
 
@@ -192,6 +348,21 @@ void main() {
 
       expect(action.coreRunningCalls, [false]);
     });
+
+    test(
+      'startup auto-run cannot override a stop requested during migration',
+      () async {
+        container.listen(configProvider, (_, _) {});
+        container
+            .read(appSettingProvider.notifier)
+            .update((value) => value.copyWith(autoRun: true));
+        await container.read(setupActionProvider.notifier).setRunning(false);
+        await container.read(setupActionProvider.notifier).initStatus();
+        expect(action.coreRunningCalls, [false]);
+        expect(action.applyProfileCalls, 0);
+        expect(container.read(runTimeProvider), isNull);
+      },
+    );
   });
 
   group('run failures', () {

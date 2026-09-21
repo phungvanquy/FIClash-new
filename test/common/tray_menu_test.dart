@@ -13,7 +13,6 @@ import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:intl/intl.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:riverpod/riverpod.dart';
 import 'package:tray/tray.dart';
@@ -43,6 +42,8 @@ TrayState _trayState({
   bool showTrayTitle = false,
   Mode mode = Mode.rule,
   List<Group> groups = const [],
+  Profile? profile,
+  VpnConnection? connection,
 }) {
   return TrayState(
     mode: mode,
@@ -54,6 +55,15 @@ TrayState _trayState({
     groups: groups,
     selectedMap: const {},
     showTrayTitle: showTrayTitle,
+    profile: profile,
+    connection:
+        connection ??
+        VpnConnection(
+          phase: isStart
+              ? VpnConnectionPhase.connected
+              : VpnConnectionPhase.disconnected,
+          canDisconnect: isStart,
+        ),
   );
 }
 
@@ -150,33 +160,34 @@ void main() {
 
     final labels = _labels(showCall());
     final l10n = currentAppLocalizations;
-    expect(labels, contains(l10n.show));
-    expect(labels, contains(l10n.start));
-    expect(labels, contains(l10n.autoLaunch));
-    expect(labels, contains(l10n.copyEnvVar));
+    expect(labels, contains(l10n.vpnHome));
+    expect(labels, contains(l10n.vpnConnect));
+    expect(labels, contains(l10n.settings));
+    expect(labels, isNot(contains(l10n.autoLaunch)));
+    expect(labels, isNot(contains(l10n.copyEnvVar)));
     expect(labels, contains(l10n.exit));
     expect(labels, isNot(contains(l10n.tun)));
     expect(labels, isNot(contains(l10n.systemProxy)));
   });
 
-  test('adds TUN and system proxy toggles once the core is running', () async {
+  test('running menu keeps advanced options in Settings', () async {
     await update(_trayState(isStart: true));
 
     final labels = _labels(showCall());
     final l10n = currentAppLocalizations;
-    expect(labels, contains(l10n.stop), reason: 'start flips to stop');
-    expect(labels, contains(l10n.tun));
-    expect(labels, contains(l10n.systemProxy));
+    expect(labels, contains(l10n.vpnDisconnect));
+    expect(labels, isNot(contains(l10n.tun)));
+    expect(labels, isNot(contains(l10n.systemProxy)));
   });
 
-  test('offers every outbound mode as a menu entry', () async {
+  test('does not expose outbound routing modes in the primary menu', () async {
     await update(_trayState(mode: Mode.global));
 
     final checkedModes = _items(showCall())
         .where((item) => item['checked'] == true)
         .map((item) => item['label'])
         .toList();
-    expect(checkedModes, contains(Intl.message(Mode.global.name)));
+    expect(checkedModes, isEmpty);
   });
 
   test('sends icon, tooltip and menu in a single show call', () async {
@@ -215,26 +226,27 @@ void main() {
     expect(first.first, 1024);
   });
 
-  test('group submenus carry their proxies as nested items', () async {
-    await update(
-      _trayState(
-        groups: [
-          const Group(
-            name: 'Proxy',
-            type: GroupType.Selector,
-            all: [Proxy(name: 'A', type: 'Direct')],
+  test(
+    'server submenu contains Auto, Fallback and the sole profile inventory',
+    () async {
+      await update(
+        _trayState(
+          profile: Profile.normal().copyWith.snapshot(
+            servers: [
+              const VpnServer(id: 'a', name: 'A', target: 'A', type: 'Vless'),
+            ],
           ),
-        ],
-      ),
-    );
+        ),
+      );
 
-    final submenu = _items(
-      showCall(),
-    ).firstWhere((item) => item['type'] == 'submenu');
-    expect(submenu['label'], 'Proxy');
-    final children = (submenu['items'] as List).cast<Map<Object?, Object?>>();
-    expect(children.map((item) => item['label']), contains('A'));
-  });
+      final submenu = _items(
+        showCall(),
+      ).firstWhere((item) => item['type'] == 'submenu');
+      expect(submenu['label'], currentAppLocalizations.vpnServers);
+      final children = (submenu['items'] as List).cast<Map<Object?, Object?>>();
+      expect(children.map((item) => item['label']), ['Auto', 'Fallback', 'A']);
+    },
+  );
 
   group('a platform that is not macOS', () {
     late AppTray windows;

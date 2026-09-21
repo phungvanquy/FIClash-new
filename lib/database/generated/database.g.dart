@@ -152,6 +152,16 @@ class $ProfilesTable extends Profiles
     requiredDuringInsert: false,
   );
   @override
+  late final GeneratedColumnWithTypeConverter<ProfileSnapshot, String>
+  snapshot = GeneratedColumn<String>(
+    'snapshot',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('{}'),
+  ).withConverter<ProfileSnapshot>($ProfilesTable.$convertersnapshot);
+  @override
   List<GeneratedColumn> get $columns => [
     id,
     label,
@@ -167,6 +177,7 @@ class $ProfilesTable extends Profiles
     selectedMap,
     unfoldSet,
     order,
+    snapshot,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -330,6 +341,12 @@ class $ProfilesTable extends Profiles
         DriftSqlType.int,
         data['${effectivePrefix}order'],
       ),
+      snapshot: $ProfilesTable.$convertersnapshot.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}snapshot'],
+        )!,
+      ),
     );
   }
 
@@ -348,6 +365,8 @@ class $ProfilesTable extends Profiles
       const StringMapConverter();
   static TypeConverter<Set<String>, String> $converterunfoldSet =
       const StringSetConverter();
+  static TypeConverter<ProfileSnapshot, String> $convertersnapshot =
+      const ProfileSnapshotConverter();
 }
 
 class RawProfile extends DataClass implements Insertable<RawProfile> {
@@ -365,6 +384,7 @@ class RawProfile extends DataClass implements Insertable<RawProfile> {
   final Map<String, String> selectedMap;
   final Set<String> unfoldSet;
   final int? order;
+  final ProfileSnapshot snapshot;
   const RawProfile({
     required this.id,
     required this.label,
@@ -380,6 +400,7 @@ class RawProfile extends DataClass implements Insertable<RawProfile> {
     required this.selectedMap,
     required this.unfoldSet,
     this.order,
+    required this.snapshot,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -426,6 +447,11 @@ class RawProfile extends DataClass implements Insertable<RawProfile> {
     if (!nullToAbsent || order != null) {
       map['order'] = Variable<int>(order);
     }
+    {
+      map['snapshot'] = Variable<String>(
+        $ProfilesTable.$convertersnapshot.toSql(snapshot),
+      );
+    }
     return map;
   }
 
@@ -457,6 +483,7 @@ class RawProfile extends DataClass implements Insertable<RawProfile> {
       order: order == null && nullToAbsent
           ? const Value.absent()
           : Value(order),
+      snapshot: Value(snapshot),
     );
   }
 
@@ -488,6 +515,7 @@ class RawProfile extends DataClass implements Insertable<RawProfile> {
       ),
       unfoldSet: serializer.fromJson<Set<String>>(json['unfoldSet']),
       order: serializer.fromJson<int?>(json['order']),
+      snapshot: serializer.fromJson<ProfileSnapshot>(json['snapshot']),
     );
   }
   @override
@@ -514,6 +542,7 @@ class RawProfile extends DataClass implements Insertable<RawProfile> {
       'selectedMap': serializer.toJson<Map<String, String>>(selectedMap),
       'unfoldSet': serializer.toJson<Set<String>>(unfoldSet),
       'order': serializer.toJson<int?>(order),
+      'snapshot': serializer.toJson<ProfileSnapshot>(snapshot),
     };
   }
 
@@ -532,6 +561,7 @@ class RawProfile extends DataClass implements Insertable<RawProfile> {
     Map<String, String>? selectedMap,
     Set<String>? unfoldSet,
     Value<int?> order = const Value.absent(),
+    ProfileSnapshot? snapshot,
   }) => RawProfile(
     id: id ?? this.id,
     label: label ?? this.label,
@@ -554,6 +584,7 @@ class RawProfile extends DataClass implements Insertable<RawProfile> {
     selectedMap: selectedMap ?? this.selectedMap,
     unfoldSet: unfoldSet ?? this.unfoldSet,
     order: order.present ? order.value : this.order,
+    snapshot: snapshot ?? this.snapshot,
   );
   RawProfile copyWithCompanion(ProfilesCompanion data) {
     return RawProfile(
@@ -587,6 +618,7 @@ class RawProfile extends DataClass implements Insertable<RawProfile> {
           : this.selectedMap,
       unfoldSet: data.unfoldSet.present ? data.unfoldSet.value : this.unfoldSet,
       order: data.order.present ? data.order.value : this.order,
+      snapshot: data.snapshot.present ? data.snapshot.value : this.snapshot,
     );
   }
 
@@ -606,7 +638,8 @@ class RawProfile extends DataClass implements Insertable<RawProfile> {
           ..write('autoUpdate: $autoUpdate, ')
           ..write('selectedMap: $selectedMap, ')
           ..write('unfoldSet: $unfoldSet, ')
-          ..write('order: $order')
+          ..write('order: $order, ')
+          ..write('snapshot: $snapshot')
           ..write(')'))
         .toString();
   }
@@ -627,6 +660,7 @@ class RawProfile extends DataClass implements Insertable<RawProfile> {
     selectedMap,
     unfoldSet,
     order,
+    snapshot,
   );
   @override
   bool operator ==(Object other) =>
@@ -645,7 +679,8 @@ class RawProfile extends DataClass implements Insertable<RawProfile> {
           other.autoUpdate == this.autoUpdate &&
           other.selectedMap == this.selectedMap &&
           other.unfoldSet == this.unfoldSet &&
-          other.order == this.order);
+          other.order == this.order &&
+          other.snapshot == this.snapshot);
 }
 
 class ProfilesCompanion extends UpdateCompanion<RawProfile> {
@@ -663,6 +698,7 @@ class ProfilesCompanion extends UpdateCompanion<RawProfile> {
   final Value<Map<String, String>> selectedMap;
   final Value<Set<String>> unfoldSet;
   final Value<int?> order;
+  final Value<ProfileSnapshot> snapshot;
   const ProfilesCompanion({
     this.id = const Value.absent(),
     this.label = const Value.absent(),
@@ -678,6 +714,7 @@ class ProfilesCompanion extends UpdateCompanion<RawProfile> {
     this.selectedMap = const Value.absent(),
     this.unfoldSet = const Value.absent(),
     this.order = const Value.absent(),
+    this.snapshot = const Value.absent(),
   });
   ProfilesCompanion.insert({
     this.id = const Value.absent(),
@@ -694,6 +731,7 @@ class ProfilesCompanion extends UpdateCompanion<RawProfile> {
     required Map<String, String> selectedMap,
     required Set<String> unfoldSet,
     this.order = const Value.absent(),
+    this.snapshot = const Value.absent(),
   }) : label = Value(label),
        url = Value(url),
        overwriteType = Value(overwriteType),
@@ -716,6 +754,7 @@ class ProfilesCompanion extends UpdateCompanion<RawProfile> {
     Expression<String>? selectedMap,
     Expression<String>? unfoldSet,
     Expression<int>? order,
+    Expression<String>? snapshot,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -733,6 +772,7 @@ class ProfilesCompanion extends UpdateCompanion<RawProfile> {
       if (selectedMap != null) 'selected_map': selectedMap,
       if (unfoldSet != null) 'unfold_set': unfoldSet,
       if (order != null) 'order': order,
+      if (snapshot != null) 'snapshot': snapshot,
     });
   }
 
@@ -751,6 +791,7 @@ class ProfilesCompanion extends UpdateCompanion<RawProfile> {
     Value<Map<String, String>>? selectedMap,
     Value<Set<String>>? unfoldSet,
     Value<int?>? order,
+    Value<ProfileSnapshot>? snapshot,
   }) {
     return ProfilesCompanion(
       id: id ?? this.id,
@@ -768,6 +809,7 @@ class ProfilesCompanion extends UpdateCompanion<RawProfile> {
       selectedMap: selectedMap ?? this.selectedMap,
       unfoldSet: unfoldSet ?? this.unfoldSet,
       order: order ?? this.order,
+      snapshot: snapshot ?? this.snapshot,
     );
   }
 
@@ -826,6 +868,11 @@ class ProfilesCompanion extends UpdateCompanion<RawProfile> {
     if (order.present) {
       map['order'] = Variable<int>(order.value);
     }
+    if (snapshot.present) {
+      map['snapshot'] = Variable<String>(
+        $ProfilesTable.$convertersnapshot.toSql(snapshot.value),
+      );
+    }
     return map;
   }
 
@@ -845,7 +892,8 @@ class ProfilesCompanion extends UpdateCompanion<RawProfile> {
           ..write('autoUpdate: $autoUpdate, ')
           ..write('selectedMap: $selectedMap, ')
           ..write('unfoldSet: $unfoldSet, ')
-          ..write('order: $order')
+          ..write('order: $order, ')
+          ..write('snapshot: $snapshot')
           ..write(')'))
         .toString();
   }
@@ -3445,6 +3493,429 @@ class IconRecordsCompanion extends UpdateCompanion<IconRecord> {
   }
 }
 
+class $ProfileCommitStatesTable extends ProfileCommitStates
+    with TableInfo<$ProfileCommitStatesTable, ProfileCommitState> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ProfileCommitStatesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    check: () => const CustomExpression('id = 1'),
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _revisionMeta = const VerificationMeta(
+    'revision',
+  );
+  @override
+  late final GeneratedColumn<int> revision = GeneratedColumn<int>(
+    'revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
+    'profile_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _migrationVersionMeta = const VerificationMeta(
+    'migrationVersion',
+  );
+  @override
+  late final GeneratedColumn<int> migrationVersion = GeneratedColumn<int>(
+    'migration_version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _migrationArchiveMeta = const VerificationMeta(
+    'migrationArchive',
+  );
+  @override
+  late final GeneratedColumn<String> migrationArchive = GeneratedColumn<String>(
+    'migration_archive',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pendingRestoreMeta = const VerificationMeta(
+    'pendingRestore',
+  );
+  @override
+  late final GeneratedColumn<String> pendingRestore = GeneratedColumn<String>(
+    'pending_restore',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    revision,
+    profileId,
+    migrationVersion,
+    migrationArchive,
+    pendingRestore,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'profile_commit_state';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ProfileCommitState> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('revision')) {
+      context.handle(
+        _revisionMeta,
+        revision.isAcceptableOrUnknown(data['revision']!, _revisionMeta),
+      );
+    }
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
+    }
+    if (data.containsKey('migration_version')) {
+      context.handle(
+        _migrationVersionMeta,
+        migrationVersion.isAcceptableOrUnknown(
+          data['migration_version']!,
+          _migrationVersionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('migration_archive')) {
+      context.handle(
+        _migrationArchiveMeta,
+        migrationArchive.isAcceptableOrUnknown(
+          data['migration_archive']!,
+          _migrationArchiveMeta,
+        ),
+      );
+    }
+    if (data.containsKey('pending_restore')) {
+      context.handle(
+        _pendingRestoreMeta,
+        pendingRestore.isAcceptableOrUnknown(
+          data['pending_restore']!,
+          _pendingRestoreMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ProfileCommitState map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ProfileCommitState(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      revision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}revision'],
+      )!,
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}profile_id'],
+      ),
+      migrationVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}migration_version'],
+      )!,
+      migrationArchive: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}migration_archive'],
+      ),
+      pendingRestore: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pending_restore'],
+      ),
+    );
+  }
+
+  @override
+  $ProfileCommitStatesTable createAlias(String alias) {
+    return $ProfileCommitStatesTable(attachedDatabase, alias);
+  }
+}
+
+class ProfileCommitState extends DataClass
+    implements Insertable<ProfileCommitState> {
+  final int id;
+  final int revision;
+  final int? profileId;
+  final int migrationVersion;
+  final String? migrationArchive;
+  final String? pendingRestore;
+  const ProfileCommitState({
+    required this.id,
+    required this.revision,
+    this.profileId,
+    required this.migrationVersion,
+    this.migrationArchive,
+    this.pendingRestore,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['revision'] = Variable<int>(revision);
+    if (!nullToAbsent || profileId != null) {
+      map['profile_id'] = Variable<int>(profileId);
+    }
+    map['migration_version'] = Variable<int>(migrationVersion);
+    if (!nullToAbsent || migrationArchive != null) {
+      map['migration_archive'] = Variable<String>(migrationArchive);
+    }
+    if (!nullToAbsent || pendingRestore != null) {
+      map['pending_restore'] = Variable<String>(pendingRestore);
+    }
+    return map;
+  }
+
+  ProfileCommitStatesCompanion toCompanion(bool nullToAbsent) {
+    return ProfileCommitStatesCompanion(
+      id: Value(id),
+      revision: Value(revision),
+      profileId: profileId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(profileId),
+      migrationVersion: Value(migrationVersion),
+      migrationArchive: migrationArchive == null && nullToAbsent
+          ? const Value.absent()
+          : Value(migrationArchive),
+      pendingRestore: pendingRestore == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pendingRestore),
+    );
+  }
+
+  factory ProfileCommitState.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ProfileCommitState(
+      id: serializer.fromJson<int>(json['id']),
+      revision: serializer.fromJson<int>(json['revision']),
+      profileId: serializer.fromJson<int?>(json['profileId']),
+      migrationVersion: serializer.fromJson<int>(json['migrationVersion']),
+      migrationArchive: serializer.fromJson<String?>(json['migrationArchive']),
+      pendingRestore: serializer.fromJson<String?>(json['pendingRestore']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'revision': serializer.toJson<int>(revision),
+      'profileId': serializer.toJson<int?>(profileId),
+      'migrationVersion': serializer.toJson<int>(migrationVersion),
+      'migrationArchive': serializer.toJson<String?>(migrationArchive),
+      'pendingRestore': serializer.toJson<String?>(pendingRestore),
+    };
+  }
+
+  ProfileCommitState copyWith({
+    int? id,
+    int? revision,
+    Value<int?> profileId = const Value.absent(),
+    int? migrationVersion,
+    Value<String?> migrationArchive = const Value.absent(),
+    Value<String?> pendingRestore = const Value.absent(),
+  }) => ProfileCommitState(
+    id: id ?? this.id,
+    revision: revision ?? this.revision,
+    profileId: profileId.present ? profileId.value : this.profileId,
+    migrationVersion: migrationVersion ?? this.migrationVersion,
+    migrationArchive: migrationArchive.present
+        ? migrationArchive.value
+        : this.migrationArchive,
+    pendingRestore: pendingRestore.present
+        ? pendingRestore.value
+        : this.pendingRestore,
+  );
+  ProfileCommitState copyWithCompanion(ProfileCommitStatesCompanion data) {
+    return ProfileCommitState(
+      id: data.id.present ? data.id.value : this.id,
+      revision: data.revision.present ? data.revision.value : this.revision,
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
+      migrationVersion: data.migrationVersion.present
+          ? data.migrationVersion.value
+          : this.migrationVersion,
+      migrationArchive: data.migrationArchive.present
+          ? data.migrationArchive.value
+          : this.migrationArchive,
+      pendingRestore: data.pendingRestore.present
+          ? data.pendingRestore.value
+          : this.pendingRestore,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ProfileCommitState(')
+          ..write('id: $id, ')
+          ..write('revision: $revision, ')
+          ..write('profileId: $profileId, ')
+          ..write('migrationVersion: $migrationVersion, ')
+          ..write('migrationArchive: $migrationArchive, ')
+          ..write('pendingRestore: $pendingRestore')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    revision,
+    profileId,
+    migrationVersion,
+    migrationArchive,
+    pendingRestore,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ProfileCommitState &&
+          other.id == this.id &&
+          other.revision == this.revision &&
+          other.profileId == this.profileId &&
+          other.migrationVersion == this.migrationVersion &&
+          other.migrationArchive == this.migrationArchive &&
+          other.pendingRestore == this.pendingRestore);
+}
+
+class ProfileCommitStatesCompanion extends UpdateCompanion<ProfileCommitState> {
+  final Value<int> id;
+  final Value<int> revision;
+  final Value<int?> profileId;
+  final Value<int> migrationVersion;
+  final Value<String?> migrationArchive;
+  final Value<String?> pendingRestore;
+  const ProfileCommitStatesCompanion({
+    this.id = const Value.absent(),
+    this.revision = const Value.absent(),
+    this.profileId = const Value.absent(),
+    this.migrationVersion = const Value.absent(),
+    this.migrationArchive = const Value.absent(),
+    this.pendingRestore = const Value.absent(),
+  });
+  ProfileCommitStatesCompanion.insert({
+    this.id = const Value.absent(),
+    this.revision = const Value.absent(),
+    this.profileId = const Value.absent(),
+    this.migrationVersion = const Value.absent(),
+    this.migrationArchive = const Value.absent(),
+    this.pendingRestore = const Value.absent(),
+  });
+  static Insertable<ProfileCommitState> custom({
+    Expression<int>? id,
+    Expression<int>? revision,
+    Expression<int>? profileId,
+    Expression<int>? migrationVersion,
+    Expression<String>? migrationArchive,
+    Expression<String>? pendingRestore,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (revision != null) 'revision': revision,
+      if (profileId != null) 'profile_id': profileId,
+      if (migrationVersion != null) 'migration_version': migrationVersion,
+      if (migrationArchive != null) 'migration_archive': migrationArchive,
+      if (pendingRestore != null) 'pending_restore': pendingRestore,
+    });
+  }
+
+  ProfileCommitStatesCompanion copyWith({
+    Value<int>? id,
+    Value<int>? revision,
+    Value<int?>? profileId,
+    Value<int>? migrationVersion,
+    Value<String?>? migrationArchive,
+    Value<String?>? pendingRestore,
+  }) {
+    return ProfileCommitStatesCompanion(
+      id: id ?? this.id,
+      revision: revision ?? this.revision,
+      profileId: profileId ?? this.profileId,
+      migrationVersion: migrationVersion ?? this.migrationVersion,
+      migrationArchive: migrationArchive ?? this.migrationArchive,
+      pendingRestore: pendingRestore ?? this.pendingRestore,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (revision.present) {
+      map['revision'] = Variable<int>(revision.value);
+    }
+    if (profileId.present) {
+      map['profile_id'] = Variable<int>(profileId.value);
+    }
+    if (migrationVersion.present) {
+      map['migration_version'] = Variable<int>(migrationVersion.value);
+    }
+    if (migrationArchive.present) {
+      map['migration_archive'] = Variable<String>(migrationArchive.value);
+    }
+    if (pendingRestore.present) {
+      map['pending_restore'] = Variable<String>(pendingRestore.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ProfileCommitStatesCompanion(')
+          ..write('id: $id, ')
+          ..write('revision: $revision, ')
+          ..write('profileId: $profileId, ')
+          ..write('migrationVersion: $migrationVersion, ')
+          ..write('migrationArchive: $migrationArchive, ')
+          ..write('pendingRestore: $pendingRestore')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$Database extends GeneratedDatabase {
   _$Database(QueryExecutor e) : super(e);
   $DatabaseManager get managers => $DatabaseManager(this);
@@ -3456,6 +3927,8 @@ abstract class _$Database extends GeneratedDatabase {
   );
   late final $ProxyGroupsTable proxyGroups = $ProxyGroupsTable(this);
   late final $IconRecordsTable iconRecords = $IconRecordsTable(this);
+  late final $ProfileCommitStatesTable profileCommitStates =
+      $ProfileCommitStatesTable(this);
   late final Index idxRuleTarget = Index(
     'idx_rule_target',
     'CREATE INDEX idx_rule_target ON rules (rule_target)',
@@ -3488,6 +3961,7 @@ abstract class _$Database extends GeneratedDatabase {
     profileRuleLinks,
     proxyGroups,
     iconRecords,
+    profileCommitStates,
     idxRuleTarget,
     idxProfileSceneOrder,
     idxProfileNameOrder,
@@ -3535,6 +4009,7 @@ typedef $$ProfilesTableCreateCompanionBuilder =
       required Map<String, String> selectedMap,
       required Set<String> unfoldSet,
       Value<int?> order,
+      Value<ProfileSnapshot> snapshot,
     });
 typedef $$ProfilesTableUpdateCompanionBuilder =
     ProfilesCompanion Function({
@@ -3552,6 +4027,7 @@ typedef $$ProfilesTableUpdateCompanionBuilder =
       Value<Map<String, String>> selectedMap,
       Value<Set<String>> unfoldSet,
       Value<int?> order,
+      Value<ProfileSnapshot> snapshot,
     });
 
 final class $$ProfilesTableReferences
@@ -3684,6 +4160,12 @@ class $$ProfilesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnWithTypeConverterFilters<ProfileSnapshot, ProfileSnapshot, String>
+  get snapshot => $composableBuilder(
+    column: $table.snapshot,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
   Expression<bool> profileRuleLinksRefs(
     Expression<bool> Function($$ProfileRuleLinksTableFilterComposer f) f,
   ) {
@@ -3813,6 +4295,11 @@ class $$ProfilesTableOrderingComposer
     column: $table.order,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get snapshot => $composableBuilder(
+    column: $table.snapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ProfilesTableAnnotationComposer
@@ -3884,6 +4371,9 @@ class $$ProfilesTableAnnotationComposer
 
   GeneratedColumn<int> get order =>
       $composableBuilder(column: $table.order, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<ProfileSnapshot, String> get snapshot =>
+      $composableBuilder(column: $table.snapshot, builder: (column) => column);
 
   Expression<T> profileRuleLinksRefs<T extends Object>(
     Expression<T> Function($$ProfileRuleLinksTableAnnotationComposer a) f,
@@ -3982,6 +4472,7 @@ class $$ProfilesTableTableManager
                 Value<Map<String, String>> selectedMap = const Value.absent(),
                 Value<Set<String>> unfoldSet = const Value.absent(),
                 Value<int?> order = const Value.absent(),
+                Value<ProfileSnapshot> snapshot = const Value.absent(),
               }) => ProfilesCompanion(
                 id: id,
                 label: label,
@@ -3997,6 +4488,7 @@ class $$ProfilesTableTableManager
                 selectedMap: selectedMap,
                 unfoldSet: unfoldSet,
                 order: order,
+                snapshot: snapshot,
               ),
           createCompanionCallback:
               ({
@@ -4015,6 +4507,7 @@ class $$ProfilesTableTableManager
                 required Map<String, String> selectedMap,
                 required Set<String> unfoldSet,
                 Value<int?> order = const Value.absent(),
+                Value<ProfileSnapshot> snapshot = const Value.absent(),
               }) => ProfilesCompanion.insert(
                 id: id,
                 label: label,
@@ -4030,6 +4523,7 @@ class $$ProfilesTableTableManager
                 selectedMap: selectedMap,
                 unfoldSet: unfoldSet,
                 order: order,
+                snapshot: snapshot,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -5832,6 +6326,241 @@ typedef $$IconRecordsTableProcessedTableManager =
       IconRecord,
       PrefetchHooks Function()
     >;
+typedef $$ProfileCommitStatesTableCreateCompanionBuilder =
+    ProfileCommitStatesCompanion Function({
+      Value<int> id,
+      Value<int> revision,
+      Value<int?> profileId,
+      Value<int> migrationVersion,
+      Value<String?> migrationArchive,
+      Value<String?> pendingRestore,
+    });
+typedef $$ProfileCommitStatesTableUpdateCompanionBuilder =
+    ProfileCommitStatesCompanion Function({
+      Value<int> id,
+      Value<int> revision,
+      Value<int?> profileId,
+      Value<int> migrationVersion,
+      Value<String?> migrationArchive,
+      Value<String?> pendingRestore,
+    });
+
+class $$ProfileCommitStatesTableFilterComposer
+    extends Composer<_$Database, $ProfileCommitStatesTable> {
+  $$ProfileCommitStatesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get migrationVersion => $composableBuilder(
+    column: $table.migrationVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get migrationArchive => $composableBuilder(
+    column: $table.migrationArchive,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get pendingRestore => $composableBuilder(
+    column: $table.pendingRestore,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ProfileCommitStatesTableOrderingComposer
+    extends Composer<_$Database, $ProfileCommitStatesTable> {
+  $$ProfileCommitStatesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get migrationVersion => $composableBuilder(
+    column: $table.migrationVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get migrationArchive => $composableBuilder(
+    column: $table.migrationArchive,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get pendingRestore => $composableBuilder(
+    column: $table.pendingRestore,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ProfileCommitStatesTableAnnotationComposer
+    extends Composer<_$Database, $ProfileCommitStatesTable> {
+  $$ProfileCommitStatesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get revision =>
+      $composableBuilder(column: $table.revision, builder: (column) => column);
+
+  GeneratedColumn<int> get profileId =>
+      $composableBuilder(column: $table.profileId, builder: (column) => column);
+
+  GeneratedColumn<int> get migrationVersion => $composableBuilder(
+    column: $table.migrationVersion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get migrationArchive => $composableBuilder(
+    column: $table.migrationArchive,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get pendingRestore => $composableBuilder(
+    column: $table.pendingRestore,
+    builder: (column) => column,
+  );
+}
+
+class $$ProfileCommitStatesTableTableManager
+    extends
+        RootTableManager<
+          _$Database,
+          $ProfileCommitStatesTable,
+          ProfileCommitState,
+          $$ProfileCommitStatesTableFilterComposer,
+          $$ProfileCommitStatesTableOrderingComposer,
+          $$ProfileCommitStatesTableAnnotationComposer,
+          $$ProfileCommitStatesTableCreateCompanionBuilder,
+          $$ProfileCommitStatesTableUpdateCompanionBuilder,
+          (
+            ProfileCommitState,
+            BaseReferences<
+              _$Database,
+              $ProfileCommitStatesTable,
+              ProfileCommitState
+            >,
+          ),
+          ProfileCommitState,
+          PrefetchHooks Function()
+        > {
+  $$ProfileCommitStatesTableTableManager(
+    _$Database db,
+    $ProfileCommitStatesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ProfileCommitStatesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ProfileCommitStatesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ProfileCommitStatesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> revision = const Value.absent(),
+                Value<int?> profileId = const Value.absent(),
+                Value<int> migrationVersion = const Value.absent(),
+                Value<String?> migrationArchive = const Value.absent(),
+                Value<String?> pendingRestore = const Value.absent(),
+              }) => ProfileCommitStatesCompanion(
+                id: id,
+                revision: revision,
+                profileId: profileId,
+                migrationVersion: migrationVersion,
+                migrationArchive: migrationArchive,
+                pendingRestore: pendingRestore,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> revision = const Value.absent(),
+                Value<int?> profileId = const Value.absent(),
+                Value<int> migrationVersion = const Value.absent(),
+                Value<String?> migrationArchive = const Value.absent(),
+                Value<String?> pendingRestore = const Value.absent(),
+              }) => ProfileCommitStatesCompanion.insert(
+                id: id,
+                revision: revision,
+                profileId: profileId,
+                migrationVersion: migrationVersion,
+                migrationArchive: migrationArchive,
+                pendingRestore: pendingRestore,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ProfileCommitStatesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$Database,
+      $ProfileCommitStatesTable,
+      ProfileCommitState,
+      $$ProfileCommitStatesTableFilterComposer,
+      $$ProfileCommitStatesTableOrderingComposer,
+      $$ProfileCommitStatesTableAnnotationComposer,
+      $$ProfileCommitStatesTableCreateCompanionBuilder,
+      $$ProfileCommitStatesTableUpdateCompanionBuilder,
+      (
+        ProfileCommitState,
+        BaseReferences<
+          _$Database,
+          $ProfileCommitStatesTable,
+          ProfileCommitState
+        >,
+      ),
+      ProfileCommitState,
+      PrefetchHooks Function()
+    >;
 
 class $DatabaseManager {
   final _$Database _db;
@@ -5848,6 +6577,8 @@ class $DatabaseManager {
       $$ProxyGroupsTableTableManager(_db, _db.proxyGroups);
   $$IconRecordsTableTableManager get iconRecords =>
       $$IconRecordsTableTableManager(_db, _db.iconRecords);
+  $$ProfileCommitStatesTableTableManager get profileCommitStates =>
+      $$ProfileCommitStatesTableTableManager(_db, _db.profileCommitStates);
 }
 
 mixin _$ProfilesDaoMixin on DatabaseAccessor<Database> {

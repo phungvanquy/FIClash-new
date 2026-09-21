@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
@@ -18,6 +19,11 @@ import 'package:path/path.dart' show dirname, join;
 import 'config/advanced.dart';
 import 'developer.dart';
 import 'theme.dart';
+import 'vpn_configuration.dart';
+import 'connection/requests.dart';
+import 'connection/connections.dart';
+import 'resources.dart';
+import 'logs.dart';
 
 class ToolsView extends ConsumerStatefulWidget {
   const ToolsView({super.key});
@@ -87,25 +93,35 @@ class _ToolViewState extends ConsumerState<ToolsView> {
       ),
     );
     final items = [
-      Consumer(
-        builder: (_, ref, _) {
-          final state = ref.watch(moreToolsSelectorStateProvider);
-          if (state.navigationItems.isEmpty) {
-            return Container();
-          }
-          return Column(
-            children: [
-              ListHeader(title: context.appLocalizations.more),
-              _buildNavigationMenu(state.navigationItems),
-            ],
-          );
-        },
-      ),
+      const VpnConfigurationSection(),
+      _buildNavigationMenu([
+        NavigationItem(
+          icon: const Icon(Icons.view_timeline),
+          label: PageLabel.requests,
+          builder: (_) => const RequestsView(),
+        ),
+        NavigationItem(
+          icon: const Icon(Icons.ballot),
+          label: PageLabel.connections,
+          builder: (_) => const ConnectionsView(),
+        ),
+        NavigationItem(
+          icon: const Icon(Icons.storage),
+          label: PageLabel.resources,
+          builder: (_) => const ResourcesView(),
+        ),
+        if (ref.watch(appSettingProvider).openLogs)
+          NavigationItem(
+            icon: const Icon(Icons.adb),
+            label: PageLabel.logs,
+            builder: (_) => const LogsView(),
+          ),
+      ]),
       ..._getSettingList(),
       ..._getOtherList(appSetting.developerMode),
     ];
     return CommonScaffold(
-      title: context.appLocalizations.tools,
+      title: context.appLocalizations.settings,
       body: ListView.builder(
         key: toolsStoreKey,
         itemCount: items.length,

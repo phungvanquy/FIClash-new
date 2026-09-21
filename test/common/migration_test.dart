@@ -6,6 +6,22 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Migration', () {
+    test(
+      'only fresh installs defer VPN defaults until explicit connect',
+      () async {
+        final fresh = await Migration(
+          store: _FakeMigrationStore(version: 0, configMap: null),
+        ).run();
+        expect(fresh.appSettingProps.vpnDefaultsPending, isTrue);
+        expect(fresh.patchClashConfig.tun.enable, isFalse);
+        final existing = await Migration(
+          store: _FakeMigrationStore(version: 1, configMap: _createConfigMap()),
+        ).run();
+        expect(existing.appSettingProps.vpnDefaultsPending, isFalse);
+        expect(existing.patchClashConfig.tun.enable, isFalse);
+      },
+    );
+
     test('returns current config without rewriting storage', () async {
       final configMap = _createConfigMap(
         davProps: const DAVProps(

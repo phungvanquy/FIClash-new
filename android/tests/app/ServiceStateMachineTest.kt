@@ -158,10 +158,81 @@ private class FakeHost(override val scope: CoroutineScope) : ServiceStateHost {
 class ServiceStateMachineTest {
 
     @Test
+    fun `snapshot is passive while vpn permission is pending`() = runTest {
+        val host = FakeHost(backgroundScope)
+        host.app = FakeApp(holdVpnPreparation = true)
+        val machine = ServiceStateMachine(host)
+        machine.syncSharedState(configuredState())
+        val start = machine.requestStart()
+        testScheduler.runCurrent()
+        val pending = machine.snapshot()
+        assertEquals(RunState.STARTING, pending.state)
+        assertEquals(0L, pending.startedAt)
+        assertEquals(pending, machine.snapshot())
+        assertEquals(0L, machine.refresh())
+        assertEquals(RunState.STARTING, machine.snapshot().state)
+        machine.requestStop().await()
+        assertFalse(start.await())
+        val stopped = machine.snapshot()
+        assertEquals(RunState.STOPPED, stopped.state)
+        assertTrue(stopped.revision > pending.revision)
+        assertEquals(pending.session, stopped.session)
+    }
+
+    @Test
+    fun `observations include actual vpn mode runtime and permission failure`() = runTest {
+        val host = FakeHost(backgroundScope)
+        val machine = ServiceStateMachine(host)
+        machine.syncSharedState(configuredState(enable = false))
+        assertTrue(machine.requestStart().await())
+        val started = machine.snapshot()
+        assertEquals(RunState.STARTED, started.state)
+        assertEquals(host.runTimeMillis, started.startedAt)
+        assertFalse(started.vpn)
+        machine.requestStop().await()
+        host.app = FakeApp(vpnGranted = false)
+        machine.syncSharedState(configuredState())
+        assertFalse(machine.requestStart().await())
+        val denied = machine.snapshot()
+        assertEquals(RunState.STOPPED, denied.state)
+        assertEquals("vpn_permission_denied", denied.failure)
+        assertTrue(denied.revision > started.revision)
+    }
+
+    @Test
+    fun `a late lost-service notification cannot replace the newer observation`() = runTest {
+        val host = FakeHost(backgroundScope)
+        val machine = ServiceStateMachine(host)
+        machine.syncSharedState(configuredState())
+        val old = machine.captureRequestToken()
+        machine.requestStart().await()
+        val started = machine.snapshot()
+        host.runTimeMillis = 0
+        machine.handleServiceLost(old)
+        assertEquals(started, machine.snapshot())
+        machine.handleServiceLost(machine.captureRequestToken())
+        assertEquals("service_lost", machine.snapshot().failure)
+        assertEquals(RunState.STOPPED, machine.snapshot().state)
+    }
+
+    @Test
     fun `initParams spells the keys the Go wrapper expects`() {
         val json = ServiceStateMachine.initParams("/files", 34)
 
         assertEquals("""{"home-dir":"/files","version":34}""", json)
+    }
+
+    @Test
+    fun `background setup retains the immutable generation and revision`() = runTest {
+        val host = FakeHost(backgroundScope)
+        host.storedSharedState = Gson().fromJson(
+            """{"vpnOptions":${Gson().toJson(vpnOptions())},"setupParams":{"test-url":"https://example.test","selected-map":{},"generation":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","revision":7}}""",
+            SharedState::class.java,
+        )
+        ServiceStateMachine(host).handleStartAction()
+        val setup = Gson().fromJson(host.lastSetupParams, SetupParams::class.java)
+        assertEquals("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", setup.generation)
+        assertEquals(7L, setup.revision)
     }
 
     @Test

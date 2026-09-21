@@ -21,36 +21,40 @@ class _MockCoreHandlerInterface extends Mock implements CoreHandlerInterface {}
 
 void main() {
   group('ProfilesAction', () {
-    test('keeps edited profile data when remote update fails', () async {
-      final original = Profile.normal(label: 'old label', url: 'bad-url');
-      final edited = original.copyWith(
-        label: 'new label',
-        url: 'still-bad-url',
-      );
-      final container = ProviderContainer(
-        overrides: [
-          currentProfileIdProvider.overrideWithBuild((_, _) => null),
-          profilesProvider.overrideWith(() => TestProfiles([original])),
-        ],
-      );
-      addTearDown(container.dispose);
+    test(
+      'refuses unmigrated refresh without publishing edited metadata',
+      () async {
+        final original = Profile.normal(label: 'old label', url: 'bad-url');
+        final edited = original.copyWith(
+          label: 'new label',
+          url: 'still-bad-url',
+        );
+        final container = ProviderContainer(
+          overrides: [
+            currentProfileIdProvider.overrideWithBuild((_, _) => null),
+            profilesProvider.overrideWith(() => TestProfiles([original])),
+          ],
+        );
+        addTearDown(container.dispose);
 
-      expect(
-        container.read(profilesProvider).getProfile(original.id),
-        original,
-      );
+        expect(
+          container.read(profilesProvider).getProfile(original.id),
+          original,
+        );
 
-      await expectLater(
-        container.read(profilesActionProvider.notifier).updateProfile(edited),
-        throwsA(anything),
-      );
+        await expectLater(
+          container.read(profilesActionProvider.notifier).updateProfile(edited),
+          throwsA(anything),
+        );
 
-      final profile = container.read(profilesProvider).getProfile(original.id);
-      expect(profile?.label, edited.label);
-      expect(profile?.url, edited.url);
-    });
+        final profile = container
+            .read(profilesProvider)
+            .getProfile(original.id);
+        expect(profile, original);
+      },
+    );
 
-    test('updates selection, inserts first profile, and reorders profiles', () {
+    test('updates legacy selection and reorders without importing', () {
       final first = Profile.normal(label: 'First');
       final second = Profile.normal(label: 'Second');
       final container = ProviderContainer(
@@ -69,62 +73,34 @@ void main() {
       action.updateCurrentSelectedMap('Group', 'Proxy');
       expect(container.read(profilesProvider), hasLength(1));
 
-      container.read(currentProfileIdProvider.notifier).value = null;
-      action.putProfile(second);
-      expect(container.read(currentProfileIdProvider), second.id);
-      expect(container.read(profilesProvider), [updatedFirst, second]);
-
       action.reorder([second, updatedFirst]);
       expect(container.read(profilesProvider), [second, updatedFirst]);
     });
 
-    test(
-      'skips profile updates that are disabled, fresh, or file-based',
-      () async {
-        final profiles = [
-          Profile.normal(label: 'Disabled').copyWith(autoUpdate: false),
-          Profile.normal(label: 'Fresh').copyWith(
-            autoUpdate: true,
-            lastUpdateDate: DateTime.now().add(const Duration(days: 1)),
-          ),
-          Profile.normal(label: 'File').copyWith(
-            autoUpdate: true,
-            lastUpdateDate: DateTime.now().subtract(const Duration(days: 1)),
-          ),
-        ];
-        final container = ProviderContainer(
-          overrides: [
-            currentProfileIdProvider.overrideWithBuild((_, _) => null),
-            profilesProvider.overrideWith(() => TestProfiles(profiles)),
-          ],
-        );
-        addTearDown(container.dispose);
-        final action = container.read(profilesActionProvider.notifier);
-
-        await action.autoUpdateProfiles();
-        await action.updateProfiles();
-
-        expect(container.read(profilesProvider), profiles);
-      },
-    );
-
-    test('setProfileAndAutoApply stores a non-current profile', () {
-      final current = Profile.normal(label: 'Current');
-      final other = Profile.normal(label: 'Other');
+    test('manual bulk refresh skips file-based profiles', () async {
+      final profiles = [
+        Profile.normal(label: 'Disabled').copyWith(autoUpdate: false),
+        Profile.normal(label: 'Fresh').copyWith(
+          autoUpdate: true,
+          lastUpdateDate: DateTime.now().add(const Duration(days: 1)),
+        ),
+        Profile.normal(label: 'File').copyWith(
+          autoUpdate: true,
+          lastUpdateDate: DateTime.now().subtract(const Duration(days: 1)),
+        ),
+      ];
       final container = ProviderContainer(
         overrides: [
-          currentProfileIdProvider.overrideWithBuild((_, _) => current.id),
-          profilesProvider.overrideWith(() => TestProfiles([current])),
+          currentProfileIdProvider.overrideWithBuild((_, _) => null),
+          profilesProvider.overrideWith(() => TestProfiles(profiles)),
         ],
       );
       addTearDown(container.dispose);
+      final action = container.read(profilesActionProvider.notifier);
 
-      container
-          .read(profilesActionProvider.notifier)
-          .setProfileAndAutoApply(other);
+      await action.updateProfiles();
 
-      expect(container.read(profilesProvider), [current, other]);
-      expect(container.read(currentProfileIdProvider), current.id);
+      expect(container.read(profilesProvider), profiles);
     });
   });
 
@@ -461,7 +437,7 @@ void main() {
 
   group('SetupAction', () {
     group('rapid status changes', () {
-      test('updates runtime and traffic while core start is pending', () async {
+      test('runtime and traffic wait for observed listener startup', () async {
         final startCompleter = Completer<bool>();
         final container = ProviderContainer(
           overrides: [
@@ -478,16 +454,17 @@ void main() {
         action.startCompleter = startCompleter;
 
         final startFuture = action.setRunning(true);
-        final initialRunTime = container.read(runTimeProvider)!;
-        await Future<void>.delayed(const Duration(milliseconds: 1100));
+        await Future<void>.delayed(Duration.zero);
 
-        expect(container.read(runTimeProvider), greaterThan(initialRunTime));
-        expect(commonAction.updateTrafficCount, greaterThanOrEqualTo(2));
+        expect(container.read(runTimeProvider), isNull);
+        expect(commonAction.updateTrafficCount, 0);
+        expect(container.read(vpnPendingProvider), isTrue);
 
         startCompleter.complete(true);
         await startFuture;
 
         expect(action.transitions, [true]);
+        expect(container.read(runTimeProvider), isNotNull);
         await action.setRunning(false);
       });
 
@@ -505,7 +482,7 @@ void main() {
             container.read(setupActionProvider.notifier) as _RaceSetupAction;
         await action.setRunning(true);
         action.transitions.clear();
-        action.applyProfileDebounceCount = 0;
+        action.appliedProfileCount = 0;
         action.stopCompleter = stopCompleter;
 
         final stopFuture = action.setRunning(false);
@@ -522,7 +499,7 @@ void main() {
         expect(action.transitions, [false, true]);
         expect(container.read(runTimeProvider), isNotNull);
         expect(container.read(isStartProvider), isTrue);
-        expect(action.applyProfileDebounceCount, 1);
+        expect(action.appliedProfileCount, 1);
         expect(action.resetCoreTrafficCount, 0);
 
         await action.setRunning(false);
@@ -555,7 +532,7 @@ void main() {
         expect(action.transitions, [true, false]);
         expect(container.read(runTimeProvider), isNull);
         expect(container.read(isStartProvider), isFalse);
-        expect(action.applyProfileDebounceCount, 0);
+        expect(action.appliedProfileCount, 1);
         expect(action.resetCoreTrafficCount, 1);
       });
 
@@ -583,7 +560,7 @@ void main() {
 
         expect(action.transitions, [true, true]);
         expect(container.read(isStartProvider), isTrue);
-        expect(action.applyProfileDebounceCount, 1);
+        expect(action.appliedProfileCount, 2);
         expect(action.resetCoreTrafficCount, 0);
 
         await action.setRunning(false);
@@ -634,8 +611,12 @@ void main() {
           await action.setRunning(true);
 
           expect(action.transitions, isEmpty);
-          expect(container.read(isStartProvider), isTrue);
-          expect(action.applyProfileDebounceCount, 1);
+          expect(container.read(isStartProvider), isFalse);
+          expect(
+            container.read(vpnConnectionProvider).phase,
+            VpnConnectionPhase.suspended,
+          );
+          expect(action.appliedProfileCount, 1);
 
           await action.setRunning(false);
           expect(action.transitions, [false]);
@@ -664,6 +645,7 @@ void main() {
         container
             .read(patchClashConfigProvider.notifier)
             .update((state) => state.copyWith.tun(enable: true));
+        container.read(runTimeProvider.notifier).value = 0;
         container.read(setupActionProvider);
         container.read(coreActionProvider);
 
@@ -700,6 +682,7 @@ void main() {
         container
             .read(patchClashConfigProvider.notifier)
             .update((state) => state.copyWith.tun(enable: true));
+        container.read(runTimeProvider.notifier).value = 0;
         container.read(setupActionProvider);
         container.read(coreActionProvider);
 
@@ -726,6 +709,7 @@ void main() {
       container
           .read(patchClashConfigProvider.notifier)
           .update((state) => state.copyWith.tun(enable: true));
+      container.read(runTimeProvider.notifier).value = 0;
       container.read(setupActionProvider);
       container.read(coreActionProvider);
 
@@ -794,6 +778,9 @@ void main() {
 }
 
 class _TestCoreAction extends CoreAction {
+  @override
+  Future<void> syncRunState() async {}
+
   int lifecycleRestartCount = 0;
   int initCoreCount = 0;
   Completer<CoreLifecycleResult>? restartCompleter;
@@ -883,23 +870,50 @@ class _AuthorizationSetupAction extends SetupAction {
 }
 
 class _RaceSetupAction extends SetupAction {
-  int applyProfileDebounceCount = 0;
+  int appliedProfileCount = 0;
   int resetCoreTrafficCount = 0;
   final transitions = <bool>[];
   Completer<bool>? startCompleter;
   Completer<bool>? stopCompleter;
+  int observationRevision = 0;
+
+  @override
+  Future<void> syncRunState() async {}
+
+  @override
+  Future<bool> applyProfile({
+    bool silence = false,
+    bool force = false,
+    Future<void> Function()? preloadInvoke,
+  }) async {
+    appliedProfileCount++;
+    await preloadInvoke?.call();
+    return true;
+  }
 
   @override
   void applyProfileDebounce({bool silence = false, bool force = false}) {
-    applyProfileDebounceCount++;
+    appliedProfileCount++;
   }
 
   @override
   Future<bool> setCoreRunning(bool running) async {
     transitions.add(running);
-    return running
+    final result = running
         ? await startCompleter?.future ?? true
         : await stopCompleter?.future ?? true;
+    if (result) {
+      observeCore(
+        CoreRunObservation(
+          session: 'race',
+          revision: ++observationRevision,
+          active: running,
+          requested: running,
+          mixedPort: running ? 7890 : 0,
+        ),
+      );
+    }
+    return result;
   }
 
   @override

@@ -26,7 +26,6 @@ import (
 	"github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/mihomo/constant/features"
 	"github.com/metacubex/mihomo/hub/executor"
-	"github.com/metacubex/mihomo/listener"
 	"github.com/metacubex/mihomo/log"
 	"github.com/metacubex/mihomo/tunnel"
 	"github.com/metacubex/mihomo/tunnel/statistic"
@@ -42,6 +41,7 @@ func handleInitClash(params *InitParams) bool {
 	configMu.Lock()
 	defer configMu.Unlock()
 	sdkVersion.Store(int32(params.Version))
+	resetPreparations()
 	constant.SetHomeDir(params.HomeDir)
 	initOwnership(params.HomeDir)
 	isInit.Store(true)
@@ -51,17 +51,21 @@ func handleInitClash(params *InitParams) bool {
 func handleStartListener() bool {
 	configMu.Lock()
 	defer configMu.Unlock()
+	if currentConfig == nil {
+		publishRunState("missing_configuration")
+		return false
+	}
 	isRunning.Store(true)
-	updateListeners(currentConfig)
+	err := updateListeners(currentConfig)
 	resolver.ResetConnection()
-	return true
+	return err == nil
 }
 
 func handleStopListener() bool {
 	configMu.Lock()
 	defer configMu.Unlock()
 	isRunning.Store(false)
-	listener.StopListener()
+	stopListeners()
 	resolver.ResetConnection()
 	return true
 }
@@ -83,12 +87,16 @@ func handleShutdown() bool {
 	handleStopLog()
 
 	configMu.Lock()
+	resetPreparations()
 	isRunning.Store(false)
-	listener.StopListener()
+	stopListeners()
 	updater.StopGeoUpdater()
 	executor.Shutdown()
 	currentConfig = nil
+	activeSnapshotGeneration = ""
+	activeSnapshotRevision = 0
 	isInit.Store(false)
+	publishRunState("")
 	configMu.Unlock()
 
 	handleForceGC()
@@ -332,11 +340,12 @@ func handleCloseConnection(connectionId string) bool {
 func handleGetExternalProviders() []ExternalProvider {
 	providers := externalProviders()
 	eps := make([]ExternalProvider, 0, len(providers))
-	for _, p := range providers {
+	for name, p := range providers {
 		externalProvider, err := toExternalProvider(p)
 		if err != nil {
 			continue
 		}
+		externalProvider.Name = name
 		eps = append(eps, *externalProvider)
 	}
 	slices.SortFunc(eps, func(a, b ExternalProvider) int {
@@ -354,6 +363,7 @@ func handleGetExternalProvider(externalProviderName string) *ExternalProvider {
 	if err != nil {
 		return nil
 	}
+	externalProvider.Name = externalProviderName
 	return externalProvider
 }
 
@@ -533,6 +543,11 @@ func defaultRefreshHealthChecks() {
 var refreshHealthChecks = defaultRefreshHealthChecks
 
 func handleSuspend(suspended bool) bool {
+	defer func() {
+		configMu.Lock()
+		publishRunState("")
+		configMu.Unlock()
+	}()
 	wasSuspended := isSuspended.Swap(suspended)
 	if suspended {
 		tunnel.OnSuspend()

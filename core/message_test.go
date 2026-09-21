@@ -57,6 +57,7 @@ func TestClassOfMessageRoutesEachTier(t *testing.T) {
 	for messageType, want := range map[MessageType]messageClass{
 		LoadedMessage:    stateMessageClass,
 		GeoUpdateMessage: stateMessageClass,
+		RunStateMessage:  stateMessageClass,
 		DelayMessage:     priorityMessageClass,
 		LogMessage:       bulkMessageClass,
 		RequestMessage:   bulkMessageClass,

@@ -46,6 +46,7 @@ class _AndroidContainerState extends ConsumerState<AndroidManager>
       }
     });
     service?.addListener(this);
+    unawaited(ref.read(setupActionProvider.notifier).syncRunState());
     app?.onPackagesChanged = _reloadPackages;
   }
 
@@ -69,6 +70,11 @@ class _AndroidContainerState extends ConsumerState<AndroidManager>
   void onServiceEvent(CoreEvent event) {
     coreEventManager.sendEvent(event);
     super.onServiceEvent(event);
+  }
+
+  @override
+  void onRunState(AndroidRunObservation observation) {
+    ref.read(setupActionProvider.notifier).observeAndroid(observation);
   }
 
   @override

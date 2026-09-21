@@ -57,7 +57,6 @@ class Application extends ConsumerStatefulWidget {
 }
 
 class ApplicationState extends ConsumerState<Application> {
-  Timer? _autoUpdateProfilesTaskTimer;
   bool _preHasVpn = false;
 
   final _pageTransitionsTheme = const PageTransitionsTheme(
@@ -83,7 +82,6 @@ class ApplicationState extends ConsumerState<Application> {
       } else {
         exit(0);
       }
-      _autoUpdateProfilesTask();
       _initLink();
       unawaited(app?.initShortcuts());
     });
@@ -115,16 +113,6 @@ class ApplicationState extends ConsumerState<Application> {
       unawaited(
         ref.read(profilesActionProvider.notifier).addProfileFormURL(url),
       );
-    });
-  }
-
-  void _autoUpdateProfilesTask() {
-    _autoUpdateProfilesTaskTimer = Timer(const Duration(minutes: 20), () async {
-      await ref.read(profilesActionProvider.notifier).autoUpdateProfiles();
-      if (!mounted) {
-        return;
-      }
-      _autoUpdateProfilesTask();
     });
   }
 
@@ -199,7 +187,6 @@ class ApplicationState extends ConsumerState<Application> {
   @override
   void dispose() {
     linkManager.destroy();
-    _autoUpdateProfilesTaskTimer?.cancel();
     super.dispose();
   }
 }

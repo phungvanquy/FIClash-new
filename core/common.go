@@ -32,6 +32,7 @@ import (
 	"github.com/metacubex/mihomo/listener"
 	authStore "github.com/metacubex/mihomo/listener/auth"
 	LC "github.com/metacubex/mihomo/listener/config"
+	"github.com/metacubex/mihomo/listener/tproxy"
 	"github.com/metacubex/mihomo/log"
 	rp "github.com/metacubex/mihomo/rules/provider"
 	"github.com/metacubex/mihomo/tunnel"
@@ -135,12 +136,17 @@ func sideUpdateExternalProvider(p cp.Provider, data []byte) error {
 	}
 }
 
-func updateListeners(cfg *config.Config) {
+func updateListeners(cfg *config.Config) error {
 	if cfg == nil || !isRunning.Load() {
-		return
+		publishRunState("")
+		return nil
 	}
 	general := cfg.General
-	listener.PatchInboundListeners(cfg.Listeners, tunnel.Tunnel, true)
+	var failures []error
+	if err := listener.PatchInboundListeners(cfg.Listeners, tunnel.Tunnel, true); err != nil {
+		failures = append(failures, err)
+		_ = listener.PatchInboundListeners(nil, tunnel.Tunnel, true)
+	}
 
 	listener.SetAllowLan(general.AllowLan)
 	inbound.SetSkipAuthPrefixes(general.SkipAuthPrefixes)
@@ -148,17 +154,35 @@ func updateListeners(cfg *config.Config) {
 	inbound.SetDisAllowedIPs(general.LanDisAllowedIPs)
 
 	listener.SetBindAddress(general.BindAddress)
-	listener.ReCreateHTTP(general.Port, tunnel.Tunnel)
-	listener.ReCreateSocks(general.SocksPort, tunnel.Tunnel)
-	listener.ReCreateRedir(general.RedirPort, tunnel.Tunnel)
-	listener.ReCreateTProxy(general.TProxyPort, tunnel.Tunnel)
-	listener.ReCreateMixed(general.MixedPort, tunnel.Tunnel)
-	listener.ReCreateShadowSocks(general.ShadowSocksConfig, tunnel.Tunnel)
-	listener.ReCreateVmess(general.VmessConfig, tunnel.Tunnel)
-	listener.ReCreateTuic(general.TuicServer, tunnel.Tunnel)
+	failures = append(failures,
+		listener.ReCreateHTTP(general.Port, tunnel.Tunnel),
+		listener.ReCreateSocks(general.SocksPort, tunnel.Tunnel),
+		listener.ReCreateRedir(general.RedirPort, tunnel.Tunnel),
+		listener.ReCreateTProxy(general.TProxyPort, tunnel.Tunnel),
+		listener.ReCreateMixed(general.MixedPort, tunnel.Tunnel),
+		listener.ReCreateShadowSocks(general.ShadowSocksConfig, tunnel.Tunnel),
+		listener.ReCreateVmess(general.VmessConfig, tunnel.Tunnel),
+		listener.ReCreateTuic(general.TuicServer, tunnel.Tunnel),
+	)
 	if !features.Android {
-		listener.ReCreateTun(general.Tun, tunnel.Tunnel)
+		failures = append(failures, listener.ReCreateTun(general.Tun, tunnel.Tunnel))
 	}
+	failures = append(failures, listener.PatchTunnel(cfg.Tunnels, tunnel.Tunnel), executor.ApplyIPTables(cfg))
+	err := errors.Join(failures...)
+	if err != nil {
+		publishRunState("listener_failed")
+	} else {
+		publishRunState("")
+	}
+	return err
+}
+
+func stopListeners() {
+	listener.StopListener()
+	_ = listener.PatchInboundListeners(nil, tunnel.Tunnel, true)
+	_ = listener.PatchTunnel(nil, tunnel.Tunnel)
+	tproxy.CleanupTProxyIPTables()
+	publishRunState("")
 }
 
 func patchSelectGroup(mapping map[string]string) {
@@ -270,6 +294,7 @@ func updateConfig(params *UpdateParams) error {
 	if currentConfig == nil {
 		return errConfigNotApplied
 	}
+	invalidatePreparations(false)
 
 	general := currentConfig.General
 	if params.MixedPort != nil {
@@ -314,9 +339,9 @@ func updateConfig(params *UpdateParams) error {
 		applyAuthentication(currentConfig, *params.Authentication)
 	}
 
-	updateListeners(currentConfig)
+	listenerError := updateListeners(currentConfig)
 	syncGeoUpdater(params.GeoAutoUpdate, params.GeoUpdateInterval)
-	return nil
+	return listenerError
 }
 
 func applyAuthentication(cfg *config.Config, authentication []string) {
@@ -377,6 +402,21 @@ func applyConfig(params *SetupParams) error {
 	runtime.GC()
 	configMu.Lock()
 	defer configMu.Unlock()
+	resetPreparations()
+	if params.Generation != "" {
+		prepared, err := prepareConfigLocked(&PrepareConfigParams{Generation: params.Generation, Revision: params.Revision})
+		if err != nil {
+			return err
+		}
+		_, err = activateConfigLocked(&ActivateConfigParams{
+			Prepared: PreparedConfigRef{Handle: prepared.Handle, Revision: prepared.Revision},
+			Setup:    *params,
+		})
+		if err != nil {
+			_, _ = handleDiscardConfig(&PreparedConfigRef{Handle: prepared.Handle, Revision: prepared.Revision})
+		}
+		return err
+	}
 
 	setTestURL(params.TestURL)
 	cfg, err := loadConfig(filepath.Join(constant.Path.HomeDir(), "config.yaml"))
@@ -398,11 +438,13 @@ func applyConfig(params *SetupParams) error {
 	}
 
 	currentConfig = cfg
+	activeSnapshotGeneration = ""
+	activeSnapshotRevision = 0
 	hub.ApplyConfig(cfg)
 	patchSelectGroup(params.SelectedMap)
-	updateListeners(cfg)
+	listenerError := updateListeners(cfg)
 	reconcileGeoUpdater()
-	return err
+	return errors.Join(err, listenerError)
 }
 
 func UnmarshalJson(data []byte, v any) error {

@@ -6,10 +6,13 @@ import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/database/database.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
+import 'package:fl_clash/providers/action.dart';
+import 'package:fl_clash/providers/state.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'generated/database.g.dart';
+part 'profile_draft.dart';
 
 Future<void> withRollback<T>({
   required T snapshot,
@@ -83,19 +86,61 @@ Stream<List<Rule>> addedRulesStream(Ref ref, int profileId) {
 
 @riverpod
 Stream<int> customRulesCount(Ref ref, int profileId) {
+  final draft = ref.watch(profileDraftProvider(profileId));
+  if (draft != null) {
+    return Stream.value(draft.ownedData.rulesFor(RuleScene.custom).length);
+  }
   return database.rulesDao.profileCustomRulesCount(profileId).watchSingle();
 }
 
 @riverpod
 Stream<int> proxyGroupsCount(Ref ref, int profileId) {
+  final draft = ref.watch(profileDraftProvider(profileId));
+  if (draft != null) return Stream.value(draft.ownedData.groups.length);
   return database.proxyGroupsDao.count(profileId).watchSingle();
 }
 
 @Riverpod(keepAlive: true)
 class Profiles extends _$Profiles {
+  Profile? _committed;
+  bool _singleProfileOnly = false;
+  int? _visibleProfileId;
+
   @override
   List<Profile> build() {
-    return ref.watch(profilesStreamProvider).value ?? [];
+    final profiles = ref.watch(profilesStreamProvider).value ?? [];
+    final committed = _committed;
+    if (committed != null &&
+        !profiles.any(
+          (profile) =>
+              profile.snapshot.revision > committed.snapshot.revision ||
+              profile == committed,
+        )) {
+      return [committed];
+    }
+    return _singleProfileOnly
+        ? profiles.where((profile) => profile.id == _visibleProfileId).toList()
+        : profiles;
+  }
+
+  void showSingleProfile(Profile? profile) {
+    _singleProfileOnly = true;
+    _visibleProfileId = profile?.id;
+    _committed = profile?.snapshot.generation == null ? null : profile;
+    state = profile == null ? [] : [profile];
+  }
+
+  void publishCommitted(Profile profile) {
+    if (profile.snapshot.generation == null || profile.snapshot.revision <= 0) {
+      throw ArgumentError('Cannot publish an uncommitted profile snapshot');
+    }
+    if ((_committed?.snapshot.revision ?? 0) > profile.snapshot.revision) {
+      return;
+    }
+    _committed = profile;
+    _singleProfileOnly = true;
+    _visibleProfileId = profile.id;
+    state = [profile];
   }
 
   void _optimistic(List<Profile> next, FutureOr<void> Function() action) {
@@ -118,6 +163,17 @@ class Profiles extends _$Profiles {
   }
 
   void put(Profile profile) {
+    if (_singleProfileOnly ||
+        profile.snapshot.generation != null ||
+        state.any((item) => item.snapshot.generation != null)) {
+      unawaited(
+        ref
+            .read(vpnActionProvider.notifier)
+            .updateMetadata(profile)
+            .catchError(_reportOptimisticFailure),
+      );
+      return;
+    }
     final newProfile = state.optimizeLabel(profile);
     _optimistic(
       state.copyAndPut(newProfile, (item) => item.id == newProfile.id),
@@ -126,6 +182,14 @@ class Profiles extends _$Profiles {
   }
 
   Future<void> del(int id) {
+    if (_singleProfileOnly ||
+        state.any(
+          (item) => item.id == id && item.snapshot.generation != null,
+        )) {
+      return Future.error(
+        StateError('Committed snapshots cannot be deleted directly'),
+      );
+    }
     return _optimisticAsync(
       state.where((e) => e.id != id).toList(),
       () => database.profiles.remove((t) => t.id.equals(id)),
@@ -136,12 +200,20 @@ class Profiles extends _$Profiles {
     final index = state.indexWhere((element) => element.id == profileId);
     if (index == -1) return;
     final newProfile = builder(state[index]);
+    if (_singleProfileOnly || state[index].snapshot.generation != null) {
+      put(newProfile);
+      return;
+    }
     final next = List<Profile>.from(state);
     next[index] = newProfile;
     _optimistic(next, () => database.profiles.put(newProfile.toCompanion()));
   }
 
   void setAndReorder(List<Profile> profiles) {
+    if (_singleProfileOnly ||
+        state.any((item) => item.snapshot.generation != null)) {
+      throw StateError('Snapshot replacement requires the import coordinator');
+    }
     _optimistic(
       List<Profile>.from(profiles),
       () => database.profilesDao.setAll(profiles),
@@ -149,6 +221,10 @@ class Profiles extends _$Profiles {
   }
 
   void reorder(List<Profile> profiles) {
+    if (_singleProfileOnly ||
+        state.any((item) => item.snapshot.generation != null)) {
+      return;
+    }
     final next = List<Profile>.from(profiles);
     final needUpdate = <ProfilesCompanion>[];
     next.forEachIndexed((index, item) {
@@ -227,6 +303,9 @@ Future<Script?> script(Ref ref, int? scriptId) async {
 }
 
 mixin RuleListMixin on OptimisticMixin<List<Rule>> {
+  ProfileDraft? get draft => null;
+
+  RuleScene? get draftScene => null;
   Future<void> persistRule(Rule rule);
 
   Future<void> persistOrder({required int ruleId, required String order});
@@ -243,6 +322,10 @@ mixin RuleListMixin on OptimisticMixin<List<Rule>> {
   }
 
   void put(Rule rule) {
+    if (draft case final editor?) {
+      editor.putRule(draftScene!, rule);
+      return;
+    }
     final newRule = rule.autoOrder(rule, null, value.firstOrNull?.order);
     optimistic(
       value.copyAndPut(newRule, (rule) => rule.id == newRule.id),
@@ -251,6 +334,10 @@ mixin RuleListMixin on OptimisticMixin<List<Rule>> {
   }
 
   void delAll(Iterable<int> ruleIds) {
+    if (draft case final editor?) {
+      editor.deleteRules(draftScene!, ruleIds);
+      return;
+    }
     optimistic(
       value.where((item) => !ruleIds.contains(item.id)).toList(),
       () => database.rulesDao.delRules(ruleIds),
@@ -258,6 +345,10 @@ mixin RuleListMixin on OptimisticMixin<List<Rule>> {
   }
 
   void order(int oldIndex, int newIndex) {
+    if (draft case final editor?) {
+      editor.orderRules(draftScene!, oldIndex, newIndex);
+      return;
+    }
     final item = value[oldIndex];
     final nextItems = value.copyAndReorder(oldIndex, newIndex);
     final newOrder = indexing.generateKeyBetween(
@@ -289,8 +380,18 @@ class ProfileAddedRules extends _$ProfileAddedRules
     with AsyncNotifierMixin, OptimisticMixin, RuleListMixin {
   @override
   Stream<List<Rule>> build(int profileId) {
+    final draft = ref.watch(profileDraftProvider(profileId));
+    if (draft != null) {
+      return Stream.value(draft.ownedData.rulesFor(RuleScene.added));
+    }
     return database.rulesDao.queryProfileAddedRules(profileId).watch();
   }
+
+  @override
+  ProfileDraft? get draft => _profileEditor(ref, profileId);
+
+  @override
+  RuleScene get draftScene => RuleScene.added;
 
   @override
   Future<void> persistRule(Rule rule) =>
@@ -310,8 +411,18 @@ class ProfileCustomRules extends _$ProfileCustomRules
     with AsyncNotifierMixin, OptimisticMixin, RuleListMixin {
   @override
   Stream<List<Rule>> build(int profileId) {
+    final draft = ref.watch(profileDraftProvider(profileId));
+    if (draft != null) {
+      return Stream.value(draft.ownedData.rulesFor(RuleScene.custom));
+    }
     return database.rulesDao.queryProfileCustomRules(profileId).watch();
   }
+
+  @override
+  ProfileDraft? get draft => _profileEditor(ref, profileId);
+
+  @override
+  RuleScene get draftScene => RuleScene.custom;
 
   @override
   Future<void> persistRule(Rule rule) =>
@@ -331,6 +442,8 @@ class ProxyGroups extends _$ProxyGroups
     with AsyncNotifierMixin, OptimisticMixin {
   @override
   Stream<List<ProxyGroup>> build(int profileId) {
+    final draft = ref.watch(profileDraftProvider(profileId));
+    if (draft != null) return Stream.value(draft.ownedData.groups);
     return database.proxyGroupsDao.query(profileId).watch();
   }
 
@@ -343,6 +456,10 @@ class ProxyGroups extends _$ProxyGroups
   }
 
   void del(String name) {
+    if (_profileEditor(ref, profileId) case final editor?) {
+      editor.deleteGroup(name);
+      return;
+    }
     optimistic(
       value.where((item) => item.name != name).toList(),
       () => database.proxyGroups.remove(
@@ -352,6 +469,9 @@ class ProxyGroups extends _$ProxyGroups
   }
 
   bool put(ProxyGroup proxyGroup) {
+    if (_profileEditor(ref, profileId) case final editor?) {
+      return editor.putGroup(proxyGroup);
+    }
     final previous = value;
     final index = previous.indexWhere((item) => item.id == proxyGroup.id);
     if (index == -1 &&
@@ -399,6 +519,10 @@ class ProxyGroups extends _$ProxyGroups
   }
 
   void order(int oldIndex, int newIndex) {
+    if (_profileEditor(ref, profileId) case final editor?) {
+      editor.orderGroups(oldIndex, newIndex);
+      return;
+    }
     final item = value[oldIndex];
     final nextItems = value.copyAndReorder(oldIndex, newIndex);
     final newOrder = indexing.generateKeyBetween(
@@ -427,6 +551,15 @@ class ProfileDisabledRuleIds extends _$ProfileDisabledRuleIds
 
   @override
   Stream<List<int>> build(int profileId) {
+    final draft = ref.watch(profileDraftProvider(profileId));
+    if (draft != null) {
+      return Stream.value(
+        draft.ownedData.links
+            .where((link) => link.scene == RuleScene.disabled)
+            .map((link) => link.ruleId)
+            .toList(),
+      );
+    }
     return database.rulesDao
         .queryProfileDisabledRules(profileId)
         .map((item) => item.id)
@@ -442,6 +575,10 @@ class ProfileDisabledRuleIds extends _$ProfileDisabledRuleIds
   }
 
   void del(int ruleId) {
+    if (_profileEditor(ref, profileId) case final editor?) {
+      editor.setDisabled(ruleId, false);
+      return;
+    }
     optimistic(
       value.where((item) => item != ruleId).toList(),
       () => database.rulesDao.delDisabledLink(profileId, ruleId),
@@ -449,6 +586,10 @@ class ProfileDisabledRuleIds extends _$ProfileDisabledRuleIds
   }
 
   void put(int ruleId) {
+    if (_profileEditor(ref, profileId) case final editor?) {
+      editor.setDisabled(ruleId, true);
+      return;
+    }
     final next = List<int>.from(value);
     if (!next.contains(ruleId)) {
       next.insert(0, ruleId);

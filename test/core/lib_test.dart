@@ -218,6 +218,14 @@ void main() {
   });
 
   group('listeners', () {
+    test('failed listener binding does not request VPN permission', () async {
+      await lib.start();
+      service.onInvokeMethod = (_) => const CoreMethodResponse(result: false);
+      service.calls.clear();
+      expect(await lib.startListener(), isFalse);
+      expect(service.calls, ['invokeMethod:startListener']);
+    });
+
     test('a listener is started only when both sides agree', () async {
       await lib.start();
       service.onInvokeMethod = (_) =>

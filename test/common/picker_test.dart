@@ -31,7 +31,45 @@ base class _LocalPlatformFile extends PlatformFile {
       _file.openRead().map(Uint8List.fromList);
 }
 
+class _ExportPicker extends Picker {
+  Uri? destination;
+  Error? failure;
+  Uint8List? exported;
+
+  @override
+  Future<Uri?> saveFile(String fileName, Uint8List bytes) async {
+    exported = bytes;
+    if (failure != null) throw failure!;
+    return destination;
+  }
+}
+
 void main() {
+  for (final result in ['success', 'cancel', 'failure']) {
+    test(
+      'persistent configuration and archive survive export $result',
+      () async {
+        final directory = await Directory.systemTemp.createTemp('vpn_export_');
+        addTearDown(() => directory.delete(recursive: true));
+        final source = File('${directory.path}/sealed-source');
+        await source.writeAsBytes([1, 2, 3, 4], flush: true);
+        final picker = _ExportPicker()
+          ..destination = result == 'success'
+              ? Uri.file('${directory.path}/exported')
+              : null
+          ..failure = result == 'failure' ? StateError('export failed') : null;
+        final operation = picker.saveFileCopy('vpn-export.zip', source.path);
+        if (result == 'failure') {
+          await expectLater(operation, throwsStateError);
+        } else {
+          expect(await operation, picker.destination);
+        }
+        expect(picker.exported, [1, 2, 3, 4]);
+        expect(await source.readAsBytes(), [1, 2, 3, 4]);
+      },
+    );
+  }
+
   group('PlatformFileExt.readBytes', () {
     test('loads bytes from the picked file path', () async {
       final directory = await Directory.systemTemp.createTemp(

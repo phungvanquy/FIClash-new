@@ -8,6 +8,9 @@ object ServiceState {
     private val machine = ServiceStateMachine(AndroidServiceStateHost)
 
     val runState = machine.runState
+    val observation = machine.observation
+
+    fun snapshot(): RunObservation = machine.snapshot()
 
     fun attachFlutterEngine(engine: FlutterEngine) =
         AndroidServiceStateHost.attachFlutterEngine(engine)

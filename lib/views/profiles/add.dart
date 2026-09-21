@@ -4,6 +4,7 @@ import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/pages/scan.dart';
 import 'package:fl_clash/providers/action.dart';
 import 'package:fl_clash/widgets/widgets.dart';
+import 'package:fl_clash/widgets/vpn_import.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -31,29 +32,19 @@ class AddProfileView extends ConsumerWidget {
   }
 
   Future<void> _toAdd(WidgetRef ref) async {
-    final profilesAction = ref.read(profilesActionProvider.notifier);
     final appLocalizations = context.appLocalizations;
-    final url = await dialogs.showCommonDialog<String>(
-      child: InputDialog(
-        autovalidateMode: AutovalidateMode.onUnfocus,
+    await dialogs.showCommonDialog<void>(
+      child: CommonDialog(
         title: appLocalizations.importFromURL,
-        labelText: appLocalizations.url,
-        value: '',
-        inputFormatters: TextInputLimits.limit(TextInputLimits.url),
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return appLocalizations.emptyTip('').trim();
-          }
-          if (!value.isUrl) {
-            return appLocalizations.urlTip('').trim();
-          }
-          return null;
-        },
+        child: Builder(
+          builder: (context) => SingleChildScrollView(
+            child: VpnImportPanel(
+              onImported: () => Navigator.of(context).pop(),
+            ),
+          ),
+        ),
       ),
     );
-    if (url != null) {
-      unawaited(profilesAction.addProfileFormURL(url));
-    }
   }
 
   @override

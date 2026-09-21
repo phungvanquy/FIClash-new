@@ -1,0 +1,19 @@
+mode: rule
+proxies:
+  - {name: Shared, type: socks5, server: 127.0.0.1, port: 1080}
+  - {name: Local, type: direct}
+proxy-providers:
+  Zulu:
+    type: inline
+    payload:
+      - {name: Shared, type: socks5, server: 127.0.0.1, port: 1081}
+      - {name: 'name[1]`.*', type: socks5, server: 127.0.0.1, port: 1082}
+  Alpha:
+    type: inline
+    payload:
+      - {name: Shared, type: socks5, server: 127.0.0.1, port: 1083}
+proxy-groups:
+  - {name: Nested, type: select, proxies: [Shared, Local], use: [Zulu]}
+  - {name: Outer, type: select, proxies: [Nested, Shared], use: [Zulu, Alpha]}
+rules:
+  - MATCH,Outer

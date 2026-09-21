@@ -843,12 +843,85 @@ class MessageLookup extends MessageLookupByLibrary {
     "value": MessageLookupByLibrary.simpleMessage("值"),
     "vibrantScheme": MessageLookupByLibrary.simpleMessage("活力"),
     "view": MessageLookupByLibrary.simpleMessage("查看"),
+    "vpnApplySettings": MessageLookupByLibrary.simpleMessage("应用已保存的配置"),
+    "vpnApplySettingsDescription": MessageLookupByLibrary.simpleMessage(
+      "使用已保存的 DNS、规则和脚本重新生成配置。仅在验证成功后替换当前配置。",
+    ),
+    "vpnAutoDescription": MessageLookupByLibrary.simpleMessage("自动选择响应快的服务器"),
+    "vpnCameraUnavailable": MessageLookupByLibrary.simpleMessage(
+      "相机不可用。请在系统设置中允许访问相机后重试，或选择二维码图片。",
+    ),
     "vpnConfigChangeDetected": MessageLookupByLibrary.simpleMessage(
       "检测到VPN相关配置改动",
+    ),
+    "vpnConfiguration": MessageLookupByLibrary.simpleMessage("VPN 配置"),
+    "vpnConnect": MessageLookupByLibrary.simpleMessage("连接"),
+    "vpnConnectionFailed": MessageLookupByLibrary.simpleMessage("连接需要处理"),
+    "vpnCustomRouting": MessageLookupByLibrary.simpleMessage("自定义路由"),
+    "vpnCustomRoutingDescription": MessageLookupByLibrary.simpleMessage(
+      "使用配置中的路由规则。在主页选择服务器将恢复简单路由。",
+    ),
+    "vpnDisconnect": MessageLookupByLibrary.simpleMessage("断开连接"),
+    "vpnDisconnecting": MessageLookupByLibrary.simpleMessage("正在断开…"),
+    "vpnDraftDescription": MessageLookupByLibrary.simpleMessage(
+      "更改在保存前仅为草稿。返回将放弃未保存的编辑，当前 VPN 将继续运行。",
+    ),
+    "vpnDraftSaveFailed": MessageLookupByLibrary.simpleMessage(
+      "无法保存此草稿，当前配置未更改。请重试；如果配置已在其他位置更改，请重新打开编辑器。",
     ),
     "vpnEnableDesc": MessageLookupByLibrary.simpleMessage(
       "通过VpnService自动路由系统所有流量",
     ),
+    "vpnFallbackDescription": MessageLookupByLibrary.simpleMessage(
+      "按顺序使用第一个可用服务器",
+    ),
+    "vpnHome": MessageLookupByLibrary.simpleMessage("主页"),
+    "vpnImportDescription": MessageLookupByLibrary.simpleMessage(
+      "导入 VPN 服务商提供的订阅链接。",
+    ),
+    "vpnImportFailed": MessageLookupByLibrary.simpleMessage(
+      "无法导入配置。已保存的配置未被替换。请检查链接和网络连接后重试。",
+    ),
+    "vpnImportTitle": MessageLookupByLibrary.simpleMessage("设置 VPN"),
+    "vpnImporting": MessageLookupByLibrary.simpleMessage("正在导入配置…"),
+    "vpnInvalidUrl": MessageLookupByLibrary.simpleMessage(
+      "请输入有效的 HTTP 或 HTTPS 订阅链接。",
+    ),
+    "vpnLocalProxy": MessageLookupByLibrary.simpleMessage("仅本地代理 · VPN 未启用"),
+    "vpnPasteClipboard": MessageLookupByLibrary.simpleMessage("从剪贴板粘贴"),
+    "vpnPermissionDenied": MessageLookupByLibrary.simpleMessage(
+      "未获得权限。请重新连接或检查系统设置。",
+    ),
+    "vpnProxyFailure": MessageLookupByLibrary.simpleMessage(
+      "无法更新系统代理。请检查网络设置。",
+    ),
+    "vpnProxyOnly": MessageLookupByLibrary.simpleMessage("已连接 · 仅系统代理"),
+    "vpnQrImage": MessageLookupByLibrary.simpleMessage("导入二维码图片"),
+    "vpnQrImageTooLarge": MessageLookupByLibrary.simpleMessage(
+      "请选择较小的二维码图片（不超过 16 MB 和 1600 万像素）。",
+    ),
+    "vpnRecoveryExport": MessageLookupByLibrary.simpleMessage("导出迁移备份"),
+    "vpnRecoveryExportDescription": MessageLookupByLibrary.simpleMessage(
+      "保留升级前保存的配置和设置副本。",
+    ),
+    "vpnRecoveryRequired": MessageLookupByLibrary.simpleMessage(
+      "已保存的配置未受影响，但无法恢复 VPN。请在设置中重试恢复。",
+    ),
+    "vpnReplace": MessageLookupByLibrary.simpleMessage("替换配置"),
+    "vpnRetry": MessageLookupByLibrary.simpleMessage("重试"),
+    "vpnScanQr": MessageLookupByLibrary.simpleMessage("扫描二维码"),
+    "vpnSelectFailed": MessageLookupByLibrary.simpleMessage(
+      "无法切换服务器。已保留之前的选择。",
+    ),
+    "vpnServerUnavailableAuto": MessageLookupByLibrary.simpleMessage(
+      "所选服务器已不可用，已切换为自动选择。",
+    ),
+    "vpnServers": MessageLookupByLibrary.simpleMessage("服务器"),
+    "vpnSettingsActionFailed": MessageLookupByLibrary.simpleMessage(
+      "无法完成操作，请重试。",
+    ),
+    "vpnSubscriptionUrl": MessageLookupByLibrary.simpleMessage("订阅链接"),
+    "vpnSuspended": MessageLookupByLibrary.simpleMessage("已暂停"),
     "vpnTip": MessageLookupByLibrary.simpleMessage("重启VPN后改变生效"),
     "webDAVConfiguration": MessageLookupByLibrary.simpleMessage("WebDAV配置"),
     "whitelistMode": MessageLookupByLibrary.simpleMessage("白名单模式"),

@@ -1,4 +1,6 @@
-import 'package:fl_clash/enum/enum.dart';
+import 'dart:async';
+
+import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/manager/hotkey_manager.dart';
 import 'package:fl_clash/models/models.dart';
@@ -11,6 +13,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../helpers/test_profiles.dart';
+import '../helpers/test_app.dart';
 
 void main() {
   testWidgets('desktop escape runs the back flow and exits search', (
@@ -85,31 +90,7 @@ void main() {
     var closeCount = 0;
     final container = ProviderContainer(
       overrides: [
-        navigationItemsStateProvider.overrideWithValue(
-          NavigationItemsState(
-            value: [
-              NavigationItem(
-                icon: const Icon(Icons.space_dashboard),
-                label: PageLabel.dashboard,
-                builder: (_) => CommonScaffold(
-                  key: const GlobalObjectKey(PageLabel.dashboard),
-                  title: 'Search page',
-                  searchState: AppBarSearchState(
-                    onSearch: (value) {
-                      query = value;
-                    },
-                  ),
-                  body: const SizedBox(),
-                ),
-              ),
-              NavigationItem(
-                icon: const Icon(Icons.construction),
-                label: PageLabel.tools,
-                builder: (_) => const SizedBox.shrink(),
-              ),
-            ],
-          ),
-        ),
+        profilesProvider.overrideWith(TestProfiles.new),
         systemActionProvider.overrideWith(
           () => _TestSystemAction(() => closeCount++),
         ),
@@ -122,18 +103,25 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp(
-          localizationsDelegates: const [
-            AppLocalizations.delegate,
-            ...GlobalMaterialLocalizations.delegates,
-          ],
-          supportedLocales: AppLocalizations.delegate.supportedLocales,
-          home: const HomePage(),
-        ),
+        child: const TestApp(child: HomePage()),
       ),
     );
     await tester.pump();
-    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(find.byType(NavigationRail), findsNothing);
+    await tester.tap(find.byKey(const Key('vpn-settings')));
+    await tester.pumpAndSettle();
+    final settingsContext = tester.element(find.text('Settings').first);
+    unawaited(
+      BaseNavigator.push(
+        settingsContext,
+        CommonScaffold(
+          title: 'Search page',
+          searchState: AppBarSearchState(onSearch: (value) => query = value),
+          body: const SizedBox(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byIcon(Icons.search));
     await tester.pumpAndSettle();
@@ -147,6 +135,9 @@ void main() {
     expect(closeCount, 0, reason: 'back must not fall through to app close');
     expect(find.byType(TextField), findsNothing);
     expect(query, isEmpty);
+    await tester.pumpWidget(const SizedBox.shrink());
+    container.dispose();
+    await tester.pump();
   });
 }
 

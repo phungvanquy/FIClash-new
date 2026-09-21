@@ -36,9 +36,10 @@ class Preferences {
     await preferences?.setInt('version', version);
   }
 
-  Future<void> saveShareState(SharedState shareState) async {
+  Future<bool> saveShareState(SharedState shareState) async {
     final preferences = await sharedPreferencesCompleter.future;
-    await preferences?.setString('sharedState', json.encode(shareState));
+    return preferences?.setString('sharedState', json.encode(shareState)) ??
+        false;
   }
 
   Future<Map<String, Object?>?> getConfigMap() async {

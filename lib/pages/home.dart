@@ -1,47 +1,104 @@
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
-import 'package:fl_clash/manager/app_manager.dart';
-import 'package:fl_clash/models/common.dart';
+import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
+import 'package:fl_clash/views/tools.dart';
+import 'package:fl_clash/widgets/vpn_import.dart';
 import 'package:fl_clash/widgets/widgets.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 
-typedef OnSelected = void Function(int index);
-
-class HomePage extends ConsumerWidget {
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final hasViewSize = ref.watch(
-      viewSizeProvider.select((size) => !size.isEmpty),
-    );
-    if (!hasViewSize) {
-      return const SizedBox.shrink();
+  ConsumerState<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends ConsumerState<HomePage> {
+  bool _settingsOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    ref.listenManual(currentPageLabelProvider, (_, next) {
+      if (next == PageLabel.tools && !_settingsOpen) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _openSettings();
+        });
+      }
+      if (next == PageLabel.dashboard && _settingsOpen) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _settingsOpen) {
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          }
+        });
+      }
+    });
+  }
+
+  Future<void> _openSettings() async {
+    if (_settingsOpen) return;
+    _settingsOpen = true;
+    ref.read(currentPageLabelProvider.notifier).toPage(PageLabel.tools);
+    try {
+      await Navigator.of(
+        context,
+      ).push<void>(MaterialPageRoute(builder: (_) => const ToolsView()));
+    } finally {
+      _settingsOpen = false;
+      if (mounted) {
+        ref.read(currentPageLabelProvider.notifier).toPage(PageLabel.dashboard);
+      }
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = ref.watch(currentProfileProvider);
     return HomeBackScopeContainer(
-      child: AppSidebarContainer(
-        child: _HomeShell(
-          child: Consumer(
-            builder: (_, ref, _) {
-              final navigationItems = ref
-                  .watch(currentNavigationItemsStateProvider)
-                  .value;
-              final isMobile = ref.watch(isMobileViewProvider);
-              return _HomePageView(
-                navigationItems: navigationItems,
-                pageBuilder: (_, index) {
-                  final navigationItem = navigationItems[index];
-                  return _NavigationPage(
-                    key: ValueKey(navigationItem.label),
-                    item: navigationItem,
-                    isMobile: isMobile,
-                    view: navigationItem.builder(context),
-                  );
-                },
-              );
-            },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text(appName),
+          automaticallyImplyLeading: false,
+          actions: [
+            IconButton(
+              key: const Key('vpn-settings'),
+              tooltip: context.appLocalizations.settings,
+              onPressed: _openSettings,
+              icon: const Icon(Icons.settings_outlined),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ),
+        body: SafeArea(
+          top: false,
+          child: profile == null
+              ? const _ImportHome()
+              : _ConfiguredHome(profile: profile),
+        ),
+      ),
+    );
+  }
+}
+
+class _ImportHome extends StatelessWidget {
+  const _ImportHome();
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: (constraints.maxHeight - 48).clamp(0, double.infinity),
+          ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: const VpnImportPanel(),
+            ),
           ),
         ),
       ),
@@ -49,288 +106,315 @@ class HomePage extends ConsumerWidget {
   }
 }
 
-class _HomeShell extends ConsumerWidget {
-  const _HomeShell({required this.child});
+class _ConfiguredHome extends StatelessWidget {
+  const _ConfiguredHome({required this.profile});
 
-  final Widget child;
+  final Profile profile;
 
-  void _handleToPage(PageLabel pageLabel, WidgetRef ref) {
-    ref.read(currentPageLabelProvider.notifier).toPage(pageLabel);
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final control = _ConnectionControl(profile: profile);
+        final servers = VpnServerList(profile: profile);
+        if (constraints.maxWidth >= 760) {
+          return Row(
+            children: [
+              Expanded(child: control),
+              const VerticalDivider(width: 1),
+              Expanded(child: servers),
+            ],
+          );
+        }
+        return Column(
+          children: [
+            Expanded(child: control),
+            const Divider(height: 1),
+            Expanded(child: servers),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ConnectionControl extends ConsumerWidget {
+  const _ConnectionControl({required this.profile});
+
+  final Profile profile;
+
+  Future<void> _toggle(
+    BuildContext context,
+    WidgetRef ref,
+    bool running,
+  ) async {
+    try {
+      await ref.read(setupActionProvider.notifier).setRunning(running);
+    } catch (_) {
+      if (context.mounted) {
+        context.showNotifier(
+          context.appLocalizations.vpnConnectionFailed,
+          level: MessageLevel.error,
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(navigationStateProvider);
-    final isMobile = state.viewMode == ViewMode.mobile;
-    final navigationItems = state.navigationItems;
-    return Material(
-      color: context.colorScheme.surface,
-      child: Column(
-        children: [
-          Flexible(
-            flex: 1,
-            child: FocusTraversalGroup(
-              policy: PageTraversalPolicy(),
-              child: MediaQuery.removePadding(
-                removeTop: false,
-                removeBottom: isMobile,
-                removeLeft: isMobile,
-                removeRight: isMobile,
-                context: context,
-                child: child,
-              ),
-            ),
+    final observed = ref.watch(vpnConnectionProvider);
+    final ready =
+        ref.watch(initProvider) &&
+        profile.snapshot.generation != null &&
+        ref.watch(vpnFailureProvider) != 'recovery_required';
+    final text = context.appLocalizations;
+    final status = switch (observed.phase) {
+      VpnConnectionPhase.disconnected => text.disconnected,
+      VpnConnectionPhase.connecting => text.connecting,
+      VpnConnectionPhase.connected => text.connected,
+      VpnConnectionPhase.disconnecting => text.vpnDisconnecting,
+      VpnConnectionPhase.proxyOnly => text.vpnProxyOnly,
+      VpnConnectionPhase.localProxy => text.vpnLocalProxy,
+      VpnConnectionPhase.suspended => text.vpnSuspended,
+      VpnConnectionPhase.failed => text.vpnConnectionFailed,
+    };
+    final active = observed.canDisconnect;
+    final action = active ? text.vpnDisconnect : text.vpnConnect;
+    final working =
+        observed.phase == VpnConnectionPhase.connecting ||
+        observed.phase == VpnConnectionPhase.disconnecting;
+    final failure = switch (observed.failure) {
+      null => null,
+      'vpn_permission_denied' ||
+      'notification_permission_denied' => text.vpnPermissionDenied,
+      'system_proxy_failed' => text.vpnProxyFailure,
+      'recovery_required' => text.vpnRecoveryRequired,
+      _ => text.vpnConnectionFailed,
+    };
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        key: const Key('vpn-controls-scroll'),
+        padding: const EdgeInsets.all(20),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: (constraints.maxHeight - 40).clamp(0, double.infinity),
           ),
-          AnimatedVisibility.bottomNavigation(
-            visible: isMobile,
-            child: MediaQuery.removePadding(
-              removeTop: true,
-              removeBottom: false,
-              removeLeft: true,
-              removeRight: true,
-              context: context,
-              child: NavigationBarTheme(
-                data: _NavigationBarDefaultsM3(context),
-                child: NavigationBar(
-                  destinations: [
-                    for (final item in navigationItems)
-                      NavigationDestination(
-                        icon: item.icon,
-                        label: item.label.label,
-                      ),
-                  ],
-                  onDestinationSelected: (index) {
-                    _handleToPage(navigationItems[index].label, ref);
-                  },
-                  selectedIndex: state.currentIndex,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (profile.label.isNotEmpty) ...[
+                Text(
+                  profile.label,
+                  textAlign: TextAlign.center,
+                  style: context.textTheme.titleMedium,
+                ),
+                const SizedBox(height: 16),
+              ],
+              Semantics(
+                liveRegion: true,
+                child: Text(
+                  status,
+                  key: const Key('vpn-status'),
+                  textAlign: TextAlign.center,
+                  style: context.textTheme.titleLarge,
                 ),
               ),
-            ),
+              const SizedBox(height: 20),
+              SizedBox.square(
+                dimension: constraints.maxHeight < 400 ? 136 : 184,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (working) const CircularProgressIndicator(),
+                    Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Tooltip(
+                        message: action,
+                        child: FilledButton(
+                          key: const Key('vpn-connect'),
+                          style: FilledButton.styleFrom(shape: AppShape.circle),
+                          onPressed: ready || active
+                              ? () => _toggle(context, ref, !active)
+                              : null,
+                          child: Semantics(
+                            label: action,
+                            child: const Icon(
+                              Icons.power_settings_new,
+                              size: 48,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(action, textAlign: TextAlign.center),
+              if (failure != null) ...[
+                const SizedBox(height: 12),
+                Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    failure,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: context.colorScheme.error),
+                  ),
+                ),
+              ],
+              if (profile.snapshot.routing == VpnRoutingMode.custom) ...[
+                const SizedBox(height: 12),
+                Text(text.vpnCustomRouting, textAlign: TextAlign.center),
+              ],
+              const SizedBox(height: 12),
+              TextButton.icon(
+                onPressed: () => showVpnImportDialog(context),
+                icon: const Icon(Icons.sync_alt),
+                label: Text(text.vpnReplace),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _NavigationPage extends StatelessWidget {
-  const _NavigationPage({
-    super.key,
-    required this.item,
-    required this.isMobile,
-    required this.view,
-  });
+class VpnServerList extends ConsumerStatefulWidget {
+  const VpnServerList({super.key, required this.profile});
 
-  final NavigationItem item;
-  final bool isMobile;
-  final Widget view;
+  final Profile profile;
 
   @override
-  Widget build(BuildContext context) {
-    final scopedView = PageFocusScope(child: view);
-    final keptView = KeepScope(
-      key: ValueKey(item.label),
-      keep: item.keep,
-      child: isMobile
-          ? scopedView
-          : Navigator(
-              key: ValueKey('${item.label.name}_navigator'),
-              pages: [MaterialPage(child: scopedView)],
-              onDidRemovePage: (_) {},
-            ),
-    );
-    return Consumer(
-      builder: (_, ref, child) {
-        final isActive = ref.watch(
-          currentPageLabelProvider.select((label) => label == item.label),
-        );
-        return PageActivityScope(
-          isActive: isActive,
-          child: ExcludeFocus(excluding: !isActive, child: child!),
-        );
-      },
-      child: keptView,
-    );
-  }
+  ConsumerState<VpnServerList> createState() => _VpnServerListState();
 }
 
-class _HomePageView extends ConsumerStatefulWidget {
-  final IndexedWidgetBuilder pageBuilder;
-  final List<NavigationItem> navigationItems;
+class _VpnServerListState extends ConsumerState<VpnServerList> {
+  VpnSelection? _pending;
+  int _operation = 0;
+  String? _error;
 
-  const _HomePageView({
-    required this.pageBuilder,
-    required this.navigationItems,
-  });
-
-  @override
-  ConsumerState createState() => _HomePageViewState();
-}
-
-class _HomePageViewState extends ConsumerState<_HomePageView> {
-  late PageController _pageController;
-
-  @override
-  void initState() {
-    super.initState();
-    _pageController = PageController(initialPage: _pageIndex);
-    ref.listenManual(currentPageLabelProvider, (prev, next) {
-      if (prev != next) {
-        _toPage(next);
+  Future<void> _select(VpnSelection selection) async {
+    final operation = ++_operation;
+    setState(() {
+      _pending = selection;
+      _error = null;
+    });
+    try {
+      final selected = await ref
+          .read(proxiesActionProvider.notifier)
+          .selectVpn(selection);
+      if (!selected && mounted && operation == _operation) {
+        setState(() => _error = context.appLocalizations.vpnSelectFailed);
       }
-    });
-  }
-
-  @override
-  void didUpdateWidget(covariant _HomePageView oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.navigationItems.length != widget.navigationItems.length) {
-      _updatePageController();
+    } catch (_) {
+      if (mounted && operation == _operation) {
+        setState(() => _error = context.appLocalizations.vpnSelectFailed);
+      }
+    } finally {
+      if (mounted && operation == _operation) setState(() => _pending = null);
     }
-  }
-
-  int get _pageIndex {
-    final pageLabel = ref.read(currentPageLabelProvider);
-    return widget.navigationItems.indexWhere((item) => item.label == pageLabel);
-  }
-
-  Future<void> _toPage(
-    PageLabel pageLabel, [
-    bool ignoreAnimateTo = false,
-  ]) async {
-    if (!mounted) {
-      return;
-    }
-    final index = widget.navigationItems.indexWhere(
-      (item) => item.label == pageLabel,
-    );
-    if (index == -1) {
-      return;
-    }
-    final isAnimateToPage = ref.read(appSettingProvider).isAnimateToPage;
-    final isMobile = ref.read(isMobileViewProvider);
-    if (isAnimateToPage && isMobile && !ignoreAnimateTo) {
-      await _pageController.animateToPage(
-        index,
-        duration: kTabScrollDuration,
-        curve: Curves.easeOut,
-      );
-    } else {
-      _pageController.jumpToPage(index);
-    }
-  }
-
-  void _updatePageController() {
-    final pageLabel = ref.read(currentPageLabelProvider);
-    _toPage(pageLabel, true);
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final itemCount = ref.watch(
-      currentNavigationItemsStateProvider.select((state) => state.value.length),
+    final text = context.appLocalizations;
+    final snapshot = widget.profile.snapshot;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+          child: Text(text.vpnServers, style: context.textTheme.titleMedium),
+        ),
+        if (_error != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Semantics(
+              liveRegion: true,
+              child: Text(
+                _error!,
+                style: TextStyle(color: context.colorScheme.error),
+              ),
+            ),
+          ),
+        Expanded(
+          child: ListView.builder(
+            key: const PageStorageKey('vpn-servers'),
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+            itemCount: snapshot.servers.length + 2,
+            itemBuilder: (context, index) {
+              final server = index < 2 ? null : snapshot.servers[index - 2];
+              final selection = switch (index) {
+                0 => const VpnSelection.auto(),
+                1 => const VpnSelection.fallback(),
+                _ => VpnSelection.server(server!.id),
+              };
+              final title = index == 0
+                  ? text.auto
+                  : index == 1
+                  ? text.fallback
+                  : server!.name;
+              final subtitle = index == 0
+                  ? text.vpnAutoDescription
+                  : index == 1
+                  ? text.vpnFallbackDescription
+                  : [server!.type, ?server.provider].join(' · ');
+              final selected =
+                  snapshot.routing == VpnRoutingMode.simple &&
+                  snapshot.selection == selection;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Semantics(
+                  selected: selected,
+                  child: ListTile(
+                    key: ValueKey(selection),
+                    shape: AppShape.xl,
+                    selected: selected,
+                    selectedTileColor: context.colorScheme.secondaryContainer,
+                    title: Text(title),
+                    subtitle: Text(subtitle),
+                    leading: Icon(
+                      index == 0
+                          ? Icons.auto_awesome
+                          : index == 1
+                          ? Icons.swap_calls
+                          : Icons.public,
+                    ),
+                    trailing: _pending == selection
+                        ? const SizedBox.square(
+                            dimension: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(
+                            selected
+                                ? Icons.check_circle
+                                : Icons.circle_outlined,
+                          ),
+                    onTap: _pending == selection
+                        ? null
+                        : () => _select(selection),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
-    return PageView.builder(
-      controller: _pageController,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: itemCount,
-      findChildIndexCallback: (key) {
-        if (key is! ValueKey<PageLabel>) {
-          return null;
-        }
-        final index = widget.navigationItems.indexWhere(
-          (item) => item.label == key.value,
-        );
-        return index == -1 ? null : index;
-      },
-      itemBuilder: (context, index) {
-        return widget.pageBuilder(context, index);
-      },
-    );
-  }
-}
-
-class _NavigationBarDefaultsM3 extends NavigationBarThemeData {
-  _NavigationBarDefaultsM3(this.context)
-    : super(
-        height: 80.0,
-        elevation: 3.0,
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-      );
-
-  final BuildContext context;
-  late final ColorScheme _colors = Theme.of(context).colorScheme;
-  late final TextTheme _textTheme = Theme.of(context).textTheme;
-
-  @override
-  Color? get backgroundColor => _colors.surfaceContainer;
-
-  @override
-  Color? get shadowColor => Colors.transparent;
-
-  @override
-  Color? get surfaceTintColor => Colors.transparent;
-
-  @override
-  WidgetStateProperty<IconThemeData?>? get iconTheme {
-    return WidgetStateProperty.resolveWith((Set<WidgetState> states) {
-      return IconThemeData(
-        size: 24.0,
-        color: states.contains(WidgetState.disabled)
-            ? _colors.onSurfaceVariant.opacity38
-            : states.contains(WidgetState.selected)
-            ? _colors.onSecondaryContainer
-            : _colors.onSurfaceVariant,
-      );
-    });
-  }
-
-  @override
-  Color? get indicatorColor => _colors.secondaryContainer;
-
-  @override
-  ShapeBorder? get indicatorShape => AppShape.full;
-
-  @override
-  WidgetStateProperty<TextStyle?>? get labelTextStyle {
-    return WidgetStateProperty.resolveWith((Set<WidgetState> states) {
-      final TextStyle style = _textTheme.labelMedium!;
-      return style.apply(
-        overflow: TextOverflow.ellipsis,
-        color: states.contains(WidgetState.disabled)
-            ? _colors.onSurfaceVariant.opacity38
-            : states.contains(WidgetState.selected)
-            ? _colors.onSurface
-            : _colors.onSurfaceVariant,
-      );
-    });
   }
 }
 
 class HomeBackScopeContainer extends ConsumerWidget {
-  final Widget child;
-
   const HomeBackScopeContainer({super.key, required this.child});
 
+  final Widget child;
+
   @override
-  Widget build(BuildContext context, ref) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return CommonPopScope(
-      onPop: (context) async {
-        final pageLabel = ref.read(currentPageLabelProvider);
-        final realContext =
-            GlobalObjectKey(pageLabel).currentContext ?? context;
-        final canPop = Navigator.canPop(realContext);
-        if (canPop) {
-          Navigator.of(realContext).pop();
-        } else {
-          await ref.read(systemActionProvider.notifier).handleClose();
-        }
+      onPop: (_) async {
+        await ref.read(systemActionProvider.notifier).handleClose();
         return false;
       },
       child: child,

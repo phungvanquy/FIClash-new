@@ -11,11 +11,15 @@ import 'package:flutter/services.dart';
 
 abstract mixin class ServiceListener {
   void onServiceEvent(CoreEvent event) {}
+
+  void onRunState(AndroidRunObservation state) {}
 }
 
 class Service {
   static Service? _instance;
   late MethodChannel methodChannel;
+  AndroidRunObservation? _runState;
+  final Set<String> _retiredSessions = {};
 
   final ObserverList<ServiceListener> _listeners =
       ObserverList<ServiceListener>();
@@ -29,6 +33,14 @@ class Service {
     methodChannel = const MethodChannel('$packageName/service');
     methodChannel.setMethodCallHandler((call) async {
       switch (call.method) {
+        case 'runState':
+          final state = AndroidRunObservation.fromJson(
+            Map<String, Object?>.from(
+              jsonDecode(call.arguments as String) as Map,
+            ),
+          );
+          _publishRunState(state);
+          break;
         case 'event':
           final data = call.arguments as String? ?? '';
           final methodCall = CoreMethodCall.fromJson(
@@ -96,6 +108,46 @@ class Service {
       return null;
     }
     return DateTime.fromMillisecondsSinceEpoch(ms);
+  }
+
+  Future<AndroidRunObservation?> getRunState() async {
+    final data = await methodChannel.invokeMethod<String>('getRunState');
+    if (data == null) return null;
+    _publishRunState(
+      AndroidRunObservation.fromJson(
+        Map<String, Object?>.from(jsonDecode(data) as Map),
+      ),
+    );
+    return _runState;
+  }
+
+  void _publishRunState(AndroidRunObservation state) {
+    final previous = _runState;
+    if (state.session.isEmpty ||
+        state.revision < 0 ||
+        _retiredSessions.contains(state.session)) {
+      return;
+    }
+    if (previous != null) {
+      if (state.session == previous.session &&
+          state.revision <= previous.revision) {
+        return;
+      }
+      if (state.session != previous.session) {
+        _retiredSessions.add(previous.session);
+      }
+    }
+    _runState = state;
+    for (final listener in List.of(_listeners)) {
+      try {
+        listener.onRunState(state);
+      } catch (error) {
+        commonPrint.log(
+          'Unable to dispatch Android run state: ${error.runtimeType}',
+          logLevel: LogLevel.error,
+        );
+      }
+    }
   }
 
   bool get hasListeners {

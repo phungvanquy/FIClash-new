@@ -34,6 +34,10 @@ class Profiles extends Table {
 
   IntColumn get order => integer().nullable()();
 
+  TextColumn get snapshot => text()
+      .withDefault(const Constant('{}'))
+      .map(const ProfileSnapshotConverter())();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -123,6 +127,7 @@ extension RawProfilExt on RawProfile {
       scriptId: scriptId,
       matchTarget: matchTarget,
       order: order,
+      snapshot: snapshot,
     );
   }
 }
@@ -144,6 +149,7 @@ extension ProfilesCompanionExt on Profile {
       scriptId: Value(scriptId),
       matchTarget: Value(matchTarget),
       order: Value(order ?? this.order),
+      snapshot: Value(snapshot),
     );
   }
 }

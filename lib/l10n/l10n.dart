@@ -55,6 +55,226 @@ class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
   }
 
+  /// `Apply saved configuration`
+  String get vpnApplySettings {
+    return Intl.message(
+      'Apply saved configuration',
+      name: 'vpnApplySettings',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Rebuild with saved DNS, rules and scripts. Your active configuration changes only after validation succeeds.`
+  String get vpnApplySettingsDescription {
+    return Intl.message(
+      'Rebuild with saved DNS, rules and scripts. Your active configuration changes only after validation succeeds.',
+      name: 'vpnApplySettingsDescription',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Changes are drafts until you save. Going back discards unsaved edits; your current VPN keeps working.`
+  String get vpnDraftDescription {
+    return Intl.message(
+      'Changes are drafts until you save. Going back discards unsaved edits; your current VPN keeps working.',
+      name: 'vpnDraftDescription',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Could not save this draft. Your current configuration is unchanged. Retry, or reopen the editor if the configuration changed elsewhere.`
+  String get vpnDraftSaveFailed {
+    return Intl.message(
+      'Could not save this draft. Your current configuration is unchanged. Retry, or reopen the editor if the configuration changed elsewhere.',
+      name: 'vpnDraftSaveFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The operation could not be completed. Please try again.`
+  String get vpnSettingsActionFailed {
+    return Intl.message(
+      'The operation could not be completed. Please try again.',
+      name: 'vpnSettingsActionFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Home`
+  String get vpnHome {
+    return Intl.message('Home', name: 'vpnHome', desc: '', args: []);
+  }
+
+  /// `Connect`
+  String get vpnConnect {
+    return Intl.message('Connect', name: 'vpnConnect', desc: '', args: []);
+  }
+
+  /// `Disconnect`
+  String get vpnDisconnect {
+    return Intl.message(
+      'Disconnect',
+      name: 'vpnDisconnect',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Disconnecting…`
+  String get vpnDisconnecting {
+    return Intl.message(
+      'Disconnecting…',
+      name: 'vpnDisconnecting',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Connected · system proxy only`
+  String get vpnProxyOnly {
+    return Intl.message(
+      'Connected · system proxy only',
+      name: 'vpnProxyOnly',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Local proxy only · VPN is not active`
+  String get vpnLocalProxy {
+    return Intl.message(
+      'Local proxy only · VPN is not active',
+      name: 'vpnLocalProxy',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Suspended`
+  String get vpnSuspended {
+    return Intl.message('Suspended', name: 'vpnSuspended', desc: '', args: []);
+  }
+
+  /// `Connection needs attention`
+  String get vpnConnectionFailed {
+    return Intl.message(
+      'Connection needs attention',
+      name: 'vpnConnectionFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Permission was not granted. Try connecting again or check system settings.`
+  String get vpnPermissionDenied {
+    return Intl.message(
+      'Permission was not granted. Try connecting again or check system settings.',
+      name: 'vpnPermissionDenied',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Could not update the system proxy. Check network settings.`
+  String get vpnProxyFailure {
+    return Intl.message(
+      'Could not update the system proxy. Check network settings.',
+      name: 'vpnProxyFailure',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Servers`
+  String get vpnServers {
+    return Intl.message('Servers', name: 'vpnServers', desc: '', args: []);
+  }
+
+  /// `Automatically choose a responsive server`
+  String get vpnAutoDescription {
+    return Intl.message(
+      'Automatically choose a responsive server',
+      name: 'vpnAutoDescription',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Use the first available server in order`
+  String get vpnFallbackDescription {
+    return Intl.message(
+      'Use the first available server in order',
+      name: 'vpnFallbackDescription',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Custom routing`
+  String get vpnCustomRouting {
+    return Intl.message(
+      'Custom routing',
+      name: 'vpnCustomRouting',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Use the configuration’s routing rules. Selecting a server on Home returns to simple routing.`
+  String get vpnCustomRoutingDescription {
+    return Intl.message(
+      'Use the configuration’s routing rules. Selecting a server on Home returns to simple routing.',
+      name: 'vpnCustomRoutingDescription',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `VPN configuration`
+  String get vpnConfiguration {
+    return Intl.message(
+      'VPN configuration',
+      name: 'vpnConfiguration',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Export migration backup`
+  String get vpnRecoveryExport {
+    return Intl.message(
+      'Export migration backup',
+      name: 'vpnRecoveryExport',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Keep a copy of the profiles and settings saved before the upgrade.`
+  String get vpnRecoveryExportDescription {
+    return Intl.message(
+      'Keep a copy of the profiles and settings saved before the upgrade.',
+      name: 'vpnRecoveryExportDescription',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Could not switch servers. Your previous selection is unchanged.`
+  String get vpnSelectFailed {
+    return Intl.message(
+      'Could not switch servers. Your previous selection is unchanged.',
+      name: 'vpnSelectFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Rule`
   String get rule {
     return Intl.message('Rule', name: 'rule', desc: '', args: []);
@@ -5090,6 +5310,146 @@ class AppLocalizations {
     return Intl.message(
       'The app list permission was denied, so installed apps cannot be listed. Please grant it manually in system settings.',
       name: 'installedAppsPermissionDeniedMessage',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Could not import the configuration. Your saved configuration has not been replaced. Check the URL and connection, then try again.`
+  String get vpnImportFailed {
+    return Intl.message(
+      'Could not import the configuration. Your saved configuration has not been replaced. Check the URL and connection, then try again.',
+      name: 'vpnImportFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Your saved configuration is safe, but the VPN could not be restored. Retry recovery in Settings.`
+  String get vpnRecoveryRequired {
+    return Intl.message(
+      'Your saved configuration is safe, but the VPN could not be restored. Retry recovery in Settings.',
+      name: 'vpnRecoveryRequired',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Your selected server is no longer available. Switched to Auto.`
+  String get vpnServerUnavailableAuto {
+    return Intl.message(
+      'Your selected server is no longer available. Switched to Auto.',
+      name: 'vpnServerUnavailableAuto',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Set up your VPN`
+  String get vpnImportTitle {
+    return Intl.message(
+      'Set up your VPN',
+      name: 'vpnImportTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Import the subscription URL from your VPN provider.`
+  String get vpnImportDescription {
+    return Intl.message(
+      'Import the subscription URL from your VPN provider.',
+      name: 'vpnImportDescription',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Subscription URL`
+  String get vpnSubscriptionUrl {
+    return Intl.message(
+      'Subscription URL',
+      name: 'vpnSubscriptionUrl',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Scan QR code`
+  String get vpnScanQr {
+    return Intl.message('Scan QR code', name: 'vpnScanQr', desc: '', args: []);
+  }
+
+  /// `Import QR image`
+  String get vpnQrImage {
+    return Intl.message(
+      'Import QR image',
+      name: 'vpnQrImage',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Paste from clipboard`
+  String get vpnPasteClipboard {
+    return Intl.message(
+      'Paste from clipboard',
+      name: 'vpnPasteClipboard',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Importing configuration…`
+  String get vpnImporting {
+    return Intl.message(
+      'Importing configuration…',
+      name: 'vpnImporting',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Enter a valid HTTP or HTTPS subscription URL.`
+  String get vpnInvalidUrl {
+    return Intl.message(
+      'Enter a valid HTTP or HTTPS subscription URL.',
+      name: 'vpnInvalidUrl',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Replace configuration`
+  String get vpnReplace {
+    return Intl.message(
+      'Replace configuration',
+      name: 'vpnReplace',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Try again`
+  String get vpnRetry {
+    return Intl.message('Try again', name: 'vpnRetry', desc: '', args: []);
+  }
+
+  /// `Camera unavailable. Allow camera access in system settings, try again, or choose a QR image.`
+  String get vpnCameraUnavailable {
+    return Intl.message(
+      'Camera unavailable. Allow camera access in system settings, try again, or choose a QR image.',
+      name: 'vpnCameraUnavailable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Choose a smaller QR image (up to 16 MB and 16 megapixels).`
+  String get vpnQrImageTooLarge {
+    return Intl.message(
+      'Choose a smaller QR image (up to 16 MB and 16 megapixels).',
+      name: 'vpnQrImageTooLarge',
       desc: '',
       args: [],
     );

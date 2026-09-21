@@ -7,9 +7,20 @@ class StoreAction extends _$StoreAction {
   @override
   void build() {}
 
-  Future<void> shakingStore() async {
-    final profileIds = ref.read(profilesProvider).map((item) => item.id);
-    final scripts = await ref.read(scriptsProvider.future);
+  Future<void> shakingStore() => ref
+      .read(setupActionProvider.notifier)
+      .serializeProfileCommit(_shakingStore);
+
+  Future<void> _shakingStore() async {
+    final legacy = await database.singleProfile.legacyProfiles();
+    final profileIds =
+        await ProfileGenerationStore(
+          Directory(await appPath.homeDirPath),
+        ).protectedProfileIds({
+          ...ref.read(profilesProvider).map((item) => item.id),
+          ...legacy.map((item) => item.id),
+        });
+    final scripts = await database.scriptsDao.query().get();
     final scriptIds = scripts.map((item) => item.id);
     final pathsToDelete = await shakingProfileTask((
       profileIds: profileIds,

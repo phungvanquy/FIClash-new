@@ -1,0 +1,73 @@
+mode: global
+proxies:
+  - {name: Shared, type: socks5, server: 127.0.0.1, port: 1080}
+  - {name: Local, type: direct}
+proxy-providers:
+  Zulu:
+    type: inline
+    payload:
+      - {name: Shared, type: socks5, server: 127.0.0.1, port: 1081}
+      - {name: 'name[1]`.*', type: socks5, server: 127.0.0.1, port: 1082}
+  Alpha:
+    type: inline
+    payload:
+      - {name: Shared, type: socks5, server: 127.0.0.1, port: 1083}
+proxy-groups:
+  - {name: Nested, type: select, proxies: [Shared, Local], use: [Zulu]}
+  - {name: Outer, type: select, proxies: [Nested, Shared], use: [Zulu, Alpha]}
+  - name: __flclash_0123456789abcdef0123456789abcdef_server_1
+    type: select
+    use: [Zulu]
+    filter: '\AShared\z'
+    empty-fallback: REJECT
+    hidden: true
+  - name: __flclash_0123456789abcdef0123456789abcdef_server_2
+    type: select
+    use: [Zulu]
+    filter: '\Aname\[1\]\x60\.\*\z'
+    empty-fallback: REJECT
+    hidden: true
+  - name: __flclash_0123456789abcdef0123456789abcdef_server_3
+    type: select
+    use: [Alpha]
+    filter: '\AShared\z'
+    empty-fallback: REJECT
+    hidden: true
+  - name: __flclash_0123456789abcdef0123456789abcdef_auto
+    type: url-test
+    proxies: &targets
+      - Shared
+      - __flclash_0123456789abcdef0123456789abcdef_server_1
+      - __flclash_0123456789abcdef0123456789abcdef_server_2
+      - __flclash_0123456789abcdef0123456789abcdef_server_3
+    url: https://www.gstatic.com/generate_204
+    interval: 300
+    lazy: false
+    empty-fallback: REJECT
+    hidden: true
+  - name: __flclash_0123456789abcdef0123456789abcdef_fallback
+    type: fallback
+    proxies: *targets
+    url: https://www.gstatic.com/generate_204
+    interval: 300
+    lazy: false
+    empty-fallback: REJECT
+    hidden: true
+  - name: __flclash_0123456789abcdef0123456789abcdef_select
+    type: select
+    proxies:
+      - __flclash_0123456789abcdef0123456789abcdef_auto
+      - __flclash_0123456789abcdef0123456789abcdef_fallback
+      - Shared
+      - __flclash_0123456789abcdef0123456789abcdef_server_1
+      - __flclash_0123456789abcdef0123456789abcdef_server_2
+      - __flclash_0123456789abcdef0123456789abcdef_server_3
+    empty-fallback: REJECT
+    hidden: true
+  - name: GLOBAL
+    type: select
+    proxies: [__flclash_0123456789abcdef0123456789abcdef_select]
+    empty-fallback: REJECT
+    hidden: true
+rules:
+  - MATCH,Outer

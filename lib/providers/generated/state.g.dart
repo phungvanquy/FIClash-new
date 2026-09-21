@@ -9,6 +9,47 @@ part of '../state.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
+@ProviderFor(vpnConnection)
+final vpnConnectionProvider = VpnConnectionProvider._();
+
+final class VpnConnectionProvider
+    extends $FunctionalProvider<VpnConnection, VpnConnection, VpnConnection>
+    with $Provider<VpnConnection> {
+  VpnConnectionProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'vpnConnectionProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$vpnConnectionHash();
+
+  @$internal
+  @override
+  $ProviderElement<VpnConnection> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  VpnConnection create(Ref ref) {
+    return vpnConnection(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(VpnConnection value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<VpnConnection>(value),
+    );
+  }
+}
+
+String _$vpnConnectionHash() => r'06c2628d0d6a417b82f87c4e2e72e7953e200a67';
+
 @ProviderFor(updateParams)
 final updateParamsProvider = UpdateParamsProvider._();
 
@@ -89,7 +130,7 @@ final class TrayStateProvider
   }
 }
 
-String _$trayStateHash() => r'25b5b6e8120d605a1b7729e0e74eb1bccafdb2fe';
+String _$trayStateHash() => r'32bac9bbcddea5fad6c9193bcefd320f96f86d1a';
 
 @ProviderFor(trayTitleState)
 final trayTitleStateProvider = TrayTitleStateProvider._();
@@ -389,7 +430,7 @@ final class ShouldPatchSystemDnsProvider
 }
 
 String _$shouldPatchSystemDnsHash() =>
-    r'73e86e60067acc55dd1cce0ea7f2d09899bbf119';
+    r'ddea58b28de0fc737d7546f48f563a52efb69972';
 
 @ProviderFor(sharedState)
 final sharedStateProvider = SharedStateProvider._();
@@ -430,7 +471,7 @@ final class SharedStateProvider
   }
 }
 
-String _$sharedStateHash() => r'e94c3767316fcf65bf122f4ac62576cb0b8a0561';
+String _$sharedStateHash() => r'050f048d1868697b0c603c88e77a8a758661f4c8';
 
 @ProviderFor(AccessControlState)
 final accessControlStateProvider = AccessControlStateProvider._();
@@ -1353,7 +1394,7 @@ final class CurrentGroupsStateProvider
 }
 
 String _$currentGroupsStateHash() =>
-    r'dbf8f02606a31486c99d7b89d19914cd5a1fc496';
+    r'0e57c8bf7ad92aaafa55aea76dfcb406cadded4f';
 
 @ProviderFor(proxyState)
 final proxyStateProvider = ProxyStateProvider._();
@@ -1394,7 +1435,7 @@ final class ProxyStateProvider
   }
 }
 
-String _$proxyStateHash() => r'76a71ab5da07dca9aeb351282c5c03ab222d0760';
+String _$proxyStateHash() => r'694f40b38b084d42e941c86f81e6619da724875a';
 
 @ProviderFor(proxiesActionsState)
 final proxiesActionsStateProvider = ProxiesActionsStateProvider._();
@@ -2072,7 +2113,7 @@ final class SelectedMapProvider
   }
 }
 
-String _$selectedMapHash() => r'd4438d8d87d0c7ec7d9c5d02f577cdba6ba2a785';
+String _$selectedMapHash() => r'918e732d4d91ab0952e8fb9036cca76a4c3599d3';
 
 @ProviderFor(unfoldSet)
 final unfoldSetProvider = UnfoldSetProvider._();
@@ -3064,7 +3105,7 @@ final class OverwriteTypeProvider
   }
 }
 
-String _$overwriteTypeHash() => r'03a8ab8ddec76935da5fa231270b65baa70fd727';
+String _$overwriteTypeHash() => r'9c496533d7189f0a0ed83ae5266c92220decf47c';
 
 final class OverwriteTypeFamily extends $Family
     with $FunctionalFamilyOverride<OverwriteType, int?> {
@@ -3139,7 +3180,7 @@ final class ClashConfigProvider
   }
 }
 
-String _$clashConfigHash() => r'd984af6731ae56dbc1f517f683a40618cdfa5129';
+String _$clashConfigHash() => r'92fd4863a7ed413637fd9228129f277306ed8040';
 
 final class ClashConfigFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<ClashConfig>, int> {
@@ -3213,7 +3254,7 @@ final class SetupStateProvider
   }
 }
 
-String _$setupStateHash() => r'2c7e491f0c373a8ad8f982f1571bf35c30b3447b';
+String _$setupStateHash() => r'8f7a61a94b037fc77553a0e0f46701bc6f4e2e80';
 
 final class SetupStateFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<SetupState>, int?> {

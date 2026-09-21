@@ -493,33 +493,47 @@ void main() {
       expect(leftovers, isEmpty);
     });
 
-    test('restoring returns the rows and copies the files home', () async {
-      await seedDatabase();
-      writeFile(join(home.path, 'profiles', '1.yaml'), 'proxies: []');
-      writeFile(join(home.path, 'scripts', '2.js'), 'body');
-      final archivePath = await backup();
-      final target = makeDir('restore_target');
+    test(
+      'restoring stages files without overwriting the working setup',
+      () async {
+        await seedDatabase();
+        writeFile(join(home.path, 'profiles', '1.yaml'), 'proxies: []');
+        writeFile(join(home.path, 'scripts', '2.js'), 'body');
+        final archivePath = await backup();
+        final target = makeDir('restore_target');
+        writeFile(join(target.path, 'profiles', '1.yaml'), 'current profile');
+        writeFile(join(target.path, 'scripts', '2.js'), 'current script');
 
-      final data = await readBackupArchive(
-        backupFilePath: archivePath,
-        restoreDirPath: restore.path,
-        homeDirPath: target.path,
-      );
+        final data = await readBackupArchive(
+          backupFilePath: archivePath,
+          restoreDirPath: restore.path,
+          homeDirPath: target.path,
+        );
 
-      expect(data.profiles.single.label, 'Backed up');
-      expect(data.scripts.single.label, 'Script');
-      expect(data.rules.single.content, 'example.com');
-      expect(data.links.single.ruleId, 3);
-      expect(data.configMap?['version'], 1);
-      expect(
-        File(join(target.path, 'profiles', '1.yaml')).readAsStringSync(),
-        'proxies: []',
-      );
-      expect(
-        File(join(target.path, 'scripts', '2.js')).readAsStringSync(),
-        'body',
-      );
-    });
+        expect(data.profiles.single.label, 'Backed up');
+        expect(data.scripts.single.label, 'Script');
+        expect(data.rules.single.content, 'example.com');
+        expect(data.links.single.ruleId, 3);
+        expect(data.configMap?['version'], 1);
+        expect(data.sourcePath, restore.path);
+        expect(
+          File(join(target.path, 'profiles', '1.yaml')).readAsStringSync(),
+          'current profile',
+        );
+        expect(
+          File(join(target.path, 'scripts', '2.js')).readAsStringSync(),
+          'current script',
+        );
+        expect(
+          File(join(restore.path, 'profiles', '1.yaml')).readAsStringSync(),
+          'proxies: []',
+        );
+        expect(
+          File(join(restore.path, 'scripts', '2.js')).readAsStringSync(),
+          'body',
+        );
+      },
+    );
 
     test('a version 0 archive goes through the legacy migration', () async {
       await seedDatabase();
@@ -550,11 +564,39 @@ void main() {
       );
       expect(
         File(
-          join(target.path, 'profiles', '${profile.id}.yaml'),
+          join(restore.path, 'profiles', '${profile.id}.yaml'),
         ).readAsStringSync(),
         'proxies: []',
       );
+      expect(target.listSync(), isEmpty);
     });
+
+    for (final name in [
+      '../outside.yaml',
+      '/outside.yaml',
+      'C:/outside.yaml',
+    ]) {
+      test('unsafe archive path $name cannot overwrite active files', () async {
+        final original = writeFile(
+          join(home.path, 'profiles', '1.yaml'),
+          'working',
+        );
+        final archive = Archive()
+          ..addFile(ArchiveFile.string(name, 'untrusted'));
+        final file = File(join(root.path, 'archive', '$uniqueId.zip'));
+        await file.writeAsBytes(ZipEncoder().encode(archive));
+        await expectLater(
+          readBackupArchive(
+            backupFilePath: file.path,
+            restoreDirPath: restore.path,
+            homeDirPath: home.path,
+          ),
+          throwsA(isA<FormatException>()),
+        );
+        expect(await original.readAsString(), 'working');
+        expect(await restore.list().toList(), isEmpty);
+      });
+    }
 
     test('an archive without a config document is rejected', () async {
       final archivePath = join(root.path, 'archive', '$uniqueId.zip');

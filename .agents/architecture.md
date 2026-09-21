@@ -199,6 +199,45 @@ second provider write — stay hand-written rather than growing extra parameters
 
 ## State Management
 
+### Single-profile VPN flow
+
+`HomePage` projects one committed profile into explicit URL/clipboard/QR intake, connection controls, and a flat
+Auto/Fallback/server list. `ToolsView` is the pushed Settings route. Legacy `PageLabel` values remain serialization
+aliases, not additional primary pages. The URL itself is a credential-bearing subscription URL; there is no separate
+token decoder. Do not automatically read the clipboard or log import URLs.
+
+`VpnAction` adapts UI/platform entry points to `VpnImportCoordinator`. `VpnCandidateStager` fetches and prepares
+unpublished generations through detached Core preparation. `ProfileGenerationStore` seals source/effective YAML,
+provider data, and cached catalog metadata. `SingleProfileRepository` commits the sole profile and profile-owned
+rules/groups only after activation, under `SetupAction.serializeProfileCommit`. Recovery journals resolve against the
+database revision before startup/refresh. Preference and shared-state copies are repairable mirrors, not commit owners.
+Never mutate a sealed generation or use legacy optimistic profile writers to replace it.
+
+`ProfileDraft` holds profile-specific override edits independently of the active profile. Its rule/group providers
+project draft data while the editor is open; explicit Save supplies owned data to preparation and the final transaction.
+Leaving the editor discards the draft, and a stale profile/metadata revision prevents saving over newer work. Shared
+global rules/scripts remain independently saved libraries; changing them cannot mutate an already sealed generation.
+Explicit override Save or Settings' Apply saved configuration stages a new generation with those library contents and
+saved DNS/configuration preferences. Runtime-only options continue through the serialized Core update path.
+
+Backup exports a consistent SQLite snapshot and verified source/provider/generation/script/geodata resources. Restore
+extracts into a request-private directory, tries the selected usable profile then ordered fallbacks, and prepares offline
+with restored settings. Shared-data policy never enables multiple profiles. Schema 5 commits a `pending_restore`
+publication record with the candidate and shared rows; script bodies and settings mirrors are published afterward and
+retried on recovery. A pending publication blocks another replacement. Library fingerprints reject concurrent edits.
+Migration archives stay under `recovery/`, outside routine cleanup. Never use the legacy migration-only database restore
+helper for a managed profile, or pass persistent source/archive files to an export helper that deletes its input.
+
+Flutter owns subscription/provider content scheduling through `VpnRefreshScheduler`. Detachment cancels pending
+refresh eligibility and pauses scheduling; attachment resumes due work. Managed native providers cannot rewrite their
+sealed files. Native reachability health checks and Auto/Fallback continue while Flutter is absent.
+
+`vpnConnectionProvider` derives presentation from Android service observations, desktop Core listener/TUN observations,
+and system-proxy results. Observations carry native session/revision identities. Core availability and optimistic
+command acknowledgements are not proof of an active VPN. Home requests transitions through `SetupAction`; Android
+`ServiceStateMachine` and desktop lifecycle code remain authoritative. Passive attachment/resume queries must not
+mutate runtime state. Fresh-install VPN/TUN defaults apply on explicit Connect, not during import.
+
 Provider files in `lib/providers/`:
 
 - `app.dart`: runtime/UI state, logs, traffic, delays, loading, navigation.
@@ -356,7 +395,8 @@ a buffer you own outright (seeding, resets, tests), never on published state.
 
 ## Database
 
-The app uses Drift/SQLite in `lib/database/`. Current schema version is 2.
+The app uses Drift/SQLite in `lib/database/`. Current schema version is 5. Schema 4 introduced immutable profile
+snapshots and the commit/migration singleton; schema 5 adds recoverable backup-settings/script publication.
 
 Tables:
 
@@ -366,6 +406,7 @@ Tables:
 - `ProfileRuleLinks` (`profile_rule_mapping`)
 - `ProxyGroups`
 - `IconRecords` (`icon_records`)
+- `ProfileCommitStates` (`profile_commit_state`): committed revision/profile, migration archive, pending restore publication.
 
 Rule scenes distinguish global added rules, profile added rules, profile custom rules, and disabled links. Rule and proxy-group ordering use fractional indexing.
 

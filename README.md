@@ -33,6 +33,16 @@ A multi-platform proxy client based on ClashMeta, simple and easy to use, open-s
 
 ## Use
 
+### Quick start
+
+1. Import your provider's subscription/configuration URL by QR code, **Paste from clipboard**, or manual entry. A “token” means the complete URL, including its embedded token—not a separate code.
+2. Choose **Auto**, **Fallback**, or a server from Home's single list.
+3. Press the large circular button to connect; press it again to disconnect. Grant VPN/TUN permission if requested.
+
+The app keeps one profile. A successful import replaces it; a failed import keeps your saved setup. The gear opens Settings, including custom routing, configuration editing, backup, and recovery. Subscription/provider-list refresh pauses when Flutter is closed; the current native VPN configuration and health checks continue.
+
+See [VPN setup, routing, and migration](VPN_GUIDE.md) for connection-state meanings and recovery details. Existing preview images above may show the previous interface.
+
 ### Linux
 
 ⚠️ Make sure to install the following dependencies before using them

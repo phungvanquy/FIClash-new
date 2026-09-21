@@ -152,6 +152,63 @@ class RunTime extends _$RunTime with AutoDisposeNotifierMixin {
 }
 
 @Riverpod(keepAlive: true)
+class CoreRunState extends _$CoreRunState {
+  final _cursor = RunObservationCursor();
+
+  @override
+  CoreRunObservation? build() => null;
+
+  bool observe(CoreRunObservation observation) {
+    if (!_cursor.accept(observation.session, observation.revision)) {
+      return false;
+    }
+    state = observation;
+    return true;
+  }
+}
+
+@Riverpod(keepAlive: true)
+class AndroidRunState extends _$AndroidRunState {
+  final _cursor = RunObservationCursor();
+
+  @override
+  AndroidRunObservation? build() => null;
+
+  bool observe(AndroidRunObservation observation) {
+    if (!_cursor.accept(observation.session, observation.revision)) {
+      return false;
+    }
+    state = observation;
+    return true;
+  }
+}
+
+@Riverpod(keepAlive: true)
+class SystemProxyState extends _$SystemProxyState
+    with AutoDisposeNotifierMixin {
+  @override
+  SystemProxyObservation build() => const SystemProxyObservation();
+}
+
+@Riverpod(keepAlive: true)
+class VpnPending extends _$VpnPending with AutoDisposeNotifierMixin {
+  @override
+  bool? build() => null;
+}
+
+@Riverpod(keepAlive: true)
+class VpnRunRequested extends _$VpnRunRequested with AutoDisposeNotifierMixin {
+  @override
+  bool build() => false;
+}
+
+@Riverpod(keepAlive: true)
+class VpnFailure extends _$VpnFailure with AutoDisposeNotifierMixin {
+  @override
+  String? build() => null;
+}
+
+@Riverpod(keepAlive: true)
 class ViewSize extends _$ViewSize with AutoDisposeNotifierMixin {
   @override
   Size build() {
@@ -204,11 +261,16 @@ class CurrentPageLabel extends _$CurrentPageLabel
   }
 
   void toPage(PageLabel pageLabel) {
-    value = pageLabel;
+    value = switch (pageLabel) {
+      PageLabel.dashboard ||
+      PageLabel.profiles ||
+      PageLabel.proxies => PageLabel.dashboard,
+      _ => PageLabel.tools,
+    };
   }
 
   void toProfiles() {
-    toPage(PageLabel.profiles);
+    toPage(PageLabel.dashboard);
   }
 }
 

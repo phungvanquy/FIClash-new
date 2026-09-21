@@ -1,3 +1,7 @@
+import 'dart:async';
+
+import 'package:fl_clash/common/proxy.dart';
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/manager/proxy_manager.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/app.dart';
@@ -7,16 +11,44 @@ import 'package:fl_clash/state.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:proxy/proxy.dart' as platform;
 
 import '../helpers/test_app.dart';
+
+class _Proxy extends platform.Proxy {
+  final calls = <int>[];
+  bool success = true;
+  Completer<bool>? startGate;
+
+  @override
+  Future<bool> startProxy(
+    int port, [
+    List<String> bypassDomain = const [],
+  ]) async {
+    calls.add(port);
+    return await startGate?.future ?? success;
+  }
+
+  @override
+  Future<bool> stopProxy() async {
+    calls.add(0);
+    return success;
+  }
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late ProviderContainer container;
+  late _Proxy proxy;
+  var revision = 0;
 
   setUp(() {
-    container = ProviderContainer();
+    proxy = _Proxy();
+    container = ProviderContainer(
+      overrides: [systemProxyAdapterProvider.overrideWithValue(proxy)],
+    );
+    container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
     globalState.container = container;
   });
 
@@ -39,7 +71,17 @@ void main() {
         .copyWith(systemProxy: true);
     container.read(patchClashConfigProvider.notifier).value =
         const PatchClashConfig().copyWith(mixedPort: mixedPort);
-    container.read(runTimeProvider.notifier).value = running ? 1 : null;
+    container
+        .read(coreRunStateProvider.notifier)
+        .observe(
+          CoreRunObservation(
+            session: 'test',
+            revision: ++revision,
+            active: running,
+            requested: running,
+            mixedPort: running ? mixedPort : 0,
+          ),
+        );
   }
 
   testWidgets('renders its child unchanged', (tester) async {
@@ -56,10 +98,19 @@ void main() {
   ) async {
     await pumpProxyManager(tester);
 
+    proxy.success = false;
     enableSystemProxy(running: true);
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), null);
+    expect(
+      container.read(systemProxyStateProvider).failure,
+      'system_proxy_failed',
+    );
+    expect(
+      container.read(vpnConnectionProvider).phase,
+      VpnConnectionPhase.localProxy,
+    );
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -73,7 +124,7 @@ void main() {
     await tester.pump();
     enableSystemProxy(running: true, mixedPort: 7891);
     await tester.pump();
-    container.read(runTimeProvider.notifier).value = null;
+    enableSystemProxy(running: false);
     await tester.pumpAndSettle();
 
     expect(container.read(proxyStateProvider).isStart, isFalse);
@@ -83,16 +134,78 @@ void main() {
   });
 
   test('a running core reports the mixed port as the proxy target', () {
-    container.read(runTimeProvider.notifier).value = 1;
-    container.read(networkSettingProvider.notifier).value = const NetworkProps()
-        .copyWith(systemProxy: true);
+    enableSystemProxy(running: true, mixedPort: 7892);
     container.read(patchClashConfigProvider.notifier).value =
-        const PatchClashConfig().copyWith(mixedPort: 7892);
+        const PatchClashConfig().copyWith(mixedPort: 9999);
 
     final state = container.read(proxyStateProvider);
     expect(state.isStart, isTrue);
     expect(state.systemProxy, isTrue);
     expect(state.port, 7892);
+  });
+
+  testWidgets('successful installation reports proxy-only fallback', (
+    tester,
+  ) async {
+    await pumpProxyManager(tester);
+    enableSystemProxy(running: true);
+    await tester.pumpAndSettle();
+    expect(container.read(systemProxyStateProvider).installed, isTrue);
+    expect(
+      container.read(vpnConnectionProvider).phase,
+      VpnConnectionPhase.proxyOnly,
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('a late installation converges to a newer stop', (tester) async {
+    await pumpProxyManager(tester);
+    proxy.startGate = Completer<bool>();
+    enableSystemProxy(running: true);
+    await tester.pump();
+    expect(container.read(systemProxyStateProvider).pending, isTrue);
+    enableSystemProxy(running: false);
+    await tester.pump();
+    proxy.startGate!.complete(true);
+    await tester.pumpAndSettle();
+    expect(proxy.calls, [0, 7890, 0]);
+    expect(container.read(systemProxyStateProvider).installed, isFalse);
+    expect(
+      container.read(vpnConnectionProvider).phase,
+      VpnConnectionPhase.disconnected,
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('failed proxy removal retains observed installation and error', (
+    tester,
+  ) async {
+    await pumpProxyManager(tester);
+    enableSystemProxy(running: true);
+    await tester.pumpAndSettle();
+    proxy.success = false;
+    enableSystemProxy(running: false);
+    await tester.pumpAndSettle();
+    expect(container.read(systemProxyStateProvider).installed, isTrue);
+    expect(
+      container.read(systemProxyStateProvider).failure,
+      'system_proxy_failed',
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('an installation finishing after disposal is removed', (
+    tester,
+  ) async {
+    await pumpProxyManager(tester);
+    proxy.startGate = Completer<bool>();
+    enableSystemProxy(running: true);
+    await tester.pump();
+    await tester.pumpWidget(const SizedBox.shrink());
+    proxy.startGate!.complete(true);
+    await tester.pumpAndSettle();
+    expect(proxy.calls, [0, 7890, 0]);
+    expect(tester.takeException(), isNull);
   });
 
   test('an excluded SSID suspends the system proxy', () {

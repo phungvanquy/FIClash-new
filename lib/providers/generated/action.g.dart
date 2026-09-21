@@ -40,7 +40,7 @@ final class CommonActionProvider extends $NotifierProvider<CommonAction, void> {
   }
 }
 
-String _$commonActionHash() => r'd486d7a6a69b4d73527d2bb74931fe423ced5a97';
+String _$commonActionHash() => r'3b2ecbbbddaf2d68b96fa5752f4ba721b6e603fa';
 
 abstract class _$CommonAction extends $Notifier<void> {
   void build();
@@ -91,7 +91,7 @@ final class SetupActionProvider extends $NotifierProvider<SetupAction, void> {
   }
 }
 
-String _$setupActionHash() => r'1ad2b0edb6bb505c638c6982020932351e8fd53c';
+String _$setupActionHash() => r'1afdf61a2c60636172301f1087a399532cc1bf65';
 
 abstract class _$SetupAction extends $Notifier<void> {
   void build();
@@ -142,7 +142,7 @@ final class BackupActionProvider extends $NotifierProvider<BackupAction, void> {
   }
 }
 
-String _$backupActionHash() => r'ffca3a6f1f1b96c61561412e99b2410c7660311f';
+String _$backupActionHash() => r'583a237a4dcad4cc190d464fa3c3f813a4b8830c';
 
 abstract class _$BackupAction extends $Notifier<void> {
   void build();
@@ -193,7 +193,7 @@ final class CoreActionProvider extends $NotifierProvider<CoreAction, void> {
   }
 }
 
-String _$coreActionHash() => r'8af16ddd3fd82648d49b6f91d7ec30198f10ddc5';
+String _$coreActionHash() => r'8cc81d92154c5fd62a664b3029ad9d7501ec6f83';
 
 abstract class _$CoreAction extends $Notifier<void> {
   void build();
@@ -244,7 +244,7 @@ final class SystemActionProvider extends $NotifierProvider<SystemAction, void> {
   }
 }
 
-String _$systemActionHash() => r'89be5d3bd8143e3e34f04c4811053bce16e590e7';
+String _$systemActionHash() => r'3f57a4326e7728b1f95acc8b31a36b5c73fd2594';
 
 abstract class _$SystemAction extends $Notifier<void> {
   void build();
@@ -295,7 +295,7 @@ final class StoreActionProvider extends $NotifierProvider<StoreAction, void> {
   }
 }
 
-String _$storeActionHash() => r'09116828bb7abbb75d54e0d3f8d842104b8d5790';
+String _$storeActionHash() => r'0b0dd6474a7d668bb1fa5962b21883155f8953b4';
 
 abstract class _$StoreAction extends $Notifier<void> {
   void build();
@@ -398,7 +398,7 @@ final class ProxiesActionProvider
   }
 }
 
-String _$proxiesActionHash() => r'd25f2cc46754b67fb1f224b42625be36c9818edb';
+String _$proxiesActionHash() => r'3187ef3342b53da72488b3f07ab673da6d52805b';
 
 abstract class _$ProxiesAction extends $Notifier<void> {
   void build();
@@ -450,9 +450,300 @@ final class ProfilesActionProvider
   }
 }
 
-String _$profilesActionHash() => r'639d2bfc31789c39e63101e9b9b39f619166ae6f';
+String _$profilesActionHash() => r'e9e4630c1209d492bfb45f66280b16776cd9d8db';
 
 abstract class _$ProfilesAction extends $Notifier<void> {
+  void build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<void, void>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<void, void>,
+              void,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+@ProviderFor(profileGenerationStore)
+final profileGenerationStoreProvider = ProfileGenerationStoreProvider._();
+
+final class ProfileGenerationStoreProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<ProfileGenerationStore>,
+          ProfileGenerationStore,
+          FutureOr<ProfileGenerationStore>
+        >
+    with
+        $FutureModifier<ProfileGenerationStore>,
+        $FutureProvider<ProfileGenerationStore> {
+  ProfileGenerationStoreProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'profileGenerationStoreProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$profileGenerationStoreHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<ProfileGenerationStore> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<ProfileGenerationStore> create(Ref ref) {
+    return profileGenerationStore(ref);
+  }
+}
+
+String _$profileGenerationStoreHash() =>
+    r'aa8b60f8687dda8304982ea48574a118249d05ec';
+
+@ProviderFor(singleProfileRepository)
+final singleProfileRepositoryProvider = SingleProfileRepositoryProvider._();
+
+final class SingleProfileRepositoryProvider
+    extends
+        $FunctionalProvider<
+          SingleProfileRepository,
+          SingleProfileRepository,
+          SingleProfileRepository
+        >
+    with $Provider<SingleProfileRepository> {
+  SingleProfileRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'singleProfileRepositoryProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$singleProfileRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<SingleProfileRepository> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  SingleProfileRepository create(Ref ref) {
+    return singleProfileRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SingleProfileRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SingleProfileRepository>(value),
+    );
+  }
+}
+
+String _$singleProfileRepositoryHash() =>
+    r'2c1c9ca76507dbbfbe7390484d94050285f2ed01';
+
+@ProviderFor(vpnResourceFetch)
+final vpnResourceFetchProvider = VpnResourceFetchProvider._();
+
+final class VpnResourceFetchProvider
+    extends
+        $FunctionalProvider<
+          VpnResourceFetch,
+          VpnResourceFetch,
+          VpnResourceFetch
+        >
+    with $Provider<VpnResourceFetch> {
+  VpnResourceFetchProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'vpnResourceFetchProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$vpnResourceFetchHash();
+
+  @$internal
+  @override
+  $ProviderElement<VpnResourceFetch> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  VpnResourceFetch create(Ref ref) {
+    return vpnResourceFetch(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(VpnResourceFetch value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<VpnResourceFetch>(value),
+    );
+  }
+}
+
+String _$vpnResourceFetchHash() => r'8b0ef9aa756135a3784c706ac5abafc567e53a3a';
+
+@ProviderFor(VpnMigrationState)
+final vpnMigrationStateProvider = VpnMigrationStateProvider._();
+
+final class VpnMigrationStateProvider
+    extends $NotifierProvider<VpnMigrationState, VpnMigrationResult?> {
+  VpnMigrationStateProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'vpnMigrationStateProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$vpnMigrationStateHash();
+
+  @$internal
+  @override
+  VpnMigrationState create() => VpnMigrationState();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(VpnMigrationResult? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<VpnMigrationResult?>(value),
+    );
+  }
+}
+
+String _$vpnMigrationStateHash() => r'c8860edb1cb8326768db022fd56fe4c8373139ab';
+
+abstract class _$VpnMigrationState extends $Notifier<VpnMigrationResult?> {
+  VpnMigrationResult? build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<VpnMigrationResult?, VpnMigrationResult?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<VpnMigrationResult?, VpnMigrationResult?>,
+              VpnMigrationResult?,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+@ProviderFor(VpnRefreshAction)
+final vpnRefreshActionProvider = VpnRefreshActionProvider._();
+
+final class VpnRefreshActionProvider
+    extends $NotifierProvider<VpnRefreshAction, void> {
+  VpnRefreshActionProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'vpnRefreshActionProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$vpnRefreshActionHash();
+
+  @$internal
+  @override
+  VpnRefreshAction create() => VpnRefreshAction();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(void value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<void>(value),
+    );
+  }
+}
+
+String _$vpnRefreshActionHash() => r'a6179dee47c8a5f023111acb7109a99d273311ff';
+
+abstract class _$VpnRefreshAction extends $Notifier<void> {
+  void build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<void, void>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<void, void>,
+              void,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+@ProviderFor(VpnAction)
+final vpnActionProvider = VpnActionProvider._();
+
+final class VpnActionProvider extends $NotifierProvider<VpnAction, void> {
+  VpnActionProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'vpnActionProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$vpnActionHash();
+
+  @$internal
+  @override
+  VpnAction create() => VpnAction();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(void value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<void>(value),
+    );
+  }
+}
+
+String _$vpnActionHash() => r'2cb9f3542ce70fd841fa8791fe4de93ffe745f43';
+
+abstract class _$VpnAction extends $Notifier<void> {
   void build();
   @$mustCallSuper
   @override

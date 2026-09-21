@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"runtime"
 	"sync/atomic"
@@ -162,6 +163,9 @@ var methodHandlers = map[CoreMethod]methodHandler{
 	getIsInitMethod: withoutArguments(func(response MethodResponse) {
 		response.success(handleGetIsInit())
 	}),
+	getRunStateMethod: withoutArguments(func(response MethodResponse) {
+		response.success(handleGetRunState())
+	}),
 	forceGcMethod: withoutArguments(func(response MethodResponse) {
 		handleForceGC()
 		response.success(true)
@@ -171,6 +175,49 @@ var methodHandlers = map[CoreMethod]methodHandler{
 	}),
 	validateConfigMethod: withArguments(func(path *string, response MethodResponse) {
 		response.success(handleValidateConfig(*path))
+	}),
+	prepareConfigMethod: withArguments(func(params *PrepareConfigParams, response MethodResponse) {
+		safeGo(response, func() {
+			result, err := handlePrepareConfig(params)
+			if err != nil {
+				if errors.Is(err, errCoreNotInitialized) {
+					response.failure("core_unavailable", err.Error(), nil)
+					return
+				}
+				var required *candidateResourceRequired
+				if errors.As(err, &required) {
+					response.failure("resource_required", "Candidate needs a geodata resource", map[string]string{"resource": required.Name})
+					return
+				}
+				response.failure("prepare_failed", err.Error(), nil)
+				return
+			}
+			response.success(result)
+		})
+	}),
+	activateConfigMethod: withArguments(func(params *ActivateConfigParams, response MethodResponse) {
+		safeGo(response, func() {
+			result, err := handleActivateConfig(params)
+			if err != nil {
+				if errors.Is(err, errStalePreparation) {
+					response.failure("stale_preparation", err.Error(), nil)
+					return
+				}
+				response.failure("activation_failed", err.Error(), nil)
+				return
+			}
+			response.success(result)
+		})
+	}),
+	discardConfigMethod: withArguments(func(params *PreparedConfigRef, response MethodResponse) {
+		safeGo(response, func() {
+			result, err := handleDiscardConfig(params)
+			if err != nil {
+				response.failure("discard_failed", err.Error(), nil)
+				return
+			}
+			response.success(result)
+		})
 	}),
 	updateConfigMethod: withArguments(func(params *UpdateParams, response MethodResponse) {
 		response.success(handleUpdateConfig(params))

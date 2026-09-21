@@ -107,6 +107,54 @@ void main() {
 
     List<Profile> read() => container.read(profilesProvider);
 
+    test('committed publication ignores older database emissions', () async {
+      final committed = profile(2, order: 0).copyWith(
+        snapshot: const ProfileSnapshot(generation: 'new', revision: 2),
+      );
+      notifier.publishCommitted(committed);
+      await testDatabase.profiles.put(profile(1).toCompanion());
+      await pumpEventQueue();
+      expect(read(), [committed]);
+      notifier.publishCommitted(
+        profile(1).copyWith(
+          snapshot: const ProfileSnapshot(generation: 'old', revision: 1),
+        ),
+      );
+      expect(read(), [committed]);
+
+      await testDatabase.profilesDao.setAll([committed]);
+      await pumpEventQueue();
+      expect(read(), [committed]);
+      final renamed = committed.copyWith(label: 'Renamed');
+      await testDatabase.profiles.put(renamed.toCompanion());
+      await pumpEventQueue();
+      expect(read(), [committed]);
+      notifier.publishCommitted(renamed);
+      expect(read(), [renamed]);
+    });
+
+    test('cannot publish an uncommitted profile', () {
+      expect(() => notifier.publishCommitted(profile(1)), throwsArgumentError);
+      expect(read(), isEmpty);
+    });
+
+    test(
+      'single-profile presentation hides legacy rows without deleting or reordering them',
+      () async {
+        final first = profile(1, order: 4);
+        final second = profile(2, order: 9);
+        await testDatabase.profiles.put(first.toCompanion());
+        await testDatabase.profiles.put(second.toCompanion());
+        notifier.showSingleProfile(second);
+        await pumpEventQueue();
+        expect(read(), [second]);
+        expect(await testDatabase.profilesDao.query().get(), [first, second]);
+        notifier.showSingleProfile(null);
+        expect(read(), isEmpty);
+        expect(await testDatabase.profilesDao.query().get(), [first, second]);
+      },
+    );
+
     test('put persists the row and the stream echoes it back', () async {
       notifier.put(profile(1, label: 'First'));
 

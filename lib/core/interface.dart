@@ -19,9 +19,17 @@ mixin CoreInterface {
 
   Future<bool> get isInit;
 
+  Future<CoreRunObservation> getRunState();
+
   Future<bool> forceGc();
 
   Future<String> validateConfig(String path);
+
+  Future<PreparedConfigResult> prepareConfig(PrepareConfigParams params);
+
+  Future<ActivatedConfigResult> activateConfig(ActivateConfigParams params);
+
+  Future<bool> discardConfig(PreparedConfigRef params);
 
   Future<Map<String, dynamic>> getConfig(String path);
 
@@ -144,6 +152,20 @@ abstract class CoreHandlerInterface with CoreInterface {
   }
 
   @override
+  Future<CoreRunObservation> getRunState() async {
+    final result = await _invokeMethod<Map<String, dynamic>>(
+      method: CoreMethod.getRunState,
+    );
+    if (result == null) {
+      throw const CoreMethodException(
+        code: 'no_response',
+        message: 'Core did not answer getRunState',
+      );
+    }
+    return CoreRunObservation.fromJson(result);
+  }
+
+  @override
   Future<bool> forceGc() async {
     return await _invokeMethod<bool>(method: CoreMethod.forceGc) ?? false;
   }
@@ -151,6 +173,53 @@ abstract class CoreHandlerInterface with CoreInterface {
   @override
   Future<String> validateConfig(String path) async {
     return _invokeMessage(method: CoreMethod.validateConfig, arguments: path);
+  }
+
+  @override
+  Future<PreparedConfigResult> prepareConfig(PrepareConfigParams params) async {
+    final result = await _invokeMethod<Map<String, dynamic>>(
+      method: CoreMethod.prepareConfig,
+      arguments: params.toJson(),
+    );
+    if (result == null) {
+      throw const CoreMethodException(
+        code: 'no_response',
+        message: 'Core did not answer prepareConfig',
+      );
+    }
+    return PreparedConfigResult.fromJson(result);
+  }
+
+  @override
+  Future<ActivatedConfigResult> activateConfig(
+    ActivateConfigParams params,
+  ) async {
+    final result = await _invokeMethod<Map<String, dynamic>>(
+      method: CoreMethod.activateConfig,
+      arguments: params.toJson(),
+    );
+    if (result == null) {
+      throw const CoreMethodException(
+        code: 'no_response',
+        message: 'Core did not answer activateConfig',
+      );
+    }
+    return ActivatedConfigResult.fromJson(result);
+  }
+
+  @override
+  Future<bool> discardConfig(PreparedConfigRef params) async {
+    final result = await _invokeMethod<bool>(
+      method: CoreMethod.discardConfig,
+      arguments: params.toJson(),
+    );
+    if (result == null) {
+      throw const CoreMethodException(
+        code: 'no_response',
+        message: 'Core did not answer discardConfig',
+      );
+    }
+    return result;
   }
 
   @override

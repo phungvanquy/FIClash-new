@@ -1,5 +1,4 @@
 import 'package:fl_clash/common/common.dart';
-import 'package:fl_clash/database/database.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/foundation.dart';
@@ -20,11 +19,8 @@ class CustomContent extends ConsumerWidget {
       return;
     }
     final clashConfig = await ref.read(clashConfigProvider(profileId).future);
-    await database.setProfileCustomData(
-      profileId,
-      clashConfig.proxyGroups,
-      clashConfig.rules,
-    );
+    if (!ref.context.mounted) return;
+    ref.read(profileDraftProvider(profileId).notifier).useDefaults(clashConfig);
   }
 
   void _handleToProxyGroupsView(BuildContext context, int profileId) {

@@ -28,9 +28,15 @@ class ProxiesAction extends _$ProxiesAction {
   final List<_DelayTestJob> _delayTestJobs = [];
 
   final Map<String, String> _pendingSelectedRollback = {};
+  int _selectionIntent = 0;
+  bool _disposed = false;
 
   @override
   void build() {
+    ref.onDispose(() {
+      _disposed = true;
+      _selectionIntent++;
+    });
     ref.listen(coreStatusProvider, (_, next) {
       if (next != CoreStatus.connected) {
         cancelDelayTests();
@@ -51,6 +57,10 @@ class ProxiesAction extends _$ProxiesAction {
   }
 
   void changeProxyDebounce(String groupName, String proxyName) {
+    if (ref.read(currentProfileProvider)?.snapshot.generation != null) {
+      unawaited(changeProxy(groupName: groupName, proxyName: proxyName));
+      return;
+    }
     _pendingSelectedRollback.putIfAbsent(
       groupName,
       () => _currentSelectedName(groupName),
@@ -73,8 +83,9 @@ class ProxiesAction extends _$ProxiesAction {
 
   Future<void> updateGroups() async {
     try {
+      final profile = ref.read(currentProfileProvider);
       commonPrint.log('updateGroups');
-      ref.read(groupsProvider.notifier).value = await retry(
+      final groups = await retry<List<Group>>(
         task: () async {
           final sortType = ref.read(
             proxiesStyleSettingProvider.select((state) => state.sortType),
@@ -83,9 +94,7 @@ class ProxiesAction extends _$ProxiesAction {
           final testUrl = ref.read(
             appSettingProvider.select((state) => state.testUrl),
           );
-          final selectedMap = ref.read(
-            currentProfileProvider.select((state) => state?.selectedMap ?? {}),
-          );
+          final selectedMap = ref.read(selectedMapProvider);
           try {
             return await _core.getProxiesGroups(
               selectedMap: selectedMap,
@@ -103,6 +112,9 @@ class ProxiesAction extends _$ProxiesAction {
         },
         retryIf: (res) => res.isEmpty,
       );
+      if (!_disposed && ref.read(currentProfileProvider) == profile) {
+        ref.read(groupsProvider.notifier).value = groups;
+      }
     } catch (e) {
       // The Core failure path already runs inside the retry task above; a
       // throw here only means ref.read hit a disposed container or the
@@ -138,15 +150,32 @@ class ProxiesAction extends _$ProxiesAction {
     required String groupName,
     required String proxyName,
   }) async {
+    final profile = ref.read(currentProfileProvider);
+    if (profile?.snapshot.generation != null) {
+      if (profile!.snapshot.routing != VpnRoutingMode.custom ||
+          groupName == profile.snapshot.managedGroups?.selector) {
+        return;
+      }
+      await _changeCommittedSelection(
+        profile,
+        (current) => current.copyWith(
+          selectedMap: {...current.selectedMap, groupName: proxyName},
+        ),
+        groupName: groupName,
+        proxyName: proxyName,
+      );
+      return;
+    }
     final profilesAction = ref.read(profilesActionProvider.notifier);
     final rollbackName =
         _pendingSelectedRollback.remove(groupName) ??
         _currentSelectedName(groupName);
     profilesAction.updateCurrentSelectedMap(groupName, proxyName);
     try {
-      await _core.changeProxy(
+      final message = await _core.changeProxy(
         ChangeProxyParams(groupName: groupName, proxyName: proxyName),
       );
+      if (message.isNotEmpty) throw MessageException(message);
     } catch (error) {
       commonPrint.log(
         'changeProxy($groupName -> $proxyName) failed: $error',
@@ -174,6 +203,121 @@ class ProxiesAction extends _$ProxiesAction {
     ref.read(checkIpNumProvider.notifier).add();
   }
 
+  Future<bool> selectVpn(VpnSelection selection) async {
+    final profile = ref.read(currentProfileProvider);
+    final groups = profile?.snapshot.managedGroups;
+    if (profile == null || groups == null) return false;
+    if (selection case VpnServerSelection(:final id)) {
+      if (!profile.snapshot.servers.any((server) => server.id == id)) {
+        return false;
+      }
+    }
+    if (profile.snapshot.routing == VpnRoutingMode.custom) {
+      _selectionIntent++;
+      final action = ref.read(vpnActionProvider.notifier);
+      final result = await action.setRouting(
+        profile,
+        VpnRoutingMode.simple,
+        selection: selection,
+      );
+      if (result.outcome == VpnImportOutcome.cancelled) return false;
+      action.requireSuccess(result);
+      return true;
+    }
+    return _changeCommittedSelection(
+      profile,
+      (current) => current.copyWith.snapshot(selection: selection),
+      groupName: groups.selector,
+      proxyName: vpnSelectionTarget(
+        selection,
+        groups,
+        profile.snapshot.servers,
+      ),
+    );
+  }
+
+  Future<bool> _changeCommittedSelection(
+    Profile expected,
+    Profile Function(Profile) update, {
+    required String groupName,
+    required String proxyName,
+  }) {
+    final intent = ++_selectionIntent;
+    final action = ref.read(vpnActionProvider.notifier);
+    action.cancel();
+    final repository = ref.read(singleProfileRepositoryProvider);
+    void checkCurrent() {
+      if (_disposed || intent != _selectionIntent) {
+        throw const VpnImportCancelled();
+      }
+    }
+
+    return ref.read(setupActionProvider.notifier).serializeProfileCommit(
+      () async {
+        Profile? previous;
+        var attempted = false;
+        var committed = false;
+        try {
+          checkCurrent();
+          previous = await repository.current();
+          checkCurrent();
+          if (previous == null ||
+              previous.id != expected.id ||
+              previous.snapshot.revision != expected.snapshot.revision ||
+              previous.snapshot.generation != expected.snapshot.generation) {
+            return false;
+          }
+          final candidate = update(previous);
+          if (candidate == previous) return true;
+          if (await _core.isInit) {
+            checkCurrent();
+            attempted = true;
+            final message = await _core.changeProxy(
+              ChangeProxyParams(groupName: groupName, proxyName: proxyName),
+            );
+            if (message.isNotEmpty) throw MessageException(message);
+          }
+          checkCurrent();
+          await repository.update(
+            expectedRevision: previous.snapshot.revision,
+            profile: candidate,
+            checkCurrent: checkCurrent,
+          );
+          committed = true;
+          await action.publishCommitted(candidate);
+          if (attempted) {
+            if (ref.read(appSettingProvider).closeConnections) {
+              await _core.closeConnections();
+            } else {
+              await _core.resetConnections();
+            }
+          }
+          ref.read(checkIpNumProvider.notifier).add();
+          return true;
+        } catch (error) {
+          if (committed) {
+            commonPrint.log(
+              'Selection mirror repair required: ${error.runtimeType}',
+              logLevel: LogLevel.warning,
+            );
+            return true;
+          }
+          if (attempted && previous != null) {
+            try {
+              await action.restoreCommitted(previous);
+            } catch (_) {
+              throw MessageException(
+                currentAppLocalizations.vpnRecoveryRequired,
+              );
+            }
+          }
+          if (error is VpnImportCancelled) return false;
+          throw MessageException(currentAppLocalizations.changeProxyFailedTip);
+        }
+      },
+    );
+  }
+
   Future<String> updateProvider(
     ExternalProvider provider, {
     bool showLoading = false,
@@ -184,6 +328,20 @@ class ProxiesAction extends _$ProxiesAction {
               .start(provider.updatingKey, scope: UpdatingScope.core)
         : null;
     try {
+      final profile = ref.read(currentProfileProvider);
+      if (profile?.snapshot.generation != null) {
+        final action = ref.read(vpnActionProvider.notifier);
+        final result = await action.refreshProviders(
+          profile!,
+          resources: {
+            '${provider.type == 'Proxy' ? 'proxy-providers' : 'rule-providers'}/${provider.name}',
+          },
+        );
+        if (result.outcome != VpnImportOutcome.cancelled) {
+          action.requireSuccess(result);
+        }
+        return '';
+      }
       final message = await _core.updateExternalProvider(
         providerName: provider.name,
       );
@@ -212,6 +370,21 @@ class ProxiesAction extends _$ProxiesAction {
               .start(provider.updatingKey, scope: UpdatingScope.core)
         : null;
     try {
+      final profile = ref.read(currentProfileProvider);
+      if (profile?.snapshot.generation != null) {
+        final action = ref.read(vpnActionProvider.notifier);
+        final result = await action.refreshProviders(
+          profile!,
+          replacement: (
+            '${provider.type == 'Proxy' ? 'proxy-providers' : 'rule-providers'}/${provider.name}',
+            utf8.encode(data),
+          ),
+        );
+        if (result.outcome != VpnImportOutcome.cancelled) {
+          action.requireSuccess(result);
+        }
+        return '';
+      }
       final message = await _core.sideLoadExternalProvider(
         providerName: provider.name,
         data: data,

@@ -1,5 +1,6 @@
 import 'package:fl_clash/common/context.dart';
 import 'package:fl_clash/views/config/general.dart';
+import 'package:fl_clash/views/vpn_configuration.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -10,7 +11,12 @@ class ConfigView extends StatelessWidget {
   Widget build(BuildContext context) {
     return BaseScaffold(
       title: context.appLocalizations.basicConfig,
-      body: const GeneralListView(),
+      body: const Column(
+        children: [
+          Expanded(child: GeneralListView()),
+          VpnApplySettings(),
+        ],
+      ),
     );
   }
 }

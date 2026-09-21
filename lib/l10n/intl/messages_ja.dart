@@ -975,12 +975,91 @@ class MessageLookup extends MessageLookupByLibrary {
     "value": MessageLookupByLibrary.simpleMessage("値"),
     "vibrantScheme": MessageLookupByLibrary.simpleMessage("ビブラント"),
     "view": MessageLookupByLibrary.simpleMessage("表示"),
+    "vpnApplySettings": MessageLookupByLibrary.simpleMessage("保存済みの設定を適用"),
+    "vpnApplySettingsDescription": MessageLookupByLibrary.simpleMessage(
+      "保存済みの DNS、ルール、スクリプトで再構築します。検証に成功した場合のみ、現在の設定を置き換えます。",
+    ),
+    "vpnAutoDescription": MessageLookupByLibrary.simpleMessage(
+      "応答の速いサーバーを自動選択",
+    ),
+    "vpnCameraUnavailable": MessageLookupByLibrary.simpleMessage(
+      "カメラを使用できません。システム設定でカメラへのアクセスを許可して再試行するか、QR 画像を選択してください。",
+    ),
     "vpnConfigChangeDetected": MessageLookupByLibrary.simpleMessage(
       "VPN関連の設定変更を検出しました",
+    ),
+    "vpnConfiguration": MessageLookupByLibrary.simpleMessage("VPN 設定"),
+    "vpnConnect": MessageLookupByLibrary.simpleMessage("接続"),
+    "vpnConnectionFailed": MessageLookupByLibrary.simpleMessage("接続を確認してください"),
+    "vpnCustomRouting": MessageLookupByLibrary.simpleMessage("カスタムルーティング"),
+    "vpnCustomRoutingDescription": MessageLookupByLibrary.simpleMessage(
+      "設定のルーティングルールを使用します。ホームでサーバーを選択するとシンプルなルーティングに戻ります。",
+    ),
+    "vpnDisconnect": MessageLookupByLibrary.simpleMessage("切断"),
+    "vpnDisconnecting": MessageLookupByLibrary.simpleMessage("切断中…"),
+    "vpnDraftDescription": MessageLookupByLibrary.simpleMessage(
+      "変更は保存するまで下書きです。戻ると未保存の編集は破棄され、現在の VPN はそのまま動作します。",
+    ),
+    "vpnDraftSaveFailed": MessageLookupByLibrary.simpleMessage(
+      "下書きを保存できませんでした。現在の設定は変更されていません。再試行するか、別の場所で設定を変更した場合はエディターを開き直してください。",
     ),
     "vpnEnableDesc": MessageLookupByLibrary.simpleMessage(
       "VpnServiceでシステムの全トラフィックを自動的にルーティングします",
     ),
+    "vpnFallbackDescription": MessageLookupByLibrary.simpleMessage(
+      "順番に最初の利用可能なサーバーを使用",
+    ),
+    "vpnHome": MessageLookupByLibrary.simpleMessage("ホーム"),
+    "vpnImportDescription": MessageLookupByLibrary.simpleMessage(
+      "VPN プロバイダーのサブスクリプション URL を読み込んでください。",
+    ),
+    "vpnImportFailed": MessageLookupByLibrary.simpleMessage(
+      "設定をインポートできませんでした。保存済みの設定は置き換えられていません。URL と接続を確認して再試行してください。",
+    ),
+    "vpnImportTitle": MessageLookupByLibrary.simpleMessage("VPN を設定"),
+    "vpnImporting": MessageLookupByLibrary.simpleMessage("設定を読み込み中…"),
+    "vpnInvalidUrl": MessageLookupByLibrary.simpleMessage(
+      "有効な HTTP または HTTPS のサブスクリプション URL を入力してください。",
+    ),
+    "vpnLocalProxy": MessageLookupByLibrary.simpleMessage(
+      "ローカルプロキシのみ · VPN は無効",
+    ),
+    "vpnPasteClipboard": MessageLookupByLibrary.simpleMessage("クリップボードから貼り付け"),
+    "vpnPermissionDenied": MessageLookupByLibrary.simpleMessage(
+      "権限が許可されていません。再接続するか、システム設定を確認してください。",
+    ),
+    "vpnProxyFailure": MessageLookupByLibrary.simpleMessage(
+      "システムプロキシを更新できませんでした。ネットワーク設定を確認してください。",
+    ),
+    "vpnProxyOnly": MessageLookupByLibrary.simpleMessage("接続済み · システムプロキシのみ"),
+    "vpnQrImage": MessageLookupByLibrary.simpleMessage("QR 画像を読み込む"),
+    "vpnQrImageTooLarge": MessageLookupByLibrary.simpleMessage(
+      "より小さい QR 画像を選択してください（16 MB、1600 万画素まで）。",
+    ),
+    "vpnRecoveryExport": MessageLookupByLibrary.simpleMessage(
+      "移行バックアップをエクスポート",
+    ),
+    "vpnRecoveryExportDescription": MessageLookupByLibrary.simpleMessage(
+      "アップグレード前に保存したプロファイルと設定のコピーを保管します。",
+    ),
+    "vpnRecoveryRequired": MessageLookupByLibrary.simpleMessage(
+      "保存済みの設定は保持されていますが、VPN を復旧できませんでした。設定画面から復旧を再試行してください。",
+    ),
+    "vpnReplace": MessageLookupByLibrary.simpleMessage("設定を置き換える"),
+    "vpnRetry": MessageLookupByLibrary.simpleMessage("再試行"),
+    "vpnScanQr": MessageLookupByLibrary.simpleMessage("QR コードをスキャン"),
+    "vpnSelectFailed": MessageLookupByLibrary.simpleMessage(
+      "サーバーを切り替えられませんでした。以前の選択は変更されていません。",
+    ),
+    "vpnServerUnavailableAuto": MessageLookupByLibrary.simpleMessage(
+      "選択したサーバーが利用できなくなったため、自動選択に切り替えました。",
+    ),
+    "vpnServers": MessageLookupByLibrary.simpleMessage("サーバー"),
+    "vpnSettingsActionFailed": MessageLookupByLibrary.simpleMessage(
+      "操作を完了できませんでした。もう一度お試しください。",
+    ),
+    "vpnSubscriptionUrl": MessageLookupByLibrary.simpleMessage("サブスクリプション URL"),
+    "vpnSuspended": MessageLookupByLibrary.simpleMessage("一時停止中"),
     "vpnTip": MessageLookupByLibrary.simpleMessage("変更はVPNの再起動後に有効になります"),
     "webDAVConfiguration": MessageLookupByLibrary.simpleMessage("WebDAV設定"),
     "whitelistMode": MessageLookupByLibrary.simpleMessage("ホワイトリストモード"),

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import 'print.dart';
 import 'protocol.dart';
+import 'vpn_intake.dart';
 
 typedef InstallConfigCallBack = void Function(String url);
 
@@ -45,13 +46,9 @@ class LinkManager {
   }
 
   void _handle(Uri uri, Function(String url) installConfigCallBack) {
-    commonPrint.log('onAppLink: $uri');
-    if (uri.host == 'install-config') {
-      final parameters = uri.queryParameters;
-      final url = parameters['url'];
-      if (url != null) {
-        installConfigCallBack(url);
-      }
+    if (!protocolSchemes.contains(uri.scheme)) return;
+    if (VpnUrlIntake.parse(uri.toString()) case VpnUrlAccepted(:final url)) {
+      installConfigCallBack(url);
     }
   }
 

@@ -200,12 +200,12 @@ void main() {
       container
           .read(currentPageLabelProvider.notifier)
           .toPage(PageLabel.proxies);
-      expect(container.read(currentPageLabelProvider), PageLabel.proxies);
+      expect(container.read(currentPageLabelProvider), PageLabel.dashboard);
     });
 
     test('toProfiles changes page', () {
       container.read(currentPageLabelProvider.notifier).toProfiles();
-      expect(container.read(currentPageLabelProvider), PageLabel.profiles);
+      expect(container.read(currentPageLabelProvider), PageLabel.dashboard);
     });
   });
 

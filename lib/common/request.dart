@@ -20,9 +20,10 @@ class Request {
     _read = read;
   }
 
-  Request() {
+  Request({Dio? subscriptionClient}) {
     dio = Dio(BaseOptions(headers: {'User-Agent': browserUa}));
-    _clashDio = Dio();
+    _clashDio = subscriptionClient ?? Dio();
+    if (subscriptionClient != null) return;
     _clashDio.httpClientAdapter = IOHttpClientAdapter(
       createHttpClient: () {
         final client = HttpClient();
@@ -52,6 +53,38 @@ class Request {
       );
       rethrow;
     }
+  }
+
+  Future<VpnDownload> fetchVpnResource(
+    String url,
+    Map<String, List<String>> headers,
+    CancelToken cancel,
+  ) async {
+    final response = await _clashDio.get<List<int>>(
+      url,
+      cancelToken: cancel,
+      options: Options(
+        responseType: ResponseType.bytes,
+        headers: headers,
+        receiveTimeout: const Duration(seconds: 30),
+        sendTimeout: const Duration(seconds: 30),
+      ),
+    );
+    String? filename;
+    try {
+      filename = getFileNameForDisposition(
+        response.headers.value('content-disposition'),
+      );
+    } on FormatException {
+      filename = null;
+    }
+    return VpnDownload(
+      response.data ?? const [],
+      filename: filename,
+      subscriptionInfo: SubscriptionInfo.formHString(
+        response.headers.value('subscription-userinfo'),
+      ),
+    );
   }
 
   Future<Response<String>> getTextResponseForUrl(String url) async {

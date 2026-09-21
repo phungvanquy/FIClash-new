@@ -1,6 +1,24 @@
 part of '../state.dart';
 
 @riverpod
+VpnConnection vpnConnection(Ref ref) {
+  return deriveVpnConnection(
+    android: system.isAndroid,
+    coreReady: ref.watch(coreStatusProvider) == CoreStatus.connected,
+    suspended: ref.watch(suspendProvider),
+    systemProxyRequested: ref.watch(
+      networkSettingProvider.select((value) => value.systemProxy),
+    ),
+    core: ref.watch(coreRunStateProvider),
+    native: ref.watch(androidRunStateProvider),
+    proxy: ref.watch(systemProxyStateProvider),
+    pending: ref.watch(vpnPendingProvider),
+    runRequested: ref.watch(vpnRunRequestedProvider),
+    failure: ref.watch(vpnFailureProvider),
+  );
+}
+
+@riverpod
 UpdateParams updateParams(Ref ref) {
   final routeMode = ref.watch(
     networkSettingProvider.select((state) => state.routeMode),
@@ -31,7 +49,13 @@ UpdateParams updateParams(Ref ref) {
 
 @riverpod
 TrayState trayState(Ref ref) {
-  final isStart = ref.watch(runTimeProvider.select((state) => state != null));
+  final connection = ref.watch(vpnConnectionProvider);
+  final isStart = switch (connection.phase) {
+    VpnConnectionPhase.connected ||
+    VpnConnectionPhase.proxyOnly ||
+    VpnConnectionPhase.localProxy => true,
+    _ => false,
+  };
   final systemProxy = ref.watch(
     networkSettingProvider.select((state) => state.systemProxy),
   );
@@ -58,11 +82,13 @@ TrayState trayState(Ref ref) {
     port: clashConfig.mixedPort,
     autoLaunch: appSetting.autoLaunch,
     systemProxy: systemProxy,
-    tunEnable: clashConfig.tunEnable,
+    tunEnable: connection.phase == VpnConnectionPhase.connected,
     isStart: isStart,
     groups: groups,
     selectedMap: selectedMap,
     showTrayTitle: appSetting.showTrayTitle,
+    connection: connection,
+    profile: ref.watch(currentProfileProvider),
   );
 }
 
@@ -133,13 +159,14 @@ bool shouldPatchSystemDns(Ref ref) {
   if (!autoSetSystemDns) {
     return false;
   }
-  final isStart = ref.watch(runTimeProvider.select((state) => state != null));
-  final tunEnable = ref.watch(
-    patchClashConfigProvider.select((state) => state.tun.enable),
-  );
+  final observed = ref.watch(coreRunStateProvider);
+  final ready = ref.watch(coreStatusProvider) == CoreStatus.connected;
   final authorizationState = ref.watch(authorizedTunEnableProvider);
-  return isStart &&
-      tunEnable &&
+  return ready &&
+      observed?.active == true &&
+      observed?.tun == true &&
+      observed?.suspended == false &&
+      !ref.watch(suspendProvider) &&
       authorizationState == TunAuthorizationState.authorized;
 }
 
@@ -153,6 +180,9 @@ SharedState sharedState(Ref ref) {
         selectedMap: state?.selectedMap ?? {},
       ),
     ),
+  );
+  final snapshot = ref.watch(
+    currentProfileProvider.select((profile) => profile?.snapshot),
   );
   final appSetting = ref.watch(
     appSettingProvider.select(
@@ -184,7 +214,7 @@ SharedState sharedState(Ref ref) {
   );
   final vpnSetting = ref.watch(vpnSettingProvider);
   final currentProfileName = currentProfile.label;
-  final selectedMap = currentProfile.selectedMap;
+  final selectedMap = ref.watch(selectedMapProvider);
   final onlyStatisticsProxy = appSetting.onlyStatisticsProxy;
   final crashlytics = appSetting.crashlytics;
   final testUrl = appSetting.testUrl;
@@ -198,7 +228,12 @@ SharedState sharedState(Ref ref) {
     crashlytics: crashlytics,
     stopTip: currentAppLocalizations.stopVpn,
     startTip: currentAppLocalizations.startVpn,
-    setupParams: SetupParams(selectedMap: selectedMap, testUrl: testUrl),
+    setupParams: SetupParams(
+      selectedMap: selectedMap,
+      testUrl: testUrl,
+      generation: snapshot?.generation,
+      revision: snapshot?.generation == null ? null : snapshot?.revision,
+    ),
     vpnOptions: VpnOptions(
       enable: vpnSetting.enable,
       stack: stack,

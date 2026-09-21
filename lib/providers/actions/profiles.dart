@@ -39,29 +39,6 @@ class ProfilesAction extends _$ProfilesAction {
     return _core.validateConfigWithData(data);
   }
 
-  Future<void> autoUpdateProfiles() async {
-    for (final profile in ref.read(profilesProvider)) {
-      if (!profile.autoUpdate) continue;
-      final isNotNeedUpdate = profile.lastUpdateDate
-          ?.add(profile.autoUpdateDuration)
-          .isBeforeNow;
-      if (isNotNeedUpdate == false || profile.type == ProfileType.file) {
-        continue;
-      }
-      try {
-        await updateProfile(profile);
-      } catch (e) {
-        commonPrint.log(compactError(e), logLevel: LogLevel.warning);
-      }
-    }
-  }
-
-  void putProfile(Profile profile) {
-    ref.read(profilesProvider.notifier).put(profile);
-    if (ref.read(currentProfileIdProvider) != null) return;
-    ref.read(currentProfileIdProvider.notifier).value = profile.id;
-  }
-
   Future<void> updateProfiles() async {
     for (final profile in ref.read(profilesProvider)) {
       if (profile.type == ProfileType.file) continue;
@@ -73,19 +50,17 @@ class ProfilesAction extends _$ProfilesAction {
     Profile profile, {
     bool showLoading = false,
   }) async {
+    if (profile.snapshot.generation == null) {
+      throw StateError('Profile migration must finish before refresh');
+    }
     final operation = showLoading
         ? ref.read(updatingKeysProvider.notifier).start(profile.updatingKey)
         : null;
     try {
-      ref.read(profilesProvider.notifier).put(profile);
-      final newProfile = await profile.update(
-        validate: (path) => _core.validateConfig(path),
-      );
-      ref.read(profilesProvider.notifier).put(newProfile);
-      if (profile.id == ref.read(currentProfileIdProvider)) {
-        ref
-            .read(setupActionProvider.notifier)
-            .applyProfileDebounce(silence: true);
+      final action = ref.read(vpnActionProvider.notifier);
+      final result = await action.refresh(profile);
+      if (result.outcome != VpnImportOutcome.cancelled) {
+        action.requireSuccess(result);
       }
     } finally {
       if (operation != null) {
@@ -102,18 +77,18 @@ class ProfilesAction extends _$ProfilesAction {
     final bytes = await platformFile.readBytes();
     globalState.navigatorKey.currentState?.popUntil((route) => route.isFirst);
     ref.read(currentPageLabelProvider.notifier).toProfiles();
-    final profile = await globalState.loadingRun(
-      tag: LoadingTag.profiles,
-      () async {
-        return Profile.normal(
-          label: platformFile.name,
-        ).saveFile(bytes, validate: (path) => _core.validateConfig(path));
-      },
-      title: currentAppLocalizations.addProfile,
-    );
-    if (profile != null) {
-      putProfile(profile);
-    }
+    await globalState.loadingRun(tag: LoadingTag.profiles, () async {
+      final action = ref.read(vpnActionProvider.notifier);
+      final result = await action.submit(
+        VpnImportRequest(
+          profile: Profile.normal(label: platformFile.name),
+          bytes: bytes,
+        ),
+      );
+      if (result.outcome != VpnImportOutcome.cancelled) {
+        action.requireSuccess(result);
+      }
+    }, title: currentAppLocalizations.addProfile);
   }
 
   Future<void> addProfileFormURL(String url) async {
@@ -121,25 +96,13 @@ class ProfilesAction extends _$ProfilesAction {
       globalState.navigatorKey.currentState?.popUntil((route) => route.isFirst);
     }
     ref.read(currentPageLabelProvider.notifier).value = PageLabel.profiles;
-    final profile = await globalState.loadingRun(
-      tag: LoadingTag.profiles,
-      () async {
-        return Profile.normal(
-          url: url,
-        ).update(validate: (path) => _core.validateConfig(path));
-      },
-      title: currentAppLocalizations.addProfile,
-    );
-    if (profile != null) {
-      putProfile(profile);
-    }
-  }
-
-  void setProfileAndAutoApply(Profile profile) {
-    ref.read(profilesProvider.notifier).put(profile);
-    if (profile.id == ref.read(currentProfileIdProvider)) {
-      ref.read(setupActionProvider.notifier).applyProfileDebounce();
-    }
+    await globalState.loadingRun(tag: LoadingTag.profiles, () async {
+      final action = ref.read(vpnActionProvider.notifier);
+      final result = await action.importUrl(url);
+      if (result.outcome != VpnImportOutcome.cancelled) {
+        action.requireSuccess(result);
+      }
+    }, title: currentAppLocalizations.addProfile);
   }
 
   Future<void> addProfileFormQrCode() async {

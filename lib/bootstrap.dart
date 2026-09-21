@@ -123,7 +123,9 @@ class Bootstrap {
           accentColor: dynamicColor.accentColor,
         );
     final profiles = await database.profilesDao.query().get();
-    container.read(profilesProvider.notifier).setAndReorder(profiles);
+    container
+        .read(profilesProvider.notifier)
+        .showSingleProfile(profiles.getProfile(config.currentProfileId));
     await AppLocalizations.load(
       getLocaleForString(config.appSettingProps.locale) ??
           WidgetsBinding.instance.platformDispatcher.locale,
@@ -147,9 +149,6 @@ class Bootstrap {
 
   Future<void> _initApp() async {
     unawaited(_container.read(systemActionProvider.notifier).updateTray());
-    unawaited(
-      _container.read(profilesActionProvider.notifier).autoUpdateProfiles(),
-    );
     unawaited(_container.read(commonActionProvider.notifier).autoCheckUpdate());
     unawaited(
       autoLaunch?.updateStatus(_container.read(appSettingProvider).autoLaunch),
@@ -163,10 +162,16 @@ class Bootstrap {
     await _showCrashRecoveryTip();
     await _showCrashlyticsTip();
     await _container.read(coreActionProvider.notifier).startCore();
-    if (!_bootDecision.isDegraded) {
+    final profiles = await _container
+        .read(vpnActionProvider.notifier)
+        .initialize();
+    if (!_bootDecision.isDegraded &&
+        profiles.complete &&
+        profiles.profile != null) {
       await _container.read(setupActionProvider.notifier).initStatus();
     }
     _container.read(initProvider.notifier).value = true;
+    _container.read(vpnRefreshActionProvider.notifier).setAttached(true);
     await bootGuard.markRunning();
     permissions.check(_container.read);
   }

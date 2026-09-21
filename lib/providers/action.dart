@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:collection/collection.dart' show MapEquality;
 import 'package:fl_clash/common/boot_guard.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/system_dns.dart';
@@ -18,6 +20,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' show basename;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:yaml/yaml.dart' show loadYaml;
 
 part 'actions/common.dart';
 part 'actions/setup.dart';
@@ -28,6 +31,7 @@ part 'actions/store.dart';
 part 'actions/theme.dart';
 part 'actions/proxies.dart';
 part 'actions/profiles.dart';
+part 'actions/vpn.dart';
 part 'actions/geo_resource.dart';
 part 'actions/updating.dart';
 part 'generated/action.g.dart';

@@ -581,6 +581,318 @@ abstract class _$RunTime extends $Notifier<int?> {
   }
 }
 
+@ProviderFor(CoreRunState)
+final coreRunStateProvider = CoreRunStateProvider._();
+
+final class CoreRunStateProvider
+    extends $NotifierProvider<CoreRunState, CoreRunObservation?> {
+  CoreRunStateProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'coreRunStateProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$coreRunStateHash();
+
+  @$internal
+  @override
+  CoreRunState create() => CoreRunState();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CoreRunObservation? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CoreRunObservation?>(value),
+    );
+  }
+}
+
+String _$coreRunStateHash() => r'9c8595371c648a8ff9f588a4c57a9c51a781554a';
+
+abstract class _$CoreRunState extends $Notifier<CoreRunObservation?> {
+  CoreRunObservation? build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<CoreRunObservation?, CoreRunObservation?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<CoreRunObservation?, CoreRunObservation?>,
+              CoreRunObservation?,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+@ProviderFor(AndroidRunState)
+final androidRunStateProvider = AndroidRunStateProvider._();
+
+final class AndroidRunStateProvider
+    extends $NotifierProvider<AndroidRunState, AndroidRunObservation?> {
+  AndroidRunStateProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'androidRunStateProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$androidRunStateHash();
+
+  @$internal
+  @override
+  AndroidRunState create() => AndroidRunState();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(AndroidRunObservation? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<AndroidRunObservation?>(value),
+    );
+  }
+}
+
+String _$androidRunStateHash() => r'6d7fafd5021d8df6b67ab924941369e0874c08fc';
+
+abstract class _$AndroidRunState extends $Notifier<AndroidRunObservation?> {
+  AndroidRunObservation? build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref =
+        this.ref as $Ref<AndroidRunObservation?, AndroidRunObservation?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AndroidRunObservation?, AndroidRunObservation?>,
+              AndroidRunObservation?,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+@ProviderFor(SystemProxyState)
+final systemProxyStateProvider = SystemProxyStateProvider._();
+
+final class SystemProxyStateProvider
+    extends $NotifierProvider<SystemProxyState, SystemProxyObservation> {
+  SystemProxyStateProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'systemProxyStateProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$systemProxyStateHash();
+
+  @$internal
+  @override
+  SystemProxyState create() => SystemProxyState();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SystemProxyObservation value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SystemProxyObservation>(value),
+    );
+  }
+}
+
+String _$systemProxyStateHash() => r'322db02fea7a4bd53d86d023d60a04d714d0415a';
+
+abstract class _$SystemProxyState extends $Notifier<SystemProxyObservation> {
+  SystemProxyObservation build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref =
+        this.ref as $Ref<SystemProxyObservation, SystemProxyObservation>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<SystemProxyObservation, SystemProxyObservation>,
+              SystemProxyObservation,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+@ProviderFor(VpnPending)
+final vpnPendingProvider = VpnPendingProvider._();
+
+final class VpnPendingProvider extends $NotifierProvider<VpnPending, bool?> {
+  VpnPendingProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'vpnPendingProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$vpnPendingHash();
+
+  @$internal
+  @override
+  VpnPending create() => VpnPending();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool?>(value),
+    );
+  }
+}
+
+String _$vpnPendingHash() => r'f1ee1e3f101d816d0a81a0456146efe73918fdf5';
+
+abstract class _$VpnPending extends $Notifier<bool?> {
+  bool? build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<bool?, bool?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<bool?, bool?>,
+              bool?,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+@ProviderFor(VpnRunRequested)
+final vpnRunRequestedProvider = VpnRunRequestedProvider._();
+
+final class VpnRunRequestedProvider
+    extends $NotifierProvider<VpnRunRequested, bool> {
+  VpnRunRequestedProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'vpnRunRequestedProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$vpnRunRequestedHash();
+
+  @$internal
+  @override
+  VpnRunRequested create() => VpnRunRequested();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$vpnRunRequestedHash() => r'6f9539f95af01e1f50b7bd65e221b4b79c4ba576';
+
+abstract class _$VpnRunRequested extends $Notifier<bool> {
+  bool build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<bool, bool>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<bool, bool>,
+              bool,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+@ProviderFor(VpnFailure)
+final vpnFailureProvider = VpnFailureProvider._();
+
+final class VpnFailureProvider extends $NotifierProvider<VpnFailure, String?> {
+  VpnFailureProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'vpnFailureProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$vpnFailureHash();
+
+  @$internal
+  @override
+  VpnFailure create() => VpnFailure();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(String? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<String?>(value),
+    );
+  }
+}
+
+String _$vpnFailureHash() => r'300099e5c3e2bb8ecc670012d816cf2d511f16dc';
+
+abstract class _$VpnFailure extends $Notifier<String?> {
+  String? build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<String?, String?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<String?, String?>,
+              String?,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
 @ProviderFor(ViewSize)
 final viewSizeProvider = ViewSizeProvider._();
 
@@ -929,7 +1241,7 @@ final class CurrentPageLabelProvider
   }
 }
 
-String _$currentPageLabelHash() => r'ccdbe5d0e0d2c324f74b3e2086d3e581740dd9bf';
+String _$currentPageLabelHash() => r'ead7bdf9c9664fcebe25b9f67f73ef26b2fbef84';
 
 abstract class _$CurrentPageLabel extends $Notifier<PageLabel> {
   PageLabel build();

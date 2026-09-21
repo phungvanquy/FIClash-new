@@ -9,6 +9,7 @@ import 'common.dart';
 import 'config.dart';
 import 'core.dart';
 import 'profile.dart';
+import 'vpn.dart';
 
 part 'generated/state.freezed.dart';
 part 'generated/state.g.dart';
@@ -112,6 +113,8 @@ abstract class TrayState with _$TrayState {
     required List<Group> groups,
     required Map<String, String> selectedMap,
     required bool showTrayTitle,
+    @Default(VpnConnection()) VpnConnection connection,
+    Profile? profile,
   }) = _TrayState;
 }
 
@@ -355,6 +358,7 @@ abstract class MakeRealProfileState with _$MakeRealProfileState {
     required List<Rule> addedRules,
     required String defaultUA,
     @Default([]) List<String> authentication,
+    @Default(true) bool confineProviderPaths,
     String? matchTarget,
   }) = _MakeRealProfileState;
 }
@@ -362,6 +366,7 @@ abstract class MakeRealProfileState with _$MakeRealProfileState {
 @freezed
 abstract class MigrationData with _$MigrationData {
   const factory MigrationData({
+    String? sourcePath,
     Map<String, Object?>? configMap,
     @Default([]) List<Rule> rules,
     @Default([]) List<Script> scripts,

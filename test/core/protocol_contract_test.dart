@@ -36,6 +36,17 @@ class _RecordingCoreHandler extends CoreHandlerInterface {
     calls[method] = arguments;
     final result = switch (method) {
       CoreMethod.initClash => true as T,
+      CoreMethod.getRunState => {
+        'session': 'native-session',
+        'revision': 9,
+        'requested': true,
+        'active': true,
+        'suspended': false,
+        'tun': false,
+        'mixedPort': 7890,
+        'generation': '0123456789abcdef0123456789abcdef',
+        'configRevision': 42,
+      },
       CoreMethod.getTraffic ||
       CoreMethod.getTotalTraffic => {'up': 12, 'down': 34},
       CoreMethod.asyncTestDelay => {
@@ -124,7 +135,119 @@ class _EmptyConfigCoreHandler extends _RecordingCoreHandler {
   }
 }
 
+class _PreparedCoreHandler extends _RecordingCoreHandler {
+  _PreparedCoreHandler(this.fixture, {this.empty = false, this.error});
+
+  final Map<String, dynamic> fixture;
+  final bool empty;
+  final CoreMethodException? error;
+
+  @override
+  Future<T?> invokeMethod<T>({
+    required CoreMethod method,
+    Object? arguments,
+    Duration? timeout,
+  }) async {
+    calls[method] = arguments;
+    if (error case final error?) throw error;
+    if (empty) return null;
+    final key = switch (method) {
+      CoreMethod.prepareConfig => 'preparedResponse',
+      CoreMethod.activateConfig => 'activatedResponse',
+      CoreMethod.discardConfig => 'discardedResponse',
+      _ => throw StateError('Unexpected method $method'),
+    };
+    return (fixture[key] as Map)['result'] as T;
+  }
+}
+
 void main() {
+  group('prepared configuration contract', () {
+    late Map<String, dynamic> fixture;
+
+    setUp(() async {
+      fixture =
+          jsonDecode(
+                await File('test/fixtures/core_protocol.json').readAsString(),
+              )
+              as Map<String, dynamic>;
+    });
+
+    test('requests and responses match the shared Go fixture', () async {
+      final handler = _PreparedCoreHandler(fixture);
+      final prepare = PrepareConfigParams.fromJson(
+        fixture['prepareCall']['arguments'] as Map<String, dynamic>,
+      );
+      final activate = ActivateConfigParams.fromJson(
+        fixture['activateCall']['arguments'] as Map<String, dynamic>,
+      );
+      final discard = PreparedConfigRef.fromJson(
+        fixture['discardCall']['arguments'] as Map<String, dynamic>,
+      );
+      final prepared = await handler.prepareConfig(prepare);
+      final activated = await handler.activateConfig(activate);
+      expect(await handler.discardConfig(discard), isTrue);
+      expect(prepared.toJson(), fixture['preparedResponse']['result']);
+      expect(activated.toJson(), fixture['activatedResponse']['result']);
+      for (final entry in {
+        CoreMethod.prepareConfig: 'prepareCall',
+        CoreMethod.activateConfig: 'activateCall',
+        CoreMethod.discardConfig: 'discardCall',
+      }.entries) {
+        final call = CoreMethodCall.fromJson(
+          fixture[entry.value] as Map<String, dynamic>,
+        );
+        expect(call.method, entry.key);
+        expect(handler.calls[entry.key], call.arguments);
+      }
+    });
+
+    test('missing replies cannot be mistaken for success', () async {
+      final handler = _PreparedCoreHandler(fixture, empty: true);
+      final calls = [
+        () => handler.prepareConfig(
+          const PrepareConfigParams(generation: 'candidate', revision: 1),
+        ),
+        () => handler.activateConfig(
+          const ActivateConfigParams(
+            prepared: PreparedConfigRef(handle: 'handle', revision: 1),
+            setup: SetupParams(selectedMap: {}, testUrl: 'test'),
+          ),
+        ),
+        () => handler.discardConfig(
+          const PreparedConfigRef(handle: 'handle', revision: 1),
+        ),
+      ];
+      for (final call in calls) {
+        await expectLater(
+          call(),
+          throwsA(
+            isA<CoreMethodException>().having(
+              (error) => error.code,
+              'code',
+              'no_response',
+            ),
+          ),
+        );
+      }
+    });
+
+    test('preparation retains structured failure details', () async {
+      const error = CoreMethodException(
+        code: 'prepare_failed',
+        message: 'invalid provider',
+        details: {'revision': 42},
+      );
+      final handler = _PreparedCoreHandler(fixture, error: error);
+      await expectLater(
+        handler.prepareConfig(
+          const PrepareConfigParams(generation: 'candidate', revision: 42),
+        ),
+        throwsA(same(error)),
+      );
+    });
+  });
+
   test('method call keeps structured arguments', () async {
     final fixture =
         json.decode(
@@ -250,6 +373,28 @@ void main() {
         ),
       ),
     );
+  });
+
+  test('passive run-state RPC uses the shared Go observation shape', () async {
+    final fixture =
+        jsonDecode(
+              await File('test/fixtures/core_protocol.json').readAsString(),
+            )
+            as Map<String, dynamic>;
+    final handler = _RecordingCoreHandler();
+    final state = await handler.getRunState();
+    expect(
+      state,
+      CoreRunObservation.fromJson(fixture['runStateResponse']['result']),
+    );
+    expect(handler.calls.keys, [CoreMethod.getRunState]);
+    expect(handler.calls[CoreMethod.getRunState], isNull);
+    final events = coreEventsFromData({
+      'type': 'runState',
+      'data': state.toJson(),
+    });
+    expect(events.single.type, CoreEventType.runState);
+    expect(CoreRunObservation.fromJson(events.single.data), state);
   });
 
   test('method response separates result and structured errors', () async {

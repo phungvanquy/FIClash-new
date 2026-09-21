@@ -9,7 +9,11 @@ class CommonAction extends _$CommonAction {
   void build() {}
 
   void toggleRunning() {
-    final running = !ref.read(isStartProvider);
+    final setup = ref.read(setupActionProvider.notifier);
+    final running =
+        ref.read(vpnPendingProvider) == false ||
+        !(setup.runningRequested ||
+            ref.read(vpnConnectionProvider).canDisconnect);
     unawaited(
       globalState.safeRun(
         () => ref
@@ -29,12 +33,12 @@ class CommonAction extends _$CommonAction {
   }
 
   void updateMode() {
-    ref.read(patchClashConfigProvider.notifier).update((state) {
-      final index = Mode.values.indexWhere((item) => item == state.mode);
-      if (index == -1) return state;
-      final nextIndex = index + 1 > Mode.values.length - 1 ? 0 : index + 1;
-      return state.copyWith(mode: Mode.values[nextIndex]);
-    });
+    final profile = ref.read(currentProfileProvider);
+    final mode = profile?.snapshot.generation == null
+        ? ref.read(patchClashConfigProvider).mode
+        : profile!.snapshot.advancedMode;
+    final next = Mode.values[(mode.index + 1) % Mode.values.length];
+    unawaited(ref.read(setupActionProvider.notifier).changeMode(next));
   }
 
   Future<void> updateTraffic() async {

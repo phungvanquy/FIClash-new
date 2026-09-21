@@ -6,6 +6,7 @@ import 'package:fl_clash/enum/enum.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'clash_config.dart';
+import 'vpn.dart';
 
 part 'generated/profile.freezed.dart';
 part 'generated/profile.g.dart';
@@ -27,10 +28,16 @@ abstract class SubscriptionInfo with _$SubscriptionInfo {
   factory SubscriptionInfo.formHString(String? info) {
     if (info == null) return const SubscriptionInfo();
     final list = info.split(';');
-    final Map<String, int?> map = {};
+    final Map<String, int> map = {};
     for (final i in list) {
-      final keyValue = i.trim().split('=');
-      map[keyValue[0]] = int.tryParse(keyValue[1]);
+      final separator = i.indexOf('=');
+      if (separator < 0) continue;
+      final key = i.substring(0, separator).trim();
+      if (!const {'upload', 'download', 'total', 'expire'}.contains(key)) {
+        continue;
+      }
+      final value = int.tryParse(i.substring(separator + 1).trim());
+      if (value != null && value >= 0) map[key] = value;
     }
     return SubscriptionInfo(
       upload: map['upload'] ?? 0,
@@ -58,6 +65,7 @@ abstract class Profile with _$Profile {
     int? scriptId,
     String? matchTarget,
     int? order,
+    @Default(ProfileSnapshot()) ProfileSnapshot snapshot,
   }) = _Profile;
 
   factory Profile.fromJson(Map<String, Object?> json) =>
@@ -163,6 +171,11 @@ extension ProfileExtension on Profile {
   }
 
   Future<File> _getFile([bool autoCreate = true]) async {
+    if (snapshot.generation != null) {
+      return ProfileGenerationStore(
+        Directory(await appPath.homeDirPath),
+      ).source(this);
+    }
     final path = await appPath.getProfilePath(id.toString());
     final file = File(path);
     final isExists = await file.exists();
@@ -193,6 +206,11 @@ extension ProfileExtension on Profile {
     Uint8List bytes, {
     required ValidateConfig validate,
   }) async {
+    if (snapshot.generation != null) {
+      throw StateError(
+        'Generation-backed profiles require a coordinated replacement',
+      );
+    }
     final path = await appPath.tempFilePath;
     final tempFile = File(path);
     await tempFile.safeWriteAsBytes(bytes);

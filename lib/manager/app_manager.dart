@@ -24,10 +24,13 @@ class AppStateManager extends ConsumerStatefulWidget {
 
 class _AppStateManagerState extends ConsumerState<AppStateManager>
     with WidgetsBindingObserver {
+  late VpnRefreshAction _refreshAction;
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _refreshAction = ref.read(vpnRefreshActionProvider.notifier);
+    _refreshAction.setAttached(true);
     ref.listenManual(checkIpProvider, (prev, next) {
       if (prev != next && next.isInit && next.containsDetection) {
         ref.read(networkDetectionProvider.notifier).startCheck();
@@ -44,15 +47,9 @@ class _AppStateManagerState extends ConsumerState<AppStateManager>
       }
     });
     ref.listenManual(suspendProvider, (prev, next) {
-      final isStart = ref.read(isStartProvider);
-      if (prev != next && isStart) {
+      if (prev != next) {
         debouncer.call(FunctionTag.suspend, () async {
-          final core = ref.read(coreHandlerProvider);
-          if (next == true) {
-            await core.stopListener();
-          } else {
-            await core.startListener();
-          }
+          await ref.read(setupActionProvider.notifier).reconcileSuspension();
           ref.read(checkIpNumProvider.notifier).add();
         });
       }
@@ -67,6 +64,7 @@ class _AppStateManagerState extends ConsumerState<AppStateManager>
 
   @override
   void dispose() {
+    _refreshAction.setAttached(false);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -74,7 +72,14 @@ class _AppStateManagerState extends ConsumerState<AppStateManager>
   @override
   Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
     commonPrint.log('$state');
+    if (state == AppLifecycleState.detached ||
+        state == AppLifecycleState.resumed) {
+      ref
+          .read(vpnRefreshActionProvider.notifier)
+          .setAttached(state == AppLifecycleState.resumed);
+    }
     if (state == AppLifecycleState.resumed) {
+      unawaited(ref.read(setupActionProvider.notifier).syncRunState());
       permissions.check(ref.read);
       render?.resume();
       WidgetsBinding.instance.addPostFrameCallback((_) {

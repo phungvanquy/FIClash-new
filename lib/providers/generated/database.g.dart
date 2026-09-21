@@ -171,7 +171,7 @@ final class CustomRulesCountProvider
   }
 }
 
-String _$customRulesCountHash() => r'a3ff7941bcbb2696ba48c82b9310d81d7238536f';
+String _$customRulesCountHash() => r'caac42ffd898bf21bcd658b9fead3cf2d3e2905c';
 
 final class CustomRulesCountFamily extends $Family
     with $FunctionalFamilyOverride<Stream<int>, int> {
@@ -240,7 +240,7 @@ final class ProxyGroupsCountProvider
   }
 }
 
-String _$proxyGroupsCountHash() => r'9bf90fc25a9ae3b9ab7aa0784d4e47786f4c4d52';
+String _$proxyGroupsCountHash() => r'e7f2c5ba78500ce97320569842399609538d699d';
 
 final class ProxyGroupsCountFamily extends $Family
     with $FunctionalFamilyOverride<Stream<int>, int> {
@@ -292,7 +292,7 @@ final class ProfilesProvider
   }
 }
 
-String _$profilesHash() => r'5d818c87da9278ae44c0298b73806aaf0155c96e';
+String _$profilesHash() => r'cafdd5be8ce48955dd3bbbba4ae29fd87da6eb9a';
 
 abstract class _$Profiles extends $Notifier<List<Profile>> {
   List<Profile> build();
@@ -510,7 +510,7 @@ final class ProfileAddedRulesProvider
   }
 }
 
-String _$profileAddedRulesHash() => r'89bfe4ed6ce0991672a40607ac18ddb71b793c51';
+String _$profileAddedRulesHash() => r'a7555e2ce0507b728afcf51ef422c7ef2b0f2191';
 
 final class ProfileAddedRulesFamily extends $Family
     with
@@ -600,7 +600,7 @@ final class ProfileCustomRulesProvider
 }
 
 String _$profileCustomRulesHash() =>
-    r'06db5c36e773ce8cba9c6a7ef26717316dd2a68e';
+    r'976fa2bd074d7fe54bb0777bd3b441f01c9791fa';
 
 final class ProfileCustomRulesFamily extends $Family
     with
@@ -689,7 +689,7 @@ final class ProxyGroupsProvider
   }
 }
 
-String _$proxyGroupsHash() => r'f3a477527846f52cc957af6622d923514a89a66e';
+String _$proxyGroupsHash() => r'39f0f946730dff5fe8c272d6f5c46995ead727cd';
 
 final class ProxyGroupsFamily extends $Family
     with
@@ -781,7 +781,7 @@ final class ProfileDisabledRuleIdsProvider
 }
 
 String _$profileDisabledRuleIdsHash() =>
-    r'7a06f7f179f9c42671f9ccb97124aed670ab51bd';
+    r'81d55f3071bc532d68fb29984d9459bb4d267523';
 
 final class ProfileDisabledRuleIdsFamily extends $Family
     with
@@ -822,6 +822,180 @@ abstract class _$ProfileDisabledRuleIds extends $StreamNotifier<List<int>> {
             as $ClassProviderElement<
               AnyNotifier<AsyncValue<List<int>>, List<int>>,
               AsyncValue<List<int>>,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, () => build(_$args));
+  }
+}
+
+@ProviderFor(editableProfile)
+final editableProfileProvider = EditableProfileFamily._();
+
+final class EditableProfileProvider
+    extends $FunctionalProvider<Profile?, Profile?, Profile?>
+    with $Provider<Profile?> {
+  EditableProfileProvider._({
+    required EditableProfileFamily super.from,
+    required int super.argument,
+  }) : super(
+         retry: null,
+         name: r'editableProfileProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$editableProfileHash();
+
+  @override
+  String toString() {
+    return r'editableProfileProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $ProviderElement<Profile?> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  Profile? create(Ref ref) {
+    final argument = this.argument as int;
+    return editableProfile(ref, argument);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Profile? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Profile?>(value),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is EditableProfileProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$editableProfileHash() => r'370a6c39a2e7e5f1dbc15fabc1ed4db881201e6b';
+
+final class EditableProfileFamily extends $Family
+    with $FunctionalFamilyOverride<Profile?, int> {
+  EditableProfileFamily._()
+    : super(
+        retry: null,
+        name: r'editableProfileProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  EditableProfileProvider call(int profileId) =>
+      EditableProfileProvider._(argument: profileId, from: this);
+
+  @override
+  String toString() => r'editableProfileProvider';
+}
+
+@ProviderFor(ProfileDraft)
+final profileDraftProvider = ProfileDraftFamily._();
+
+final class ProfileDraftProvider
+    extends $NotifierProvider<ProfileDraft, ProfileEditDraft?> {
+  ProfileDraftProvider._({
+    required ProfileDraftFamily super.from,
+    required int super.argument,
+  }) : super(
+         retry: null,
+         name: r'profileDraftProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$profileDraftHash();
+
+  @override
+  String toString() {
+    return r'profileDraftProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  ProfileDraft create() => ProfileDraft();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ProfileEditDraft? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ProfileEditDraft?>(value),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is ProfileDraftProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$profileDraftHash() => r'f8d6a8085a598323bd06375322185fb8f433091e';
+
+final class ProfileDraftFamily extends $Family
+    with
+        $ClassFamilyOverride<
+          ProfileDraft,
+          ProfileEditDraft?,
+          ProfileEditDraft?,
+          ProfileEditDraft?,
+          int
+        > {
+  ProfileDraftFamily._()
+    : super(
+        retry: null,
+        name: r'profileDraftProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  ProfileDraftProvider call(int profileId) =>
+      ProfileDraftProvider._(argument: profileId, from: this);
+
+  @override
+  String toString() => r'profileDraftProvider';
+}
+
+abstract class _$ProfileDraft extends $Notifier<ProfileEditDraft?> {
+  late final _$args = ref.$arg as int;
+  int get profileId => _$args;
+
+  ProfileEditDraft? build(int profileId);
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<ProfileEditDraft?, ProfileEditDraft?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<ProfileEditDraft?, ProfileEditDraft?>,
+              ProfileEditDraft?,
               Object?,
               Object?
             >;

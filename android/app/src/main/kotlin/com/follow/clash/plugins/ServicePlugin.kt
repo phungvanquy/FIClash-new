@@ -23,6 +23,13 @@ class ServicePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         channel = MethodChannel(binding.binaryMessenger, "${Components.PACKAGE_NAME}/service")
         channel.setMethodCallHandler(this)
+        scope.launch {
+            ServiceState.observation.collect { observation ->
+                scope.launch(Dispatchers.Main) {
+                    channel.invokeMethod("runState", gson.toJson(observation))
+                }
+            }
+        }
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
@@ -41,6 +48,7 @@ class ServicePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
             "shutdown" -> shutdown(result)
             "invokeMethod" -> invokeMethod(call, result)
             "getRunTime" -> getRunTime(result)
+            "getRunState" -> result.success(gson.toJson(ServiceState.snapshot()))
             "syncState" -> syncState(call, result)
             "start" -> start(result)
             "stop" -> stop(result)

@@ -1,4 +1,5 @@
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/database/database.dart' as db;
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
@@ -15,6 +16,19 @@ import '../helpers/test_database_providers.dart';
 import '../helpers/test_profiles.dart';
 
 const _profileId = 1;
+
+class _Draft extends ProfileDraft {
+  _Draft(this.profile);
+
+  final Profile profile;
+
+  @override
+  ProfileEditDraft? build(int profileId) => ProfileEditDraft(
+    original: profile,
+    profile: profile,
+    ownedData: const db.ProfileOwnedData(),
+  );
+}
 
 Script _script(int id, String label) {
   return Script(id: id, label: label, lastUpdateTime: DateTime(2026));
@@ -43,6 +57,7 @@ void main() {
         profilesProvider.overrideWith(() => TestProfiles([profile])),
         currentProfileIdProvider.overrideWithBuild((_, _) => _profileId),
         scriptsProvider.overrideWith(() => TestScripts(scripts)),
+        profileDraftProvider(_profileId).overrideWith(() => _Draft(profile)),
       ],
     );
     addTearDown(built.dispose);
@@ -66,7 +81,7 @@ void main() {
   }
 
   int? selectedScriptId() {
-    return container.read(profilesProvider).getProfile(_profileId)?.scriptId;
+    return container.read(editableProfileProvider(_profileId))?.scriptId;
   }
 
   testWidgets('lists every script with the configure entry', (tester) async {
@@ -119,6 +134,7 @@ void main() {
     await tester.pump();
 
     expect(selectedScriptId(), 11);
+    expect(container.read(profileProvider(_profileId))?.scriptId, isNull);
   });
 
   testWidgets('tapping the selected script clears it', (tester) async {
@@ -132,6 +148,7 @@ void main() {
     await tester.pump();
 
     expect(selectedScriptId(), isNull);
+    expect(container.read(profileProvider(_profileId))?.scriptId, 10);
   });
 
   testWidgets('tapping the radio selects the same script as the tile', (
@@ -144,5 +161,6 @@ void main() {
     await tester.pump();
 
     expect(selectedScriptId(), 10);
+    expect(container.read(profileProvider(_profileId))?.scriptId, isNull);
   });
 }

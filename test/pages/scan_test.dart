@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:fl_clash/pages/scan.dart';
+import 'package:fl_clash/common/common.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,6 +20,7 @@ class _FakeScannerPlatform extends MobileScannerPlatform {
   int startCalls = 0;
   int stopCalls = 0;
   int disposeCalls = 0;
+  bool denied = false;
 
   void emit(BarcodeCapture capture) => _barcodes.add(capture);
 
@@ -37,6 +39,11 @@ class _FakeScannerPlatform extends MobileScannerPlatform {
   @override
   Future<MobileScannerViewAttributes> start(StartOptions startOptions) async {
     startCalls++;
+    if (denied) {
+      throw const MobileScannerException(
+        errorCode: MobileScannerErrorCode.permissionDenied,
+      );
+    }
     return const MobileScannerViewAttributes(
       cameraDirection: CameraFacing.back,
       currentTorchMode: TorchState.off,
@@ -180,7 +187,9 @@ void main() {
       expect(result, 'https://sub.example/x');
     });
 
-    testWidgets('a non-url barcode pops without a value', (tester) async {
+    testWidgets('an invalid barcode keeps the scanner open for retry', (
+      tester,
+    ) async {
       String? result = 'unset';
       var popped = false;
       await pumpScanPage(
@@ -194,9 +203,65 @@ void main() {
       platform.emit(_capture(type: BarcodeType.text, rawValue: 'plain text'));
       await tester.pumpAndSettle();
 
+      expect(popped, isFalse);
+      expect(result, 'unset');
+      expect(
+        find.text(currentAppLocalizations.pleaseUploadValidQrcode),
+        findsOneWidget,
+      );
+      platform.emit(
+        _capture(
+          type: BarcodeType.text,
+          rawValue: 'https://sub.example/valid?token=a%2Fb',
+        ),
+      );
+      await tester.pumpAndSettle();
       expect(popped, isTrue);
-      expect(result, isNull);
+      expect(result, 'https://sub.example/valid?token=a%2Fb');
     });
+
+    testWidgets('duplicate detections can only pop the scanner once', (
+      tester,
+    ) async {
+      var pops = 0;
+      await pumpScanPage(tester, onPopped: (_) => pops++);
+      platform.emit(
+        _capture(type: BarcodeType.text, rawValue: 'https://sub.example/one'),
+      );
+      platform.emit(
+        _capture(type: BarcodeType.text, rawValue: 'https://sub.example/two'),
+      );
+      platform.emit(const BarcodeCapture(barcodes: []));
+      await tester.pumpAndSettle();
+      expect(pops, 1);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+      'permission denial presents recovery and close remains available',
+      (tester) async {
+        platform.denied = true;
+        var popped = false;
+        await pumpScanPage(tester, onPopped: (_) => popped = true);
+        expect(
+          find.text(currentAppLocalizations.vpnCameraUnavailable),
+          findsWidgets,
+        );
+        platform.denied = false;
+        await tester.tap(find.text(currentAppLocalizations.vpnRetry).last);
+        await tester.pumpAndSettle();
+        expect(platform.startCalls, 2);
+        platform.emit(
+          _capture(
+            type: BarcodeType.text,
+            rawValue: 'https://sub.example/retry',
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(popped, isTrue);
+        expect(tester.takeException(), isNull);
+      },
+    );
   });
 
   group('ScanPage app lifecycle', () {

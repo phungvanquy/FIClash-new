@@ -39,6 +39,36 @@ void main() {
   });
 
   group('Profile.saveFile', () {
+    test(
+      'generation source lookup is offline and cannot be overwritten by legacy saves',
+      () async {
+        final store = ProfileGenerationStore(
+          Directory(await appPath.homeDirPath),
+        );
+        final generation = await store.allocate();
+        final profile = Profile.normal().copyWith(
+          snapshot: ProfileSnapshot(generation: generation, revision: 1),
+        );
+        await store.write(
+          generation,
+          'source.yaml',
+          utf8.encode('immutable source'),
+        );
+        await store.write(
+          generation,
+          'effective.yaml',
+          utf8.encode('effective source'),
+        );
+        await store.seal(profile);
+        expect(await (await profile.file).readAsString(), 'immutable source');
+        await expectLater(
+          profile.saveFile(Uint8List(0), validate: (_) async => ''),
+          throwsStateError,
+        );
+        expect(await (await profile.file).readAsString(), 'immutable source');
+      },
+    );
+
     // EditProfileView relies on this throwing rather than silently
     // succeeding, so a caller-level try/catch can surface the failure.
     test('rejects an invalid config without touching the saved file', () async {

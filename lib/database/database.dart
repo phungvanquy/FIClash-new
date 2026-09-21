@@ -18,6 +18,7 @@ part 'links.dart';
 part 'profiles.dart';
 part 'rules.dart';
 part 'scripts.dart';
+part 'single_profile.dart';
 
 @DriftDatabase(
   tables: [
@@ -27,6 +28,7 @@ part 'scripts.dart';
     ProfileRuleLinks,
     ProxyGroups,
     IconRecords,
+    ProfileCommitStates,
   ],
   daos: [ProfilesDao, ScriptsDao, RulesDao, ProxyGroupsDao, IconRecordsDao],
 )
@@ -34,7 +36,9 @@ class Database extends _$Database {
   Database([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 5;
+
+  late final singleProfile = SingleProfileRepository(this);
 
   static LazyDatabase _openConnection() {
     return LazyDatabase(() async {
@@ -46,6 +50,10 @@ class Database extends _$Database {
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
+      onCreate: (m) async {
+        await m.createAll();
+        await _installSingleProfileConstraints();
+      },
       onUpgrade: (m, from, to) async {
         if (from < 2) {
           await m.createTable(proxyGroups);
@@ -56,8 +64,36 @@ class Database extends _$Database {
         if (from < 3) {
           await _addColumnIfMissing(m, profiles, profiles.matchTarget);
         }
+        if (from < 4) {
+          await _addColumnIfMissing(m, profiles, profiles.snapshot);
+          final tables = await customSelect(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'profile_commit_state'",
+          ).get();
+          if (tables.isEmpty) await m.createTable(profileCommitStates);
+          await _installSingleProfileConstraints();
+        }
+        if (from < 5) {
+          await _addColumnIfMissing(
+            m,
+            profileCommitStates,
+            profileCommitStates.pendingRestore,
+          );
+        }
       },
     );
+  }
+
+  Future<void> _installSingleProfileConstraints() async {
+    for (final operation in ['INSERT', 'UPDATE OF id']) {
+      final name = operation == 'INSERT' ? 'insert' : 'update';
+      await customStatement('''
+        CREATE TRIGGER IF NOT EXISTS single_profile_$name
+        BEFORE $operation ON profiles
+        WHEN EXISTS (SELECT 1 FROM profile_commit_state WHERE migration_version > 0)
+          AND EXISTS (SELECT 1 FROM profiles WHERE id != NEW.id)
+        BEGIN SELECT RAISE(ABORT, 'single profile required'); END
+      ''');
+    }
   }
 
   /// Drift rewinds user_version on downgrade but keeps the columns it added.
@@ -143,6 +179,9 @@ class Database extends _$Database {
         links.isEmpty &&
         proxyGroups.isEmpty) {
       return;
+    }
+    if ((await singleProfile.state()).migrationVersion != 0) {
+      throw StateError('Managed profiles require coordinated restore');
     }
     await batch((b) {
       if (isOverride) {

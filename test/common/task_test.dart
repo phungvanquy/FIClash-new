@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
@@ -10,6 +11,213 @@ import 'package:yaml/yaml.dart';
 int _double(int value) => value * 2;
 
 void main() {
+  group('managed VPN configuration', () {
+    const generation = '0123456789abcdef0123456789abcdef';
+    const prefix = '__flclash_${generation}_';
+    const testUrl = 'https://www.gstatic.com/generate_204';
+    final catalog = [
+      const VpnServer(
+        id: 'inline/U2hhcmVk',
+        name: 'Shared',
+        target: 'Shared',
+        type: 'Socks5',
+      ),
+      const VpnServer(
+        id: 'provider/WnVsdQ/U2hhcmVk',
+        name: 'Shared',
+        target: 'Shared',
+        type: 'Socks5',
+        provider: 'Zulu',
+      ),
+      const VpnServer(
+        id: 'provider/WnVsdQ/bmFtZVsxXWAuKg',
+        name: 'name[1]`.*',
+        target: 'name[1]`.*',
+        type: 'Socks5',
+        provider: 'Zulu',
+      ),
+      const VpnServer(
+        id: 'provider/QWxwaGE/U2hhcmVk',
+        name: 'Shared',
+        target: 'Shared',
+        type: 'Socks5',
+        provider: 'Alpha',
+      ),
+    ];
+
+    Map<String, dynamic> source() =>
+        jsonDecode(
+              jsonEncode(
+                loadYaml(
+                  File('test/fixtures/vpn_inventory.yaml').readAsStringSync(),
+                ),
+              ),
+            )
+            as Map<String, dynamic>;
+
+    test('matches the shared Core routing fixture without mutating source', () {
+      final raw = source();
+      final before = jsonEncode(raw);
+      final result = buildVpnConfiguration(
+        source: raw,
+        catalog: catalog,
+        generation: generation,
+        testUrl: testUrl,
+      );
+      expect(
+        result.effective,
+        loadYaml(File('test/fixtures/vpn_managed.yaml').readAsStringSync()),
+      );
+      expect(jsonEncode(raw), before);
+      expect(result.servers.map((server) => server.target), [
+        'Shared',
+        '${prefix}server_1',
+        '${prefix}server_2',
+        '${prefix}server_3',
+      ]);
+      expect(result.selectedMap, {
+        '${prefix}select': '${prefix}auto',
+        'GLOBAL': '${prefix}select',
+      });
+    });
+
+    test('allocates around source collisions and retains fallback order', () {
+      final raw = source();
+      (raw['proxy-groups'] as List).add({
+        'name': '${prefix}auto',
+        'type': 'select',
+        'proxies': ['Shared'],
+      });
+      final result = buildVpnConfiguration(
+        source: raw,
+        catalog: catalog,
+        generation: generation,
+        testUrl: testUrl,
+        selection: const VpnSelection.fallback(),
+      );
+      expect(result.groups.auto, '${prefix}auto_1');
+      final groups = result.effective['proxy-groups'] as List;
+      final auto =
+          groups.firstWhere((item) => item['name'] == result.groups.auto)
+              as Map;
+      final fallback =
+          groups.firstWhere((item) => item['name'] == result.groups.fallback)
+              as Map;
+      expect(auto['proxies'], fallback['proxies']);
+      expect(
+        auto['proxies'],
+        result.servers.map((server) => server.target).toList(),
+      );
+      expect(auto['empty-fallback'], 'REJECT');
+      expect(fallback['empty-fallback'], 'REJECT');
+      expect(
+        result.selectedMap[result.groups.selector],
+        result.groups.fallback,
+      );
+    });
+
+    test(
+      'preserves advanced routing and protocol fields across mode builds',
+      () {
+        final raw = source();
+        final proxy = (raw['proxies'] as List).first as Map;
+        proxy['network'] = 'ws';
+        proxy['ws-opts'] = {
+          'path': '/api?token=a%2Bb',
+          'headers': {'Host': 'example.test'},
+        };
+        proxy['reality-opts'] = {'public-key': 'opaque', 'short-id': '00'};
+        final originalGlobal = {
+          'name': 'GLOBAL',
+          'type': 'select',
+          'proxies': ['Outer'],
+        };
+        (raw['proxy-groups'] as List).add(originalGlobal);
+        const advancedSelections = {'Outer': 'Nested', 'GLOBAL': 'Outer'};
+        final simple = buildVpnConfiguration(
+          source: raw,
+          catalog: catalog,
+          generation: generation,
+          testUrl: testUrl,
+          selection: VpnSelection.server(catalog.last.id),
+          advancedSelections: advancedSelections,
+        );
+        expect(simple.effective['mode'], 'global');
+        expect(simple.selectedMap['GLOBAL'], simple.groups.selector);
+        expect(
+          simple.selectedMap[simple.groups.selector],
+          simple.servers.last.target,
+        );
+        final custom = buildVpnConfiguration(
+          source: raw,
+          catalog: catalog,
+          generation: generation,
+          testUrl: testUrl,
+          routing: VpnRoutingMode.custom,
+          advancedMode: Mode.rule,
+          advancedSelections: advancedSelections,
+        );
+        expect(custom.effective['mode'], 'rule');
+        expect(custom.effective['rules'], raw['rules']);
+        expect(
+          (custom.effective['proxy-groups'] as List)
+              .where((item) => item['name'] == 'GLOBAL')
+              .single,
+          originalGlobal,
+        );
+        expect(custom.selectedMap['GLOBAL'], 'Outer');
+        expect(simple.effective['proxies'], raw['proxies']);
+        expect(custom.effective['proxies'], raw['proxies']);
+        expect(advancedSelections, {'Outer': 'Nested', 'GLOBAL': 'Outer'});
+      },
+    );
+
+    test(
+      'retains identity across generations and replaces missing selection with Auto',
+      () {
+        final raw = source();
+        final selected = VpnSelection.server(catalog.last.id);
+        final refreshed = buildVpnConfiguration(
+          source: raw,
+          catalog: catalog,
+          generation: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          testUrl: testUrl,
+          selection: selected,
+        );
+        expect(refreshed.selection, selected);
+        expect(
+          refreshed.selectedMap[refreshed.groups.selector],
+          refreshed.servers.last.target,
+        );
+        final missing = buildVpnConfiguration(
+          source: raw,
+          catalog: catalog.sublist(0, 3),
+          generation: generation,
+          testUrl: testUrl,
+          selection: selected,
+        );
+        expect(missing.selection, const VpnSelection.auto());
+      },
+    );
+
+    test('rejects empty or ambiguous catalogs', () {
+      for (final invalid in [
+        <VpnServer>[],
+        [catalog.first, catalog.first],
+      ]) {
+        expect(
+          () => buildVpnConfiguration(
+            source: source(),
+            catalog: invalid,
+            generation: generation,
+            testUrl: testUrl,
+          ),
+          throwsFormatException,
+        );
+      }
+    });
+  });
+
   test('encoding helpers round-trip structured data', () async {
     final encoded = await encodeJSONTask({
       'name': 'FlClash',
@@ -498,7 +706,9 @@ void main() {
       }
     });
 
-    Future<({String legacyPath, String newPath})> runMigration() async {
+    Future<({String legacyPath, String newPath})> runMigration({
+      bool staging = false,
+    }) async {
       final providerDir = join(
         tempDir.path,
         providersDirectoryName,
@@ -524,10 +734,11 @@ void main() {
           rules: const [],
           addedRules: const [],
           defaultUA: 'FlClash-Test',
+          confineProviderPaths: !staging,
         ),
       );
       final config = loadYaml(result.yaml) as YamlMap;
-      expect(config['proxy-providers'][name]['path'], newPath);
+      expect(config['proxy-providers'][name]['path'], staging ? null : newPath);
       return (legacyPath: legacyPath, newPath: newPath);
     }
 
@@ -555,6 +766,26 @@ void main() {
       expect(File(paths.legacyPath).existsSync(), isFalse);
       expect(File(paths.newPath).existsSync(), isFalse);
     });
+
+    test(
+      'staging never migrates or rewrites the live provider cache',
+      () async {
+        final providerDir = join(
+          tempDir.path,
+          providersDirectoryName,
+          '17',
+          proxiesProviderDirectoryName,
+        );
+        await Directory(providerDir).create(recursive: true);
+        final legacyFile = File(join(providerDir, url.toMd5()));
+        await legacyFile.writeAsString('live-provider-data');
+
+        final paths = await runMigration(staging: true);
+
+        expect(File(paths.newPath).existsSync(), isFalse);
+        expect(await legacyFile.readAsString(), 'live-provider-data');
+      },
+    );
   });
 
   test('log and list tasks produce stable mapped output', () async {

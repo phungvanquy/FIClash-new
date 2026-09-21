@@ -128,6 +128,9 @@ class Migration {
     }
 
     config = Config.realFromJson(data.configMap);
+    if (oldVersion == 0 && data.configMap == null) {
+      config = config.copyWith.appSettingProps(vpnDefaultsPending: true);
+    }
     await _store.restore(data);
     if (!await _store.saveConfig(config)) {
       // An unopenable store is reported later by the corrupt-cache dialog,

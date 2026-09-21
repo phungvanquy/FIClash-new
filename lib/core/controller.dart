@@ -90,10 +90,21 @@ class CoreController {
 
   FutureOr<bool> get isInit => _interface.isInit;
 
+  Future<CoreRunObservation> getRunState() => _interface.getRunState();
+
   Future<String> validateConfig(String path) async {
     final res = await _interface.validateConfig(path);
     return res;
   }
+
+  Future<PreparedConfigResult> prepareConfig(PrepareConfigParams params) =>
+      _interface.prepareConfig(params);
+
+  Future<ActivatedConfigResult> activateConfig(ActivateConfigParams params) =>
+      _interface.activateConfig(params);
+
+  Future<bool> discardConfig(PreparedConfigRef params) =>
+      _interface.discardConfig(params);
 
   Future<String> validateConfigWithData(String data) async {
     final path = await appPath.tempFilePath;
@@ -200,8 +211,12 @@ class CoreController {
     return _interface.asyncTestDelay(url, proxyName);
   }
 
-  Future<Map<String, dynamic>> getConfig(int id) async {
-    final profilePath = await appPath.getProfilePath(id.toString());
+  Future<Map<String, dynamic>> getConfig(int id, {String? generation}) async {
+    final profilePath = generation == null
+        ? await appPath.getProfilePath(id.toString())
+        : ProfileGenerationStore(
+            Directory(await appPath.homeDirPath),
+          ).resource(generation, 'source.yaml').path;
     final data = Map<String, dynamic>.from(
       await _interface.getConfig(profilePath),
     );

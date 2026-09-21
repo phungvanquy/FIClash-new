@@ -67,10 +67,10 @@ void main() {
         .read(viewSizeProvider.notifier)
         .update((_) => Size(maxMobileWidth.toDouble(), 800));
     final mobile = container.read(currentNavigationItemsStateProvider).value;
-    expect(
-      mobile.map((item) => item.label),
-      containsAll([PageLabel.dashboard, PageLabel.profiles, PageLabel.tools]),
-    );
+    expect(mobile.map((item) => item.label), [
+      PageLabel.dashboard,
+      PageLabel.tools,
+    ]);
     expect(
       mobile.map((item) => item.label),
       isNot(contains(PageLabel.connections)),
@@ -87,13 +87,13 @@ void main() {
     expect(desktop.currentIndex, greaterThan(0));
     expect(
       desktop.navigationItems[desktop.currentIndex].label,
-      PageLabel.connections,
+      PageLabel.tools,
     );
 
     container
         .read(currentPageLabelProvider.notifier)
         .toPage(PageLabel.resources);
-    expect(container.read(navigationStateProvider).currentIndex, 0);
+    expect(container.read(navigationStateProvider).currentIndex, 1);
   });
 
   test('layout and page state providers compose their dependencies', () {
@@ -189,6 +189,19 @@ void main() {
   );
 
   test('runtime, VPN, tray, and DNS states follow live state', () {
+    container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
+    container
+        .read(coreRunStateProvider.notifier)
+        .observe(
+          const CoreRunObservation(
+            session: 'test',
+            revision: 1,
+            active: true,
+            requested: true,
+            tun: true,
+            mixedPort: 8899,
+          ),
+        );
     container
         .read(runTimeProvider.notifier)
         .update((_) => DateTime(2026).millisecondsSinceEpoch);
@@ -335,6 +348,42 @@ void main() {
       ),
       isTrue,
     );
+  });
+
+  test('managed selections and generation reach native shared state', () async {
+    await AppLocalizations.load(const Locale('en'));
+    container.listen(sharedStateProvider, (_, _) {});
+    const groups = VpnManagedGroups(
+      selector: 'managed',
+      auto: 'automatic',
+      fallback: 'fallback',
+    );
+    final profile = Profile.normal().copyWith(
+      selectedMap: {'Original': 'Kept', 'GLOBAL': 'Original'},
+      snapshot: const ProfileSnapshot(
+        generation: '0123456789abcdef0123456789abcdef',
+        revision: 4,
+        managedGroups: groups,
+        selection: VpnSelection.fallback(),
+      ),
+    );
+    _profiles(container).replace([profile]);
+    container.read(currentProfileIdProvider.notifier).value = profile.id;
+    expect(container.read(selectedMapProvider), {
+      'Original': 'Kept',
+      'GLOBAL': 'managed',
+      'managed': 'fallback',
+    });
+    final setup = container.read(sharedStateProvider).setupParams!;
+    expect(setup.generation, profile.snapshot.generation);
+    expect(setup.revision, 4);
+    expect(setup.selectedMap, container.read(selectedMapProvider));
+
+    _profiles(
+      container,
+    ).replace([profile.copyWith.snapshot(routing: VpnRoutingMode.custom)]);
+    expect(container.read(selectedMapProvider)['GLOBAL'], 'Original');
+    expect(profile.selectedMap, {'Original': 'Kept', 'GLOBAL': 'Original'});
   });
 
   test('package, hotkey, profile, and overwrite providers expose defaults', () {

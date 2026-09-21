@@ -2,11 +2,10 @@ import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
-import 'package:flutter/services.dart';
 import 'package:tray/tray.dart';
 
 import 'app_localizations.dart';
-import 'l10n_labels.dart';
+import 'dialog.dart';
 import 'app_ports.dart';
 import 'constant.dart';
 import 'provider_reader.dart';
@@ -81,7 +80,7 @@ class AppTray implements TrayPort {
           isTemplate: isMacOS,
         ),
         toolTip: appName,
-        menu: _buildMenu(trayState: trayState, read: read),
+        menu: buildMenu(trayState: trayState, read: read),
       ),
     );
     await updateTitle(showTrayTitle: trayState.showTrayTitle, traffic: traffic);
@@ -97,117 +96,74 @@ class AppTray implements TrayPort {
     await Tray.instance.setTitle(showTrayTitle ? traffic.trayTitle : '');
   }
 
-  List<TrayMenuItem> _buildMenu({
+  @visibleForTesting
+  List<TrayMenuItem> buildMenu({
     required TrayState trayState,
     required ProviderReader read,
   }) {
-    final commonAction = read(commonActionProvider.notifier);
-    final systemAction = read(systemActionProvider.notifier);
-    final setupAction = read(setupActionProvider.notifier);
-    final appLocalizations = currentAppLocalizations;
-
-    return [
-      TrayMenuAction(
-        label: appLocalizations.show,
-        onSelected: () {
-          window?.show();
-        },
-      ),
-      TrayMenuCheckbox(
-        label: trayState.isStart
-            ? appLocalizations.stop
-            : appLocalizations.start,
-        checked: false,
-        onSelected: commonAction.toggleRunning,
-      ),
-      if (isMacOS)
-        TrayMenuCheckbox(
-          label: appLocalizations.speedStatistics,
-          checked: trayState.showTrayTitle,
-          onSelected: commonAction.updateSpeedStatistics,
-        ),
-      const TrayMenuSeparator(),
-      for (final mode in Mode.values)
-        TrayMenuCheckbox(
-          label: mode.label,
-          checked: mode == trayState.mode,
-          onSelected: () {
-            setupAction.changeMode(mode);
-          },
-        ),
-      const TrayMenuSeparator(),
-      if (isMacOS) ..._buildGroupMenu(trayState: trayState, read: read),
-      if (trayState.isStart) ...[
-        TrayMenuCheckbox(
-          label: appLocalizations.tun,
-          checked: trayState.tunEnable,
-          onSelected: systemAction.updateTun,
-        ),
-        TrayMenuCheckbox(
-          label: appLocalizations.systemProxy,
-          checked: trayState.systemProxy,
-          onSelected: systemAction.updateSystemProxy,
-        ),
-        const TrayMenuSeparator(),
-      ],
-      TrayMenuCheckbox(
-        label: appLocalizations.autoLaunch,
-        checked: trayState.autoLaunch,
-        onSelected: systemAction.updateAutoLaunch,
-      ),
-      TrayMenuAction(
-        label: appLocalizations.copyEnvVar,
-        onSelected: () {
-          _copyEnv(trayState.port);
-        },
-      ),
-      const TrayMenuSeparator(),
-      TrayMenuAction(
-        label: appLocalizations.exit,
-        onSelected: () {
-          systemAction.handleExit();
-        },
-      ),
-    ];
-  }
-
-  List<TrayMenuItem> _buildGroupMenu({
-    required TrayState trayState,
-    required ProviderReader read,
-  }) {
-    if (trayState.groups.isEmpty) {
-      return const [];
+    final text = currentAppLocalizations;
+    final profile = trayState.profile;
+    final canDisconnect = trayState.connection.canDisconnect;
+    void open(PageLabel page) {
+      read(currentPageLabelProvider.notifier).toPage(page);
+      window?.show();
     }
+
+    TrayMenuCheckbox node(String label, VpnSelection selection) =>
+        TrayMenuCheckbox(
+          label: label,
+          checked:
+              profile?.snapshot.routing == VpnRoutingMode.simple &&
+              profile?.snapshot.selection == selection,
+          onSelected: () async {
+            try {
+              final selected = await read(
+                proxiesActionProvider.notifier,
+              ).selectVpn(selection);
+              if (!selected) {
+                dialogs.showNotifier(
+                  text.vpnSelectFailed,
+                  level: MessageLevel.error,
+                );
+              }
+            } catch (_) {
+              dialogs.showNotifier(
+                text.vpnSelectFailed,
+                level: MessageLevel.error,
+              );
+            }
+          },
+        );
     return [
-      for (final group in trayState.groups)
+      TrayMenuAction(
+        label: text.vpnHome,
+        onSelected: () => open(PageLabel.dashboard),
+      ),
+      TrayMenuAction(
+        label: canDisconnect ? text.vpnDisconnect : text.vpnConnect,
+        enabled: canDisconnect || profile?.snapshot.generation != null,
+        onSelected: read(commonActionProvider.notifier).toggleRunning,
+      ),
+      if (profile != null)
         TrayMenuSubmenu(
-          label: group.name,
+          label: text.vpnServers,
           items: [
-            for (final proxy in group.all)
-              TrayMenuCheckbox(
-                label: proxy.name,
-                checked:
-                    read(selectedProxyNameProvider(group.name)) == proxy.name,
-                onSelected: () {
-                  read(
-                    proxiesActionProvider.notifier,
-                  ).changeProxy(groupName: group.name, proxyName: proxy.name);
-                },
-              ),
+            node(text.auto, const VpnSelection.auto()),
+            node(text.fallback, const VpnSelection.fallback()),
+            for (final server in profile.snapshot.servers)
+              node(server.name, VpnSelection.server(server.id)),
           ],
         ),
+      TrayMenuAction(
+        label: text.settings,
+        onSelected: () => open(PageLabel.tools),
+      ),
       const TrayMenuSeparator(),
+      TrayMenuAction(
+        label: text.exit,
+        onSelected: read(systemActionProvider.notifier).handleExit,
+      ),
     ];
-  }
-
-  Future<void> _copyEnv(int port) async {
-    final url = 'http://127.0.0.1:$port';
-
-    final cmdline = isWindows
-        ? 'set \$env:all_proxy=$url'
-        : 'export all_proxy=$url';
-
-    await Clipboard.setData(ClipboardData(text: cmdline));
   }
 }
 

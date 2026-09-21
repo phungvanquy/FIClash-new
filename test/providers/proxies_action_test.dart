@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:drift/native.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/core/controller.dart';
 import 'package:fl_clash/core/interface.dart';
 import 'package:fl_clash/core/method.dart';
+import 'package:fl_clash/database/database.dart' as db;
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/action.dart';
@@ -21,6 +23,20 @@ import 'package:riverpod/riverpod.dart';
 import '../helpers/test_profiles.dart';
 
 class MockCoreHandlerInterface extends Mock implements CoreHandlerInterface {}
+
+class _SelectionVpnAction extends VpnAction {
+  final restored = <Profile>[];
+
+  @override
+  Future<void> publishCommitted(Profile profile) async {
+    ref.read(profilesProvider.notifier).publishCommitted(profile);
+  }
+
+  @override
+  Future<void> restoreCommitted(Profile? profile) async {
+    if (profile != null) restored.add(profile);
+  }
+}
 
 const _testUrl = 'http://delay.test';
 
@@ -82,6 +98,189 @@ void main() {
 
   ProxiesAction actionOf(ProviderContainer container) =>
       container.read(proxiesActionProvider.notifier);
+
+  group('committed VPN selection', () {
+    const profile = Profile(
+      id: 1,
+      order: 0,
+      autoUpdateDuration: Duration(hours: 1),
+      selectedMap: {'Original': 'Old'},
+      snapshot: ProfileSnapshot(
+        revision: 1,
+        generation: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        managedGroups: VpnManagedGroups(
+          selector: 'Select',
+          auto: 'Auto',
+          fallback: 'Fallback',
+        ),
+        servers: [VpnServer(id: 'a', name: 'A', target: 'A', type: 'Socks5')],
+      ),
+    );
+    late db.Database database;
+    late ProviderContainer container;
+
+    setUp(() async {
+      database = db.Database(NativeDatabase.memory());
+      await database.singleProfile.commit(
+        profile: profile,
+        expectedRevision: 0,
+      );
+      container = ProviderContainer(
+        overrides: [
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+          profilesProvider.overrideWith(() => TestProfiles([profile])),
+          currentProfileIdProvider.overrideWithBuild((_, _) => profile.id),
+          singleProfileRepositoryProvider.overrideWithValue(
+            database.singleProfile,
+          ),
+          vpnActionProvider.overrideWith(_SelectionVpnAction.new),
+        ],
+      );
+      when(() => core.isInit).thenAnswer((_) async => true);
+      when(() => core.changeProxy(any())).thenAnswer((_) async => '');
+      when(core.closeConnections).thenAnswer((_) async => true);
+      when(core.resetConnections).thenAnswer((_) async => true);
+    });
+
+    tearDown(() async {
+      container.dispose();
+      await database.close();
+    });
+
+    test(
+      'disconnected selection persists without starting a listener',
+      () async {
+        expect(
+          await actionOf(container).selectVpn(const VpnSelection.server('a')),
+          isTrue,
+        );
+        final current = (await database.singleProfile.current())!;
+        expect(current.snapshot.selection, const VpnSelection.server('a'));
+        expect(current.selectedMap, profile.selectedMap);
+        expect(container.read(selectedMapProvider)['Select'], 'A');
+        verify(
+          () => core.changeProxy(
+            const ChangeProxyParams(groupName: 'Select', proxyName: 'A'),
+          ),
+        ).called(1);
+        verifyNever(() => core.startListener());
+      },
+    );
+
+    test('offline selection is used on the next Core setup', () async {
+      when(() => core.isInit).thenAnswer((_) async => false);
+      expect(
+        await actionOf(container).selectVpn(const VpnSelection.fallback()),
+        isTrue,
+      );
+      expect(container.read(selectedMapProvider)['Select'], 'Fallback');
+      expect(
+        (await database.singleProfile.current())!.snapshot.selection,
+        const VpnSelection.fallback(),
+      );
+      verifyNever(() => core.changeProxy(any()));
+    });
+
+    test(
+      'Core rejection preserves saved selection and restores routing',
+      () async {
+        when(() => core.changeProxy(any())).thenAnswer((_) async => 'rejected');
+        await expectLater(
+          actionOf(container).selectVpn(const VpnSelection.server('a')),
+          throwsA(isA<MessageException>()),
+        );
+        expect(await database.singleProfile.current(), profile);
+        expect(
+          (container.read(vpnActionProvider.notifier) as _SelectionVpnAction)
+              .restored,
+          [profile],
+        );
+        expect(container.read(currentProfileProvider), profile);
+      },
+    );
+
+    test('rapid A/B selections cannot persist or roll back over B', () async {
+      final entered = Completer<void>();
+      final release = Completer<void>();
+      when(() => core.changeProxy(any())).thenAnswer((invocation) async {
+        final params =
+            invocation.positionalArguments.single as ChangeProxyParams;
+        if (params.proxyName == 'A') {
+          entered.complete();
+          await release.future;
+        }
+        return '';
+      });
+      final first = actionOf(
+        container,
+      ).selectVpn(const VpnSelection.server('a'));
+      await entered.future;
+      final second = actionOf(
+        container,
+      ).selectVpn(const VpnSelection.fallback());
+      release.complete();
+      expect(await first, isFalse);
+      expect(await second, isTrue);
+      expect(
+        (await database.singleProfile.current())!.snapshot.selection,
+        const VpnSelection.fallback(),
+      );
+      expect(container.read(selectedMapProvider)['Select'], 'Fallback');
+    });
+
+    test('a queued old-profile selection cannot alter a replacement', () async {
+      final entered = Completer<void>();
+      final release = Completer<void>();
+      final queue = container
+          .read(setupActionProvider.notifier)
+          .serializeProfileCommit(() async {
+            entered.complete();
+            await release.future;
+            final replacement = profile.copyWith(
+              id: 2,
+              snapshot: profile.snapshot.copyWith(revision: 2),
+            );
+            await database.singleProfile.commit(
+              profile: replacement,
+              expectedRevision: 1,
+            );
+            container
+                .read(profilesProvider.notifier)
+                .publishCommitted(replacement);
+            container.read(currentProfileIdProvider.notifier).value = 2;
+          });
+      await entered.future;
+      final pending = actionOf(
+        container,
+      ).selectVpn(const VpnSelection.server('a'));
+      release.complete();
+      await queue;
+      expect(await pending, isFalse);
+      expect((await database.singleProfile.current())!.id, 2);
+      verifyNever(() => core.changeProxy(any()));
+    });
+
+    test(
+      'custom group selection keeps the independent simple choice',
+      () async {
+        final custom = profile.copyWith.snapshot(
+          routing: VpnRoutingMode.custom,
+        );
+        await database.singleProfile.update(
+          expectedRevision: 1,
+          profile: custom,
+        );
+        container.read(profilesProvider.notifier).publishCommitted(custom);
+        await actionOf(
+          container,
+        ).changeProxy(groupName: 'Original', proxyName: 'New');
+        final current = (await database.singleProfile.current())!;
+        expect(current.selectedMap['Original'], 'New');
+        expect(current.snapshot.selection, const VpnSelection.auto());
+        expect(current.snapshot.routing, VpnRoutingMode.custom);
+      },
+    );
+  });
 
   group('updateGroups', () {
     test('publishes the groups derived from core proxy data', () async {

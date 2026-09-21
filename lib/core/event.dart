@@ -32,6 +32,8 @@ abstract mixin class CoreEventListener {
 
   void onCrash(String message) {}
 
+  void onRunState(CoreRunObservation observation) {}
+
   void onGeoUpdate(
     String geoType,
     bool updating,
@@ -62,6 +64,9 @@ class CoreEventManager {
               break;
             case CoreEventType.crash:
               listener.onCrash(event.data);
+              break;
+            case CoreEventType.runState:
+              listener.onRunState(CoreRunObservation.fromJson(event.data));
               break;
             case CoreEventType.geoUpdate:
               final data = event.data as Map<String, dynamic>;

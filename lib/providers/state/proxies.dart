@@ -2,9 +2,15 @@ part of '../state.dart';
 
 @riverpod
 GroupsState currentGroupsState(Ref ref) {
-  final mode = ref.watch(
+  final configuredMode = ref.watch(
     patchClashConfigProvider.select((state) => state.mode),
   );
+  final snapshot = ref.watch(currentProfileProvider)?.snapshot;
+  final mode = snapshot?.generation == null
+      ? configuredMode
+      : snapshot!.routing == VpnRoutingMode.simple
+      ? Mode.global
+      : snapshot.advancedMode;
   final groups = ref.watch(
     groupsProvider.select(
       (state) => state.map((item) {
@@ -31,7 +37,8 @@ GroupsState currentGroupsState(Ref ref) {
 @riverpod
 ProxyState proxyState(Ref ref) {
   final suspend = ref.watch(suspendProvider);
-  final isStart = ref.watch(runTimeProvider.select((state) => state != null));
+  final observed = ref.watch(coreRunStateProvider);
+  final ready = ref.watch(coreStatusProvider) == CoreStatus.connected;
   final systemProxySelector = ref.watch(
     networkSettingProvider.select(
       (state) => SystemProxySelectorState(
@@ -40,14 +47,16 @@ ProxyState proxyState(Ref ref) {
       ),
     ),
   );
-  final mixedPort = ref.watch(
-    patchClashConfigProvider.select((state) => state.mixedPort),
-  );
   return ProxyState(
-    isStart: suspend ? false : isStart,
+    isStart:
+        !suspend &&
+        ready &&
+        observed?.active == true &&
+        observed!.mixedPort > 0 &&
+        !observed.suspended,
     systemProxy: systemProxySelector.systemProxy,
     bassDomain: systemProxySelector.bypassDomain,
-    port: mixedPort,
+    port: observed?.mixedPort ?? 0,
   );
 }
 
@@ -197,10 +206,8 @@ bool delayTestPending(Ref ref, {required String proxyName, String? testUrl}) {
 
 @riverpod
 Map<String, String> selectedMap(Ref ref) {
-  final selectedMap = ref.watch(
-    currentProfileProvider.select((state) => state?.selectedMap ?? {}),
-  );
-  return selectedMap;
+  final profile = ref.watch(currentProfileProvider);
+  return profile == null ? const {} : vpnRuntimeSelections(profile);
 }
 
 @riverpod

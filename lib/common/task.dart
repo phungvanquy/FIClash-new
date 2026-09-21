@@ -4,7 +4,7 @@ import 'dart:io';
 
 import 'package:archive/archive_io.dart';
 import 'package:drift/drift.dart';
-import 'package:drift_flutter/drift_flutter.dart';
+import 'package:drift/native.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/database/database.dart';
 import 'package:fl_clash/enum/enum.dart';
@@ -207,8 +207,10 @@ Future<({String yaml, String md5})> _makeRealProfileTask(
   if (rawConfig['profile'] == null) {
     rawConfig['profile'] = {};
   }
-  confineProviders('proxy-providers', proxiesProviderDirectoryName);
-  confineProviders('rule-providers', rulesProviderDirectoryName);
+  if (data.confineProviderPaths) {
+    confineProviders('proxy-providers', proxiesProviderDirectoryName);
+    confineProviders('rule-providers', rulesProviderDirectoryName);
+  }
   rawConfig['profile']['store-selected'] = false;
   rawConfig['geox-url'] = realPatchConfig.geoXUrl.raw;
   rawConfig['global-ua'] = realPatchConfig.globalUa ?? defaultUA;
@@ -630,29 +632,35 @@ Future<String> writeBackupArchive({
   return zipFilePath;
 }
 
-Future<MigrationData> restoreTask() async {
-  return compute<RootIsolateToken, MigrationData>(
-    _restoreTask,
-    RootIsolateToken.instance!,
-  );
+Future<MigrationData> restoreTask({
+  String? backupFilePath,
+  String? restoreDirPath,
+}) async {
+  return compute<
+    ({RootIsolateToken token, String? backup, String? restore}),
+    MigrationData
+  >(_restoreTask, (
+    token: RootIsolateToken.instance!,
+    backup: backupFilePath,
+    restore: restoreDirPath,
+  ));
 }
 
-Future<MigrationData> _restoreTask(RootIsolateToken token) async {
-  BackgroundIsolateBinaryMessenger.ensureInitialized(token);
+Future<MigrationData> _restoreTask(
+  ({RootIsolateToken token, String? backup, String? restore}) args,
+) async {
+  BackgroundIsolateBinaryMessenger.ensureInitialized(args.token);
   return readBackupArchive(
-    backupFilePath: await appPath.backupFilePath,
-    restoreDirPath: await appPath.restoreDirPath,
+    backupFilePath: args.backup ?? await appPath.backupFilePath,
+    restoreDirPath: args.restore ?? await appPath.restoreDirPath,
     homeDirPath: await appPath.homeDirPath,
   );
 }
 
-/// `posix.normalize` was doing this on its own and it does not: it collapses
-/// `a/../b`, but a name that starts with `../` normalizes to itself and an
-/// absolute one stays absolute, so either writes wherever the archive asks. A
-/// backup file is untrusted input — it is whatever the user picked off disk.
 String? _restoreEntryPath(String restoreDirPath, String name) {
   final normalized = posix.normalize(name.replaceAll('\\', '/'));
   if (normalized.isEmpty ||
+      normalized.contains(':') ||
       posix.isAbsolute(normalized) ||
       normalized == '..' ||
       normalized.startsWith('../')) {
@@ -671,21 +679,53 @@ Future<MigrationData> readBackupArchive({
   required String restoreDirPath,
   required String homeDirPath,
 }) async {
-  final zipDecoder = ZipDecoder();
-  final input = InputFileStream(backupFilePath);
-  final archive = zipDecoder.decodeStream(input);
   final dir = Directory(restoreDirPath);
-  await dir.create(recursive: true);
-  for (final file in archive.files) {
-    final outPath = _restoreEntryPath(restoreDirPath, file.name);
-    if (outPath == null) {
-      continue;
-    }
-    final outputStream = OutputFileStream(outPath);
-    file.writeContent(outputStream);
-    await outputStream.close();
+  if (normalize(restoreDirPath) == normalize(homeDirPath)) {
+    throw const FormatException('Restore must use unpublished staging');
   }
-  await input.close();
+  await dir.create(recursive: true);
+  if (await FileSystemEntity.type(dir.path, followLinks: false) !=
+          FileSystemEntityType.directory ||
+      !await dir.list().isEmpty) {
+    throw const FormatException('Restore staging must be empty');
+  }
+  final input = InputFileStream(backupFilePath);
+  try {
+    final archive = ZipDecoder().decodeStream(input, verify: true);
+    final destinations = <String>{};
+    var totalBytes = 0;
+    if (archive.files.length > 100000) {
+      throw const FormatException('Backup has too many resources');
+    }
+    for (final file in archive.files) {
+      final outPath = _restoreEntryPath(restoreDirPath, file.name);
+      if (outPath == null ||
+          file.isSymbolicLink ||
+          !destinations.add(outPath)) {
+        throw const FormatException('Invalid backup entry');
+      }
+      if (!file.isFile) continue;
+      totalBytes += file.size;
+      if (file.size > 1024 * 1024 * 1024 ||
+          totalBytes > 4 * 1024 * 1024 * 1024) {
+        throw const FormatException('Backup resources are too large');
+      }
+    }
+    if (archive.files.any((file) => file.name == 'snapshot-manifest.json')) {
+      await VpnArchiveStore(dir).verify(File(backupFilePath));
+    }
+    for (final file in archive.files.where((file) => file.isFile)) {
+      final outPath = _restoreEntryPath(restoreDirPath, file.name)!;
+      final outputStream = OutputFileStream(outPath);
+      try {
+        file.writeContent(outputStream);
+      } finally {
+        await outputStream.close();
+      }
+    }
+  } finally {
+    await input.close();
+  }
   final restoreConfigFile = File(join(restoreDirPath, configJsonName));
   if (!await restoreConfigFile.exists()) {
     throw MessageException(currentAppLocalizations.invalidBackupFile);
@@ -694,27 +734,23 @@ Future<MigrationData> readBackupArchive({
       json.decode(await restoreConfigFile.readAsString())
           as Map<String, Object?>?;
   final version = restoreConfigMap?['version'] ?? 0;
-  MigrationData migrationData = MigrationData(configMap: restoreConfigMap);
+  MigrationData migrationData = MigrationData(
+    configMap: restoreConfigMap,
+    sourcePath: restoreDirPath,
+  );
   if (version == 0 && restoreConfigMap != null) {
     migrationData = await migrateLegacyConfig(
       configMap: restoreConfigMap,
       sourcePath: restoreDirPath,
-      targetPath: homeDirPath,
+      targetPath: restoreDirPath,
     );
-    return migrationData;
+    return migrationData.copyWith(sourcePath: restoreDirPath);
   }
   final backupDatabaseFile = File(join(restoreDirPath, backupDatabaseName));
   if (!await backupDatabaseFile.exists()) {
     return migrationData;
   }
-  final database = Database(
-    driftDatabase(
-      name: 'database',
-      native: DriftNativeOptions(
-        databaseDirectory: () async => Directory(restoreDirPath),
-      ),
-    ),
-  );
+  final database = Database(NativeDatabase(backupDatabaseFile));
   try {
     final results = await Future.wait([
       database.profilesDao.query().get(),
@@ -725,19 +761,6 @@ Future<MigrationData> readBackupArchive({
     ]);
     final profiles = results[0].cast<Profile>();
     final scripts = results[1].cast<Script>();
-    final profilesMigration = profiles.map(
-      (item) => (
-        from: _getProfilePath(restoreDirPath, item.id.toString()),
-        to: _getProfilePath(homeDirPath, item.id.toString()),
-      ),
-    );
-    final scriptsMigration = scripts.map(
-      (item) => (
-        from: _getScriptPath(restoreDirPath, item.id.toString()),
-        to: _getScriptPath(homeDirPath, item.id.toString()),
-      ),
-    );
-    await _copyWithMapList([...profilesMigration, ...scriptsMigration]);
     return migrationData.copyWith(
       profiles: profiles,
       scripts: scripts,
@@ -748,14 +771,6 @@ Future<MigrationData> readBackupArchive({
   } finally {
     await database.close();
   }
-}
-
-Future<void> _copyWithMapList(
-  List<({String from, String to})> copyMapList,
-) async {
-  await Future.wait(
-    copyMapList.map((item) => File(item.from).safeCopy(item.to)).toList(),
-  );
 }
 
 String _getScriptPath(String root, String fileName) {

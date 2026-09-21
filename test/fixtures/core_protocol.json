@@ -10,6 +10,72 @@
       "geo-update-interval": 24
     }
   },
+  "prepareCall": {
+    "id": "prepareConfig#contract",
+    "method": "prepareConfig",
+    "arguments": {
+      "generation": "0123456789abcdef0123456789abcdef",
+      "revision": 42
+    }
+  },
+  "preparedResponse": {
+    "id": "prepareConfig#contract",
+    "result": {
+      "handle": "session-bound-handle",
+      "generation": "0123456789abcdef0123456789abcdef",
+      "revision": 42,
+      "servers": [
+        {
+          "id": "provider/c291cmNl/U2VydmVy",
+          "name": "Server",
+          "target": "managed-server",
+          "type": "Vless",
+          "provider": "source"
+        }
+      ]
+    }
+  },
+  "activateCall": {
+    "id": "activateConfig#contract",
+    "method": "activateConfig",
+    "arguments": {
+      "prepared": {"handle": "session-bound-handle", "revision": 42},
+      "setup": {
+        "selected-map": {"GLOBAL": "managed-server"},
+        "test-url": "https://www.gstatic.com/generate_204"
+      }
+    }
+  },
+  "activatedResponse": {
+    "id": "activateConfig#contract",
+    "result": {
+      "generation": "0123456789abcdef0123456789abcdef",
+      "revision": 42
+    }
+  },
+  "discardCall": {
+    "id": "discardConfig#contract",
+    "method": "discardConfig",
+    "arguments": {"handle": "session-bound-handle", "revision": 42}
+  },
+  "discardedResponse": {
+    "id": "discardConfig#contract",
+    "result": true
+  },
+  "runStateResponse": {
+    "id": "getRunState#contract",
+    "result": {
+      "session": "native-session",
+      "revision": 9,
+      "requested": true,
+      "active": true,
+      "suspended": false,
+      "tun": false,
+      "mixedPort": 7890,
+      "generation": "0123456789abcdef0123456789abcdef",
+      "configRevision": 42
+    }
+  },
   "eventCall": {
     "method": "message",
     "arguments": [

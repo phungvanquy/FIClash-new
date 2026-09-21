@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:fl_clash/common/common.dart';
@@ -8,7 +7,6 @@ import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/pages/editor.dart';
 import 'package:fl_clash/providers/action.dart';
-import 'package:fl_clash/providers/core.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:material_ui/material_ui.dart';
@@ -36,7 +34,9 @@ class _EditProfileViewState extends ConsumerState<EditProfileView> {
   String? _rawText;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final _fileInfoNotifier = ValueNotifier<FileInfo?>(null);
-  late SetupAction _setupAction;
+  late VpnAction _vpnAction;
+  int? _requestRevision;
+  bool _saving = false;
   Uint8List? _fileData;
 
   @override
@@ -48,7 +48,7 @@ class _EditProfileViewState extends ConsumerState<EditProfileView> {
     _autoUpdateDurationController = TextEditingController(
       text: widget.profile.autoUpdateDuration.inMinutes.toString(),
     );
-    _setupAction = ref.read(setupActionProvider.notifier);
+    _vpnAction = ref.read(vpnActionProvider.notifier);
     _updateFileInfo();
   }
 
@@ -62,7 +62,18 @@ class _EditProfileViewState extends ConsumerState<EditProfileView> {
   }
 
   Future<void> _handleConfirm() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_saving || !_formKey.currentState!.validate()) return;
+    setState(() => _saving = true);
+    try {
+      final saved = await globalState.safeRun(_save);
+      if (saved == true && mounted) Navigator.of(context).pop();
+    } finally {
+      _requestRevision = null;
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<bool> _save() async {
     var profile = widget.profile.copyWith(
       url: _urlController.text,
       label: _labelController.text,
@@ -71,7 +82,6 @@ class _EditProfileViewState extends ConsumerState<EditProfileView> {
         minutes: int.parse(_autoUpdateDurationController.text),
       ),
     );
-    final profilesAction = ref.read(profilesActionProvider.notifier);
     final hasUpdate = widget.profile.url != profile.url;
     if (_fileData != null) {
       if (profile.type == ProfileType.url && _autoUpdate) {
@@ -84,31 +94,23 @@ class _EditProfileViewState extends ConsumerState<EditProfileView> {
           profile = profile.copyWith(autoUpdate: false);
         }
       }
-      final savedProfile = await globalState.safeRun(
-        () => profile.saveFile(
-          _fileData!,
-          validate: (path) =>
-              ref.read(coreHandlerProvider).validateConfig(path),
-        ),
-      );
-      if (savedProfile == null) {
-        return;
-      }
-      profilesAction.putProfile(savedProfile);
-    } else if (!hasUpdate) {
-      profilesAction.putProfile(profile);
-    } else {
-      unawaited(
-        globalState.safeRun(() async {
-          await Future.delayed(commonDuration);
-          if (hasUpdate) {
-            await profilesAction.updateProfile(profile);
-          }
-        }),
-      );
     }
-    if (mounted) {
-      Navigator.of(context).pop();
+    if (!mounted) return false;
+    try {
+      if (_fileData == null && !hasUpdate) {
+        await _vpnAction.updateMetadata(profile);
+      } else {
+        final operation = _vpnAction.edit(profile, bytes: _fileData);
+        _requestRevision = _vpnAction.requestRevision;
+        final result = await operation;
+        if (result.outcome == VpnImportOutcome.cancelled) return false;
+        _vpnAction.requireSuccess(result);
+      }
+      return true;
+    } on MessageException {
+      rethrow;
+    } catch (_) {
+      throw MessageException(currentAppLocalizations.vpnImportFailed);
     }
   }
 
@@ -141,16 +143,10 @@ class _EditProfileViewState extends ConsumerState<EditProfileView> {
   }
 
   Future<void> _editProfileFile() async {
-    if (_rawText == null) {
-      final profilePath = await appPath.getProfilePath(
-        widget.profile.id.toString(),
-      );
-      final file = File(profilePath);
-      if (await file.exists()) {
-        _rawText = await file.readAsString();
-      }
-    }
-    if (!mounted) return;
+    _rawText ??= await globalState.safeRun(
+      () async => (await widget.profile.file).readAsString(),
+    );
+    if (!mounted || _rawText == null) return;
     final title = widget.profile.label.takeFirstValid([
       widget.profile.id.toString(),
     ]);
@@ -177,7 +173,7 @@ class _EditProfileViewState extends ConsumerState<EditProfileView> {
       },
     );
     final data = await BaseNavigator.push<String>(context, editorPage);
-    if (data == null) {
+    if (!mounted || data == null) {
       return;
     }
     _rawText = data;
@@ -222,8 +218,9 @@ class _EditProfileViewState extends ConsumerState<EditProfileView> {
     _urlController.dispose();
     _fileInfoNotifier.dispose();
     _autoUpdateDurationController.dispose();
+    final revision = _requestRevision;
+    if (revision != null) _vpnAction.cancelIfCurrent(revision);
     super.dispose();
-    _setupAction.autoApplyProfile();
   }
 
   @override
@@ -252,7 +249,7 @@ class _EditProfileViewState extends ConsumerState<EditProfileView> {
       child: PageFocusScope(
         child: CommonPopScope(
           onPop: (context) {
-            if (_fileData == null) {
+            if (_saving || _fileData == null) {
               return true;
             }
             _handleBack();
@@ -261,27 +258,32 @@ class _EditProfileViewState extends ConsumerState<EditProfileView> {
           child: FloatLayout(
             floatingWidget: FloatWrapper(
               child: CommonFloatingActionButton(
-                onPressed: _handleConfirm,
+                onPressed: _saving ? null : _handleConfirm,
                 icon: const Icon(Icons.save),
-                label: appLocalizations.save,
+                label: _saving
+                    ? appLocalizations.loading
+                    : appLocalizations.save,
               ),
             ),
-            child: Form(
-              key: _formKey,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Builder(
-                  builder: (context) => ListView.separated(
-                    padding: kMaterialListPadding.copyWith(
-                      bottom: BottomInsetScope.of(context),
+            child: AbsorbPointer(
+              absorbing: _saving,
+              child: Form(
+                key: _formKey,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Builder(
+                    builder: (context) => ListView.separated(
+                      padding: kMaterialListPadding.copyWith(
+                        bottom: BottomInsetScope.of(context),
+                      ),
+                      itemBuilder: (_, index) {
+                        return items[index];
+                      },
+                      separatorBuilder: (_, _) {
+                        return const SizedBox(height: 24);
+                      },
+                      itemCount: items.length,
                     ),
-                    itemBuilder: (_, index) {
-                      return items[index];
-                    },
-                    separatorBuilder: (_, _) {
-                      return const SizedBox(height: 24);
-                    },
-                    itemCount: items.length,
                   ),
                 ),
               ),

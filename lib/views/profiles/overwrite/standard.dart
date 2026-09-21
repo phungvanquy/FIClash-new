@@ -223,7 +223,7 @@ class _MatchTargetItem extends ConsumerWidget {
             labelBuilder: (item) =>
                 item.isEmpty ? appLocalizations.followProfile : item,
             selectedOf: (ref) => ref.watch(
-              profileProvider(
+              editableProfileProvider(
                 profileId,
               ).select((state) => state?.matchTarget ?? ''),
             ),
@@ -235,7 +235,7 @@ class _MatchTargetItem extends ConsumerWidget {
     if (res == null) {
       return;
     }
-    ref.read(profilesProvider.notifier).updateProfile(profileId, (state) {
+    ref.read(profileDraftProvider(profileId).notifier).updateProfile((state) {
       return state.copyWith(matchTarget: res.isEmpty ? null : res);
     });
   }
@@ -244,7 +244,7 @@ class _MatchTargetItem extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final appLocalizations = context.appLocalizations;
     final matchTarget = ref.watch(
-      profileProvider(profileId).select((state) => state?.matchTarget),
+      editableProfileProvider(profileId).select((state) => state?.matchTarget),
     );
     final clashConfig = ref.watch(clashConfigProvider(profileId)).value;
     final invalid =

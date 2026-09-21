@@ -60,8 +60,13 @@ class CoreAction extends _$CoreAction {
       await initCore();
       ref.read(coreStatusProvider.notifier).value = CoreStatus.connected;
     }
+    await syncRunState();
     return true;
   }
+
+  @protected
+  Future<void> syncRunState() =>
+      ref.read(setupActionProvider.notifier).syncRunState();
 
   Future<void> closeConnection(String id) async {
     await _core.closeConnection(id);
@@ -92,6 +97,8 @@ class CoreAction extends _$CoreAction {
   }
 
   Future<bool> _runRestartWorker() async {
+    final setup = ref.read(setupActionProvider.notifier);
+    final previousIntent = setup.restartIntent;
     try {
       ref.read(coreStatusProvider.notifier).value = CoreStatus.connecting;
       final result = await restartLifecycle();
@@ -103,7 +110,7 @@ class CoreAction extends _$CoreAction {
       var applied = true;
       while (appliedRevision < _requestedRestartRevision) {
         final revision = _requestedRestartRevision;
-        if (ref.read(isStartProvider)) {
+        if (setup.shouldResumeAfterRestart(previousIntent)) {
           applied = await ref
               .read(setupActionProvider.notifier)
               .setRunning(true, initialize: true);

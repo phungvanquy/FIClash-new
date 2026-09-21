@@ -1,5 +1,16 @@
 part of 'database.dart';
 
+class ProfileSnapshotConverter extends TypeConverter<ProfileSnapshot, String> {
+  const ProfileSnapshotConverter();
+
+  @override
+  ProfileSnapshot fromSql(String fromDb) =>
+      ProfileSnapshot.fromJson(jsonDecode(fromDb) as Map<String, dynamic>);
+
+  @override
+  String toSql(ProfileSnapshot value) => jsonEncode(value.toJson());
+}
+
 class StringMapConverter extends TypeConverter<Map<String, String>, String> {
   const StringMapConverter();
 

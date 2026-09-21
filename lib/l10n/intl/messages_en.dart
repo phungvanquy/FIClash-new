@@ -1170,12 +1170,105 @@ class MessageLookup extends MessageLookupByLibrary {
     "value": MessageLookupByLibrary.simpleMessage("Value"),
     "vibrantScheme": MessageLookupByLibrary.simpleMessage("Vibrant"),
     "view": MessageLookupByLibrary.simpleMessage("View"),
+    "vpnApplySettings": MessageLookupByLibrary.simpleMessage(
+      "Apply saved configuration",
+    ),
+    "vpnApplySettingsDescription": MessageLookupByLibrary.simpleMessage(
+      "Rebuild with saved DNS, rules and scripts. Your active configuration changes only after validation succeeds.",
+    ),
+    "vpnAutoDescription": MessageLookupByLibrary.simpleMessage(
+      "Automatically choose a responsive server",
+    ),
+    "vpnCameraUnavailable": MessageLookupByLibrary.simpleMessage(
+      "Camera unavailable. Allow camera access in system settings, try again, or choose a QR image.",
+    ),
     "vpnConfigChangeDetected": MessageLookupByLibrary.simpleMessage(
       "VPN-related configuration change detected",
+    ),
+    "vpnConfiguration": MessageLookupByLibrary.simpleMessage(
+      "VPN configuration",
+    ),
+    "vpnConnect": MessageLookupByLibrary.simpleMessage("Connect"),
+    "vpnConnectionFailed": MessageLookupByLibrary.simpleMessage(
+      "Connection needs attention",
+    ),
+    "vpnCustomRouting": MessageLookupByLibrary.simpleMessage("Custom routing"),
+    "vpnCustomRoutingDescription": MessageLookupByLibrary.simpleMessage(
+      "Use the configuration’s routing rules. Selecting a server on Home returns to simple routing.",
+    ),
+    "vpnDisconnect": MessageLookupByLibrary.simpleMessage("Disconnect"),
+    "vpnDisconnecting": MessageLookupByLibrary.simpleMessage("Disconnecting…"),
+    "vpnDraftDescription": MessageLookupByLibrary.simpleMessage(
+      "Changes are drafts until you save. Going back discards unsaved edits; your current VPN keeps working.",
+    ),
+    "vpnDraftSaveFailed": MessageLookupByLibrary.simpleMessage(
+      "Could not save this draft. Your current configuration is unchanged. Retry, or reopen the editor if the configuration changed elsewhere.",
     ),
     "vpnEnableDesc": MessageLookupByLibrary.simpleMessage(
       "Route all system traffic through VpnService automatically",
     ),
+    "vpnFallbackDescription": MessageLookupByLibrary.simpleMessage(
+      "Use the first available server in order",
+    ),
+    "vpnHome": MessageLookupByLibrary.simpleMessage("Home"),
+    "vpnImportDescription": MessageLookupByLibrary.simpleMessage(
+      "Import the subscription URL from your VPN provider.",
+    ),
+    "vpnImportFailed": MessageLookupByLibrary.simpleMessage(
+      "Could not import the configuration. Your saved configuration has not been replaced. Check the URL and connection, then try again.",
+    ),
+    "vpnImportTitle": MessageLookupByLibrary.simpleMessage("Set up your VPN"),
+    "vpnImporting": MessageLookupByLibrary.simpleMessage(
+      "Importing configuration…",
+    ),
+    "vpnInvalidUrl": MessageLookupByLibrary.simpleMessage(
+      "Enter a valid HTTP or HTTPS subscription URL.",
+    ),
+    "vpnLocalProxy": MessageLookupByLibrary.simpleMessage(
+      "Local proxy only · VPN is not active",
+    ),
+    "vpnPasteClipboard": MessageLookupByLibrary.simpleMessage(
+      "Paste from clipboard",
+    ),
+    "vpnPermissionDenied": MessageLookupByLibrary.simpleMessage(
+      "Permission was not granted. Try connecting again or check system settings.",
+    ),
+    "vpnProxyFailure": MessageLookupByLibrary.simpleMessage(
+      "Could not update the system proxy. Check network settings.",
+    ),
+    "vpnProxyOnly": MessageLookupByLibrary.simpleMessage(
+      "Connected · system proxy only",
+    ),
+    "vpnQrImage": MessageLookupByLibrary.simpleMessage("Import QR image"),
+    "vpnQrImageTooLarge": MessageLookupByLibrary.simpleMessage(
+      "Choose a smaller QR image (up to 16 MB and 16 megapixels).",
+    ),
+    "vpnRecoveryExport": MessageLookupByLibrary.simpleMessage(
+      "Export migration backup",
+    ),
+    "vpnRecoveryExportDescription": MessageLookupByLibrary.simpleMessage(
+      "Keep a copy of the profiles and settings saved before the upgrade.",
+    ),
+    "vpnRecoveryRequired": MessageLookupByLibrary.simpleMessage(
+      "Your saved configuration is safe, but the VPN could not be restored. Retry recovery in Settings.",
+    ),
+    "vpnReplace": MessageLookupByLibrary.simpleMessage("Replace configuration"),
+    "vpnRetry": MessageLookupByLibrary.simpleMessage("Try again"),
+    "vpnScanQr": MessageLookupByLibrary.simpleMessage("Scan QR code"),
+    "vpnSelectFailed": MessageLookupByLibrary.simpleMessage(
+      "Could not switch servers. Your previous selection is unchanged.",
+    ),
+    "vpnServerUnavailableAuto": MessageLookupByLibrary.simpleMessage(
+      "Your selected server is no longer available. Switched to Auto.",
+    ),
+    "vpnServers": MessageLookupByLibrary.simpleMessage("Servers"),
+    "vpnSettingsActionFailed": MessageLookupByLibrary.simpleMessage(
+      "The operation could not be completed. Please try again.",
+    ),
+    "vpnSubscriptionUrl": MessageLookupByLibrary.simpleMessage(
+      "Subscription URL",
+    ),
+    "vpnSuspended": MessageLookupByLibrary.simpleMessage("Suspended"),
     "vpnTip": MessageLookupByLibrary.simpleMessage(
       "Changes take effect after restarting the VPN",
     ),

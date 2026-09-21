@@ -9,7 +9,7 @@ class ScriptContent extends ConsumerWidget {
   const ScriptContent({super.key});
 
   void _handleChange(WidgetRef ref, int profileId, int scriptId) {
-    ref.read(profilesProvider.notifier).updateProfile(profileId, (state) {
+    ref.read(profileDraftProvider(profileId).notifier).updateProfile((state) {
       return state.copyWith(
         scriptId: state.scriptId == scriptId ? null : scriptId,
       );
@@ -17,7 +17,7 @@ class ScriptContent extends ConsumerWidget {
   }
 
   void _handleRadioChange(WidgetRef ref, int profileId, int? scriptId) {
-    ref.read(profilesProvider.notifier).updateProfile(profileId, (state) {
+    ref.read(profileDraftProvider(profileId).notifier).updateProfile((state) {
       return state.copyWith(scriptId: scriptId);
     });
   }
@@ -27,7 +27,7 @@ class ScriptContent extends ConsumerWidget {
     final appLocalizations = context.appLocalizations;
     final profileId = ProfileIdProvider.of(context)!.profileId;
     final scriptId = ref.watch(
-      profileProvider(profileId).select((state) => state?.scriptId),
+      editableProfileProvider(profileId).select((state) => state?.scriptId),
     );
     final scripts = ref.watch(scriptsProvider).value ?? [];
     return SliverMainAxisGroup(

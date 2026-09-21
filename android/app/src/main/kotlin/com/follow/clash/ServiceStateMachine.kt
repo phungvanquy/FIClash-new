@@ -14,6 +14,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.resume
+import java.util.UUID
 
 enum class RunState {
     STARTED,
@@ -21,6 +22,15 @@ enum class RunState {
     STOPPING,
     STOPPED,
 }
+
+data class RunObservation(
+    val session: String,
+    val revision: Long = 0,
+    val state: RunState = RunState.STOPPED,
+    val startedAt: Long = 0,
+    val vpn: Boolean = false,
+    val failure: String? = null,
+)
 
 internal typealias RunRequest = RunIntentArbiter.Token
 
@@ -39,6 +49,8 @@ internal class ServiceStateMachine(private val host: ServiceStateHost) {
     private val startPreparationLock = Mutex()
     private val mutableRunState = MutableStateFlow(RunState.STOPPED)
     private val arbiter = RunIntentArbiter()
+    private val intentLock = Any()
+    private val mutableObservation = MutableStateFlow(RunObservation(UUID.randomUUID().toString()))
 
     @Volatile
     private var sharedState = SharedState()
@@ -47,6 +59,25 @@ internal class ServiceStateMachine(private val host: ServiceStateHost) {
     private var pendingVpnPreparation: (() -> Unit)? = null
 
     val runState = mutableRunState.asStateFlow()
+    val observation = mutableObservation.asStateFlow()
+
+    fun snapshot(): RunObservation = observation.value
+
+    private fun publish(state: RunState, failure: String? = null, vpn: Boolean = observation.value.vpn) {
+        mutableRunState.value = state
+        mutableObservation.value = observation.value.copy(
+            revision = observation.value.revision + 1,
+            state = state,
+            startedAt = if (state == RunState.STOPPED) 0 else runTimeMillis,
+            vpn = state != RunState.STOPPED && vpn,
+            failure = failure,
+        )
+    }
+
+    private fun publishCurrent(request: RunRequest, state: RunState, vpn: Boolean = observation.value.vpn) =
+        synchronized(intentLock) {
+            if (isCurrent(request)) publish(state, vpn = vpn)
+        }
 
     private val runTimeMillis: Long
         get() = host.runTimeMillis
@@ -61,7 +92,11 @@ internal class ServiceStateMachine(private val host: ServiceStateHost) {
 
     suspend fun refresh(): Long = transitionLock.withLock {
         val current = runTimeMillis
-        mutableRunState.value = if (current == 0L) RunState.STOPPED else RunState.STARTED
+        synchronized(intentLock) {
+            if (runState.value != RunState.STARTING && runState.value != RunState.STOPPING) {
+                publish(if (current == 0L) RunState.STOPPED else RunState.STARTED)
+            }
+        }
         current
     }
 
@@ -75,10 +110,9 @@ internal class ServiceStateMachine(private val host: ServiceStateHost) {
         if (runTimeMillis != 0L) {
             return@withLock
         }
-        if (!arbiter.resetToStopped(token)) {
-            return@withLock
+        synchronized(intentLock) {
+            if (arbiter.resetToStopped(token)) publish(RunState.STOPPED, failure = "service_lost")
         }
-        mutableRunState.value = RunState.STOPPED
     }
 
     suspend fun handleStartAction() {
@@ -118,7 +152,7 @@ internal class ServiceStateMachine(private val host: ServiceStateHost) {
         val result = CompletableDeferred<Boolean>()
         val launchRequest: (Boolean) -> Unit = { shouldStart ->
             if (!shouldStart) {
-                fail(request)
+                fail(request, "notification_permission_denied")
                 result.complete(false)
             } else {
                 host.scope.launch {
@@ -126,7 +160,7 @@ internal class ServiceStateMachine(private val host: ServiceStateHost) {
                         runCatching { start(request) }
                             .onFailure { error ->
                                 host.log("Unable to process service start request: $error")
-                                fail(request)
+                                fail(request, "start_failed")
                                 reconcileStopped()
                             }
                             .getOrDefault(false),
@@ -151,6 +185,12 @@ internal class ServiceStateMachine(private val host: ServiceStateHost) {
                 runCatching { stop(request) }
                     .onFailure { error ->
                         host.log("Unable to process service stop request: $error")
+                        synchronized(intentLock) {
+                            if (isCurrent(request)) publish(
+                                if (runTimeMillis == 0L) RunState.STOPPED else RunState.STARTED,
+                                failure = "stop_failed",
+                            )
+                        }
                     }
                     .getOrDefault(false),
             )
@@ -223,14 +263,14 @@ internal class ServiceStateMachine(private val host: ServiceStateHost) {
         }
         val options = sharedState.vpnOptions
         if (options == null) {
-            fail(request)
+            fail(request, "missing_configuration")
             return false
         }
         if (!prepareVpn(options)) {
             if (host.app() == null && isCurrent(request)) {
                 host.showToast(VPN_PERMISSION_MESSAGE)
             }
-            fail(request)
+            fail(request, "vpn_permission_denied")
             return false
         }
         if (!isCurrent(request)) {
@@ -242,20 +282,19 @@ internal class ServiceStateMachine(private val host: ServiceStateHost) {
                 return@transition false
             }
             if (runTimeMillis != 0L && host.isVpnServiceActive() == options.enable) {
-                mutableRunState.value = RunState.STARTED
+                publishCurrent(request, RunState.STARTED, vpn = options.enable)
                 return@transition true
             }
-            mutableRunState.value = RunState.STARTING
+            publishCurrent(request, RunState.STARTING)
             val startedAtMillis = host.startService(options)
             if (startedAtMillis == 0L) {
-                mutableRunState.value = RunState.STOPPED
-                fail(request)
+                fail(request, "start_failed")
                 return@transition false
             }
             if (!isCurrent(request)) {
                 return@transition false
             }
-            mutableRunState.value = RunState.STARTED
+            publishCurrent(request, RunState.STARTED, vpn = options.enable)
             true
         }
     }
@@ -264,9 +303,10 @@ internal class ServiceStateMachine(private val host: ServiceStateHost) {
         if (isRunningRequested() || runTimeMillis == 0L) {
             return@withLock
         }
-        mutableRunState.value = RunState.STOPPING
+        val request = captureRequestToken()
+        publishCurrent(request, RunState.STOPPING)
         host.stopService()
-        mutableRunState.value = RunState.STOPPED
+        publishCurrent(request, RunState.STOPPED)
     }
 
     private suspend fun stop(request: RunRequest): Boolean = transitionLock.withLock {
@@ -274,12 +314,13 @@ internal class ServiceStateMachine(private val host: ServiceStateHost) {
             return@withLock false
         }
         abandonVpnPreparation()
-        if (runState.value == RunState.STOPPED && runTimeMillis == 0L) {
+        if (runTimeMillis == 0L) {
+            publishCurrent(request, RunState.STOPPED)
             return@withLock true
         }
-        mutableRunState.value = RunState.STOPPING
+        publishCurrent(request, RunState.STOPPING)
         host.stopService()
-        mutableRunState.value = RunState.STOPPED
+        publishCurrent(request, RunState.STOPPED)
         isCurrent(request)
     }
 
@@ -311,14 +352,20 @@ internal class ServiceStateMachine(private val host: ServiceStateHost) {
         abandon()
     }
 
-    private fun createRequest(running: Boolean): RunRequest = arbiter.request(running)
+    private fun createRequest(running: Boolean): RunRequest = synchronized(intentLock) {
+        arbiter.request(running).also {
+            publish(if (running) RunState.STARTING else RunState.STOPPING)
+        }
+    }
 
     private fun isRunningRequested(): Boolean = arbiter.isRunningRequested
 
     private fun isCurrent(request: RunRequest): Boolean = arbiter.isCurrent(request)
 
-    private fun fail(request: RunRequest) {
-        arbiter.resetToStopped(request)
+    private fun fail(request: RunRequest, failure: String) = synchronized(intentLock) {
+        if (arbiter.resetToStopped(request)) {
+            publish(if (runTimeMillis == 0L) RunState.STOPPED else RunState.STARTED, failure)
+        }
     }
 
     internal companion object {

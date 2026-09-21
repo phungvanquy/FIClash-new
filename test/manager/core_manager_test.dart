@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:fl_clash/common/common.dart';
@@ -435,4 +436,63 @@ void main() {
       },
     );
   });
+
+  testWidgets('committed generation publication does not repeat setup', (
+    tester,
+  ) async {
+    final coreInterface = _coreInterface();
+    final profile = Profile.normal().copyWith(
+      snapshot: const ProfileSnapshot(generation: 'committed', revision: 1),
+    );
+    final container = await _pumpCoreManager(
+      tester,
+      coreInterface,
+      overrides: [
+        initProvider.overrideWithBuild((_, _) => true),
+        profilesProvider.overrideWith(() => TestProfiles([profile])),
+      ],
+    );
+    container.read(currentProfileIdProvider.notifier).value = profile.id;
+    await tester.pump();
+    verifyNever(() => coreInterface.setupConfig(any()));
+    coreEventManager.sendEvent(
+      const CoreEvent(type: CoreEventType.loaded, data: 'old-provider'),
+    );
+    await tester.pump();
+    verifyNever(() => coreInterface.getExternalProvider(any()));
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets(
+    'late legacy provider event cannot update a committed generation',
+    (tester) async {
+      final coreInterface = _coreInterface();
+      final response = Completer<ExternalProvider?>();
+      when(
+        () => coreInterface.getExternalProvider('old'),
+      ).thenAnswer((_) => response.future);
+      final old = Profile.normal();
+      final container = await _pumpCoreManager(
+        tester,
+        coreInterface,
+        overrides: [
+          profilesProvider.overrideWith(() => TestProfiles([old])),
+          currentProfileIdProvider.overrideWithBuild((_, _) => old.id),
+        ],
+      );
+      coreEventManager.sendEvent(
+        const CoreEvent(type: CoreEventType.loaded, data: 'old'),
+      );
+      await tester.pump();
+      (container.read(profilesProvider.notifier) as TestProfiles).replace([
+        old.copyWith(
+          snapshot: const ProfileSnapshot(generation: 'committed', revision: 1),
+        ),
+      ]);
+      response.complete(null);
+      await tester.pump();
+      expect(container.read(providersProvider), isEmpty);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
 }

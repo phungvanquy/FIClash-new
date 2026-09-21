@@ -10,6 +10,10 @@ import 'package:flutter_test/flutter_test.dart';
 
 class _RecordingListener with ServiceListener {
   final events = <CoreEvent>[];
+  final runStates = <AndroidRunObservation>[];
+
+  @override
+  void onRunState(AndroidRunObservation state) => runStates.add(state);
 
   @override
   void onServiceEvent(CoreEvent event) => events.add(event);
@@ -162,6 +166,77 @@ void main() {
       mockChannel((_) async => null);
       expect(await Service().getRunTime(), isNull);
     });
+  });
+
+  group('observed run state', () {
+    const session = 'native-test-1';
+    const starting = AndroidRunObservation(
+      session: session,
+      revision: 1,
+      state: VpnRunState.starting,
+    );
+    const started = AndroidRunObservation(
+      session: session,
+      revision: 2,
+      state: VpnRunState.started,
+      startedAt: 1700000000000,
+      vpn: true,
+    );
+
+    Future<void> emitState(AndroidRunObservation state) async {
+      await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .handlePlatformMessage(
+            channelName,
+            codec.encodeMethodCall(MethodCall('runState', jsonEncode(state))),
+            null,
+          );
+    }
+
+    test(
+      'passive snapshot preserves pending state without querying runtime',
+      () async {
+        final state = starting.copyWith(session: 'snapshot-only');
+        mockChannel((_) async => jsonEncode(state));
+        expect(await Service().getRunState(), state);
+        expect(calls.map((call) => call.method), ['getRunState']);
+      },
+    );
+
+    test(
+      'events and late snapshots cannot overwrite a newer observation',
+      () async {
+        final listener = _RecordingListener();
+        Service().addListener(listener);
+        addTearDown(() => Service().removeListener(listener));
+        await emitState(started);
+        await emitState(starting);
+        mockChannel((_) async => jsonEncode(starting));
+        expect(await Service().getRunState(), started);
+        expect(listener.runStates, [started]);
+      },
+    );
+
+    test(
+      'new native sessions retire old events and removed listeners stay detached',
+      () async {
+        final previous = started.copyWith(session: 'retired-by-next');
+        await emitState(previous);
+        final listener = _RecordingListener();
+        Service().addListener(listener);
+        const stopped = AndroidRunObservation(
+          session: 'native-test-2',
+          revision: 1,
+          state: VpnRunState.stopped,
+          failure: 'vpn_permission_denied',
+        );
+        await emitState(stopped);
+        await emitState(previous.copyWith(revision: 999));
+        expect(listener.runStates, [stopped]);
+        Service().removeListener(listener);
+        await emitState(stopped.copyWith(revision: 2));
+        expect(listener.runStates, [stopped]);
+      },
+    );
   });
 
   group('invokeMethod', () {

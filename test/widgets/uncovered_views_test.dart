@@ -1,3 +1,4 @@
+import 'package:fl_clash/database/database.dart' as db;
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/features/overwrite/overwrite.dart';
 import 'package:fl_clash/l10n/l10n.dart';
@@ -25,6 +26,19 @@ class _TestScripts extends Scripts {
 
   @override
   Stream<List<Script>> build() => Stream.value(initial);
+}
+
+class _Draft extends ProfileDraft {
+  _Draft(this.profile);
+
+  final Profile profile;
+
+  @override
+  ProfileEditDraft? build(int profileId) => ProfileEditDraft(
+    original: profile,
+    profile: profile,
+    ownedData: const db.ProfileOwnedData(),
+  );
 }
 
 class _TestGlobalRules extends GlobalRules {
@@ -288,7 +302,7 @@ void main() {
     expect(tester.takeException(), null);
   });
 
-  testWidgets('standard overwrite picks a MATCH-TARGET from the profile', (
+  testWidgets('standard overwrite picks a MATCH-TARGET in the draft', (
     tester,
   ) async {
     final profile = Profile.normal();
@@ -296,6 +310,7 @@ void main() {
       tester,
       profiles: [profile],
       overrides: [
+        profileDraftProvider(profile.id).overrideWith(() => _Draft(profile)),
         currentProfileIdProvider.overrideWithBuild((_, _) => profile.id),
         profileAddedRulesProvider.overrideWith2(
           (_) => _TestProfileAddedRules(const []),
@@ -342,7 +357,11 @@ void main() {
     await tester.tap(find.text('HK'));
     await tester.pumpAndSettle();
     expect(find.byType(OverwriteSelectionSheet<String>), findsNothing);
-    expect(container.read(profilesProvider).first.matchTarget, 'HK');
+    expect(
+      container.read(editableProfileProvider(profile.id))?.matchTarget,
+      'HK',
+    );
+    expect(container.read(profilesProvider).first.matchTarget, isNull);
     expect(find.text('HK'), findsOneWidget);
     expect(tester.takeException(), null);
   });
