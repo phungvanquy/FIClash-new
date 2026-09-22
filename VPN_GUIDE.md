@@ -16,11 +16,29 @@ Automatic groups do not silently switch to DIRECT when no eligible server is ava
 
 ## Connection status
 
-The button starts, stops, or cancels a pending connection. Status follows native service/listener observations, not merely Core startup or a start-command acknowledgement. Connecting can include waiting for platform authorization. Connected means the observed VPN/TUN path is active. On desktop, **System proxy only** or **Local proxy only** indicates that TUN is not active; those modes do not capture all device traffic. Failed permission/startup, suspended operation, and failed recovery are shown separately.
+The circular button connects or disconnects. While connecting, use the separate Cancel action; repeated transition taps are disabled. Status follows native service/listener observations, not merely Core startup or a command acknowledgement. Green means Connected, gray means Disconnected, orange means Connecting, blue means Disconnecting, and red marks a connection error. Text and icons identify the state too. Connecting can include waiting for platform authorization. Connected means the observed VPN/TUN path is active, not that every website or server is reachable. On desktop, **System proxy only** or **Local proxy only** indicates that TUN is not active; those modes do not capture all device traffic. Failed permission/startup, suspended operation, and failed recovery are shown separately. If disconnect cannot be confirmed, retry Disconnect; the app does not report successful disconnection or turn that failure into a reconnect request.
 
 Fresh installations request VPN/TUN defaults when you explicitly connect. Existing platform preferences are preserved during migration. OS permission prompts and platform-specific TUN requirements still apply.
 
+When reopening on Android, Checking connection means the app is waiting for its native state snapshot; it does not assume that a previously running VPN is off.
+
 Closing the Flutter app pauses subscription and provider-content refresh. If the native VPN remains running, it uses the last committed configuration; health checks, Auto, and Fallback continue. Due content refresh resumes when Flutter returns. Choosing Exit/Disconnect or having the operating system stop the native service is different from merely closing Flutter.
+
+## Test server latency
+
+Choose **Test latency** above the server list. Each individual server shows its measured round-trip probe time in milliseconds; lower is better for this test, not a guarantee of download speed. The fastest successful node is marked without moving the list or selecting it. Auto and Fallback remain automatic modes, not individual measurements.
+
+The button shows Testing while the batch runs and cannot launch another batch. Not tested means there is no measurement for this configuration and test URL. Timed out means the probe exceeded its deadline; Unreachable means the probe could not connect or complete; Test failed means the test infrastructure did not return a usable result. Retry after checking your internet access and, if needed, the test URL in Settings. Testing does not connect a disconnected VPN, change the selected node/mode, or close your active traffic sessions. Auto/Fallback's normal health-based choices can still change as designed. Results are session-only and cleared when the configuration generation or test URL changes.
+
+## Disconnecting on Android
+
+Tap **Disconnect** and wait for Disconnected. The app removes its foreground connection notification and releases the tunnel before reporting successful cleanup. A failed cleanup remains visible and retryable. Closing the app or dismissing it from Recents is not a reliable way to disconnect; a running native VPN is allowed to continue. Reopening reads native state rather than assuming the previous button tap succeeded. Force-stopping/killing the process closes its OS-owned descriptors; it is not the normal disconnect procedure.
+
+If cleanup fails, retry **Disconnect** before connecting again. Native starts remain blocked until cleanup succeeds, even if an old connection timer remains. Successful delayed cleanup clears the resolved disconnect error; it does not automatically reconnect.
+
+Android's **Always-on VPN** is separate from FlClash's auto-connect preference: Android can start the service again. To leave it off, open Android Settings → Network & Internet (or Connections) → VPN → FlClash, then disable Always-on VPN. If **Block connections without VPN** is enabled, internet access can remain blocked after disconnecting. Android's Always-on warning notification is different from FlClash's foreground notification and can remain until Always-on is disabled or the VPN reconnects. Menu wording varies by device. See [Android's VPN lifecycle and Always-on guidance](https://developer.android.com/develop/connectivity/vpn).
+
+If the VPN key remains while FlClash says Disconnected with Always-on disabled, check whether another VPN is active in Android settings. If FlClash still appears connected, disconnect it there and report the Android version, app build, displayed state, and whether the key or app notification remained. Do not include subscription URLs or tokens in logs/screenshots. The key icon is managed by Android; this app cannot remove it independently of the tunnel.
 
 ## One profile, safe replacement
 

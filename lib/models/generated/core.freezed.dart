@@ -2323,7 +2323,7 @@ as dynamic,
 /// @nodoc
 mixin _$Delay {
 
- String get name; String get url; int? get value;
+ String get name; String get url; int? get value;@JsonKey(includeIfNull: false) String? get failure;
 /// Create a copy of Delay
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -2337,20 +2337,20 @@ $DelayCopyWith<Delay> get copyWith => _$DelayCopyWithImpl<Delay>(this as Delay, 
 @override
 bool operator ==(Object other) {
   final _this = this as Delay;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Delay&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.url, _this.url) || other.url == _this.url)&&(identical(other.value, _this.value) || other.value == _this.value));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Delay&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.url, _this.url) || other.url == _this.url)&&(identical(other.value, _this.value) || other.value == _this.value)&&(identical(other.failure, _this.failure) || other.failure == _this.failure));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as Delay;
-  return Object.hash(runtimeType,_this.name,_this.url,_this.value);
+  return Object.hash(runtimeType,_this.name,_this.url,_this.value,_this.failure);
 }
 
 @override
 String toString() {
   final _this = this as Delay;
-  return 'Delay(name: ${_this.name}, url: ${_this.url}, value: ${_this.value})';
+  return 'Delay(name: ${_this.name}, url: ${_this.url}, value: ${_this.value}, failure: ${_this.failure})';
 }
 
 
@@ -2361,7 +2361,7 @@ abstract mixin class $DelayCopyWith<$Res>  {
   factory $DelayCopyWith(Delay value, $Res Function(Delay) _then) = _$DelayCopyWithImpl;
 @useResult
 $Res call({
- String name, String url, int? value
+ String name, String url, int? value,@JsonKey(includeIfNull: false) String? failure
 });
 
 
@@ -2378,12 +2378,13 @@ class _$DelayCopyWithImpl<$Res>
 
 /// Create a copy of Delay
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? name = null,Object? url = null,Object? value = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? name = null,Object? url = null,Object? value = freezed,Object? failure = freezed,}) {
   return _then(Delay(
 name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,url: null == url ? _self.url : url // ignore: cast_nullable_to_non_nullable
 as String,value: freezed == value ? _self.value : value // ignore: cast_nullable_to_non_nullable
-as int?,
+as int?,failure: freezed == failure ? _self.failure : failure // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -2468,10 +2469,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String name,  String url,  int? value)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String name,  String url,  int? value, @JsonKey(includeIfNull: false)  String? failure)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Delay() when $default != null:
-return $default(_that.name,_that.url,_that.value);case _:
+return $default(_that.name,_that.url,_that.value,_that.failure);case _:
   return orElse();
 
 }
@@ -2489,10 +2490,10 @@ return $default(_that.name,_that.url,_that.value);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String name,  String url,  int? value)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String name,  String url,  int? value, @JsonKey(includeIfNull: false)  String? failure)  $default,) {final _that = this;
 switch (_that) {
 case _Delay():
-return $default(_that.name,_that.url,_that.value);case _:
+return $default(_that.name,_that.url,_that.value,_that.failure);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -2509,10 +2510,10 @@ return $default(_that.name,_that.url,_that.value);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String name,  String url,  int? value)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String name,  String url,  int? value, @JsonKey(includeIfNull: false)  String? failure)?  $default,) {final _that = this;
 switch (_that) {
 case _Delay() when $default != null:
-return $default(_that.name,_that.url,_that.value);case _:
+return $default(_that.name,_that.url,_that.value,_that.failure);case _:
   return null;
 
 }
@@ -2524,12 +2525,13 @@ return $default(_that.name,_that.url,_that.value);case _:
 @JsonSerializable()
 
 class _Delay implements Delay {
-  const _Delay({required this.name, required this.url, this.value});
+  const _Delay({required this.name, required this.url, this.value, @JsonKey(includeIfNull: false) this.failure});
   factory _Delay.fromJson(Map<String, dynamic> json) => _$DelayFromJson(json);
 
 @override final  String name;
 @override final  String url;
 @override final  int? value;
+@override@JsonKey(includeIfNull: false) final  String? failure;
 
 /// Create a copy of Delay
 /// with the given fields replaced by the non-null parameter values.
@@ -2544,18 +2546,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Delay&&(identical(other.name, name) || other.name == name)&&(identical(other.url, url) || other.url == url)&&(identical(other.value, value) || other.value == value));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Delay&&(identical(other.name, name) || other.name == name)&&(identical(other.url, url) || other.url == url)&&(identical(other.value, value) || other.value == value)&&(identical(other.failure, failure) || other.failure == failure));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,name,url,value);
+    return Object.hash(runtimeType,name,url,value,failure);
 }
 
 @override
 String toString() {
-    return 'Delay(name: $name, url: $url, value: $value)';
+    return 'Delay(name: $name, url: $url, value: $value, failure: $failure)';
 }
 
 
@@ -2566,7 +2568,7 @@ abstract mixin class _$DelayCopyWith<$Res> implements $DelayCopyWith<$Res> {
   factory _$DelayCopyWith(_Delay value, $Res Function(_Delay) _then) = __$DelayCopyWithImpl;
 @override @useResult
 $Res call({
- String name, String url, int? value
+ String name, String url, int? value,@JsonKey(includeIfNull: false) String? failure
 });
 
 
@@ -2583,12 +2585,13 @@ class __$DelayCopyWithImpl<$Res>
 
 /// Create a copy of Delay
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? name = null,Object? url = null,Object? value = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? name = null,Object? url = null,Object? value = freezed,Object? failure = freezed,}) {
   return _then(_Delay(
 name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,url: null == url ? _self.url : url // ignore: cast_nullable_to_non_nullable
 as String,value: freezed == value ? _self.value : value // ignore: cast_nullable_to_non_nullable
-as int?,
+as int?,failure: freezed == failure ? _self.failure : failure // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 

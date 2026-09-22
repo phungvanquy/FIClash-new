@@ -29,9 +29,16 @@ class VpnService : SystemVpnService(), ManagedService {
     private val tunLock = Any()
     private var tunRunning = false
 
+    override fun onCreate() {
+        super.onCreate()
+        ManagedServiceRegistry.register(this)
+    }
+
     override fun onDestroy() {
         try {
-            cleanup()
+            runCatching { cleanup() }
+                .onSuccess { ManagedServiceRegistry.unregister(this) }
+                .onFailure { GlobalState.log("VPN destruction cleanup failed: $it") }
         } finally {
             super.onDestroy()
         }
@@ -105,15 +112,16 @@ class VpnService : SystemVpnService(), ManagedService {
         }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // Android starts always-on VPN through this callback instead of FlClash's bound-service
-        // path. Notify the app layer so it can restore Core and fully initialize the VPN service.
         notifyVpnStartRequested()
-        return super.onStartCommand(intent, flags, startId)
+        return START_NOT_STICKY
     }
 
     override fun onRevoke() {
-        stop()
-        notifyVpnRevoked()
+        try {
+            stop()
+        } finally {
+            notifyVpnRevoked()
+        }
     }
 
     private fun handleStart(options: VpnOptions) {
@@ -146,11 +154,6 @@ class VpnService : SystemVpnService(), ManagedService {
         synchronized(tunLock) {
             tunRunning = true
             try {
-                // A Core that fails to take the descriptor leaves the system
-                // routes pointing at an interface nothing reads, and it no
-                // longer keeps its own sockets out of them: every connection
-                // then hangs until it times out. Tear the VPN down instead of
-                // reporting a start that only looks successful.
                 check(
                     Core.startTun(
                         fd = fd,
@@ -247,6 +250,7 @@ class VpnService : SystemVpnService(), ManagedService {
         }
     }
 
+    @Synchronized
     override fun start() {
         try {
             modules.start()
@@ -257,6 +261,7 @@ class VpnService : SystemVpnService(), ManagedService {
         }
     }
 
+    @Synchronized
     override fun stop() {
         try {
             cleanup()
@@ -265,11 +270,13 @@ class VpnService : SystemVpnService(), ManagedService {
         }
     }
 
+    @Synchronized
     private fun cleanup() {
         try {
             modules.stop()
         } finally {
             stopTun()
+            uidPackageNameMap.clear()
         }
     }
 

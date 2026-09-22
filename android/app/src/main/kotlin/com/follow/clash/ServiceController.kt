@@ -4,13 +4,12 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
-import android.os.Handler
 import android.os.IBinder
-import android.os.Looper
 import com.follow.clash.common.GlobalState
 import com.follow.clash.common.intent
 import com.follow.clash.core.Core
 import com.follow.clash.service.ManagedService
+import com.follow.clash.service.ManagedServiceRegistry
 import com.follow.clash.service.ProxyService
 import com.follow.clash.service.ServiceConfig
 import com.follow.clash.service.VpnService
@@ -34,10 +33,10 @@ object ServiceController {
     private var runTimeMillis = 0L
 
     suspend fun unbind() = lock.withLock {
-        clearBinding()
+        if (runTimeMillis == 0L) clearBinding()
     }
 
-    private fun clearBinding() {
+    private suspend fun clearBinding() {
         binding?.unbind()
         binding = null
     }
@@ -92,11 +91,7 @@ object ServiceController {
         val result = currentBinding.useService { service -> service.start() }
         if (result.isFailure) {
             GlobalState.log("Unable to start background service: ${result.exceptionOrNull()}")
-            currentBinding.stopIfConnected()
-                .onFailure { error ->
-                    GlobalState.log("Unable to clean up failed background service start: $error")
-                }
-            clearBinding()
+            tearDownServices()
             runTimeMillis = 0L
             return@withLock runTimeMillis
         }
@@ -113,24 +108,27 @@ object ServiceController {
     }
 
     private suspend fun tearDownServices() {
-        binding?.useService { service -> service.stop() }
-            ?.onFailure { error ->
-                GlobalState.log("Unable to stop background service: $error")
+        withContext(Dispatchers.Default) {
+            try {
+                ManagedServiceRegistry.stopAll()
+            } finally {
+                Core.stopTun()
             }
-        clearBinding()
+        }
         stopServices()
+        clearBinding()
     }
 
-    // A service the system started itself — always-on VPN, or the sticky restart
-    // after the process was killed — outlives every binding this process holds, so
-    // unbinding alone leaves the tunnel up while the app reports it stopped.
-    private fun stopServices() {
+    private suspend fun stopServices() = withContext(Dispatchers.Main.immediate) {
+        var failure: Throwable? = null
         listOf(VpnService::class.intent, ProxyService::class.intent).forEach { intent ->
-            runCatching { GlobalState.application.stopService(intent) }
-                .onFailure { error ->
-                    GlobalState.log("Unable to stop ${intent.component?.className}: $error")
-                }
+            try {
+                GlobalState.application.stopService(intent)
+            } catch (error: Throwable) {
+                if (failure == null) failure = error else failure!!.addSuppressed(error)
+            }
         }
+        failure?.let { throw it }
     }
 
     suspend fun isVpnServiceActive(): Boolean = lock.withLock {
@@ -197,24 +195,12 @@ private class ManagedServiceBinding(
         }
     }
 
-    suspend fun stopIfConnected(): Result<Unit> = runCatching {
-        val service = serviceState.value?.getOrNull() ?: return@runCatching
-        withContext(Dispatchers.Default) {
-            service.stop()
+    suspend fun unbind() = withContext(Dispatchers.Main.immediate) {
+        if (isBound) {
+            GlobalState.application.unbindService(this@ManagedServiceBinding)
+            isBound = false
         }
-    }
-
-    fun unbind() {
         serviceState.value = null
-        if (!isBound) return
-        isBound = false
-        Handler(Looper.getMainLooper()).post {
-            runCatching {
-                GlobalState.application.unbindService(this)
-            }.onFailure { error ->
-                GlobalState.log("Unable to unbind background service: $error")
-            }
-        }
     }
 
     override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {

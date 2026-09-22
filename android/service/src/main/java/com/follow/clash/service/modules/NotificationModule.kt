@@ -49,6 +49,7 @@ internal class NotificationModule(
     private val service: Service,
     private val scope: CoroutineScope,
 ) : ServiceModule {
+    private val gate = ModuleGate()
     override fun start() {
         update(ServiceConfig.notificationParams.value.extended)
         scope.launch {
@@ -102,7 +103,7 @@ internal class NotificationModule(
         }
     }
 
-    private fun update(params: ExtendedNotificationParams) {
+    private fun update(params: ExtendedNotificationParams) = gate.update {
         service.startForeground(
             with(notificationBuilder) {
                 setContentTitle(params.title)
@@ -121,7 +122,7 @@ internal class NotificationModule(
     }
 
     @Suppress("DEPRECATION")
-    override fun stop() {
+    override fun stop() = gate.stop {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             service.stopForeground(STOP_FOREGROUND_REMOVE)
         } else {

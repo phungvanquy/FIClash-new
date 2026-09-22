@@ -126,23 +126,37 @@ Android deliberately keeps Flutter requests optimistic and the native layer auth
   state. Identity checks discard obsolete work. `startPreparationLock` serializes permission/setup preparation and
   `transitionLock` serializes actual service transitions.
 - `ServiceController` owns exactly one `ManagedServiceBinding`, selects `VpnService` or `ProxyService` from `VpnOptions`,
-  binds with a five-second connection timeout, invokes `ManagedService.start()`/`stop()` off the main thread, and clears
-  binding/run-time state on failure or disconnection.
+  binds with a five-second connection timeout and invokes service work off the main thread. Failed teardown retains
+  ownership for retry; successful cleanup or confirmed service loss releases binding/run-time state.
+- `ManagedServiceRegistry` inventories actual service instances, including system-created/unbound instances; it does
+  not own intent. Controller teardown stops every registered resource before releasing binding/runtime ownership.
+  Cleanup failure is propagated and retained for retry, even when startup never produced a timer. Flutter detachment
+  retains a running native binding. STOPPED is published only after successful cleanup, not command acknowledgement.
+- `ServiceStateMachine` retains unresolved cleanup failure independently of observations. It rejects native starts and
+  background Core preparation until cleanup succeeds, rather than reusing a partially stopped service's timer/binding.
+  Successful delayed cleanup clears the resolved stop error only; unrelated failures and latest-intent checks remain.
+- `ModuleLifecycle` retains failed cleanup work and still attempts the other modules. `ModuleGate` serializes final
+  notification/suspension cleanup against late callbacks. Network callbacks cannot repopulate stopped module state.
 - Generic service creation/destruction is lifecycle evidence, not user intent. New commands must flow through
   `ServiceState.requestStart()`/`requestStop()` or the explicit system-action handlers instead of inferring intent from a
   callback.
 
 Quick Settings, notification, revoke, and Always-on VPN paths converge on the same owner:
 
-- With a Flutter engine attached, `ServiceState.handleStartAction()`/`handleStopAction()` forward through `TilePlugin` to
-  `TileManager`, which updates normal Flutter setup state. Without Flutter, native code restores `SharedState` from
-  preferences, runs `quickSetup`, checks VPN permission, and submits the native request directly.
+- With a Flutter engine attached, `ServiceState.handleStartAction()` forwards through `TilePlugin` to `TileManager`.
+  Without Flutter, native code restores `SharedState`, runs `quickSetup`, checks permission, and submits startup only
+  if no newer stop superseded that preparation. Notification/tile/revoke stops run directly through native arbitration
+  regardless of Flutter responsiveness; observations update the UI. Repeated pending stops coalesce.
 - Android may create an Always-on `VpnService` through `onStartCommand()` without FlClash's bound-service path. The service
   sends the explicit, permission-protected `VPN_START_REQUESTED` broadcast to `ServiceBroadcastReceiver`, which routes it to
   `ServiceState.handleStartAction()` so Core/configuration and the normal binding are restored before TUN is treated as
   ready.
 - `VpnService.onRevoke()` stops TUN/modules first, then sends `VPN_REVOKED`; the receiver only requests a stop when
   `ServiceController` still owns an active VPN binding.
+- `RunObservation.requested` carries native intent independently of state/runtime. Failed teardown can retain runtime
+  while requested is false; Flutter must not turn that observation back into a reconnect intent. Runtime is only a
+  legacy startup fallback until an authoritative observation has arrived. Android Always-on remains independent OS
+  policy; `START_NOT_STICKY` avoids accidental sticky restarts but does not disable Always-on.
 - `ServiceBroadcastReceiver` uses `goAsync()` and an atomic one-shot completion. Normal completion or a nine-second
   watchdog calls `PendingResult.finish()` exactly once; the watchdog releases Android's broadcast lease and does not
   cancel or redefine the underlying lifecycle intent.
@@ -179,9 +193,18 @@ surface. It is shown only outside dashboard edit mode and only when `coreLib == 
 - Taps during the display hold or while the provider is genuinely connecting are inert. Connected/disconnected taps show
   the appropriate confirmation and delegate restart to `CoreAction`; the widget never starts Core directly.
 
-Proxy delay testing follows the same failure-safe UI rule. `proxyDelayTest()` records an in-progress zero delay, writes the
-real result on success, and logs plus records `-1` on exceptions. `DelayTestButton` reverses its animation in `finally`, so
-an RPC failure cannot leave the control permanently spinning.
+Advanced proxy testing tracks progress in `pendingDelayTestsProvider`, independently of the last numeric result.
+`DelayTestButton` reverses its animation in `finally`. Home's `VpnLatency` owns a single-flight inventory batch, uses
+bounded `TaskPool` probes against unique catalog targets, and stores typed transient outcomes by node identity.
+Optional `Delay.failure` distinguishes timeout/unreachable/test failure while retaining numeric wire compatibility.
+Missing/mismatched Core replies are test failures, never measured node timeouts. Generation, URL, Core availability,
+and disposal are checked again at completion even when provider subscriptions are paused. Testing never writes
+selection/running intent or closes traffic connections. Fastest highlighting preserves catalog order and mode entries.
+
+Home uses green/gray for connected/disconnected and distinct orange/blue/red transition/error states with text/icons.
+The circular button is disabled during transitions; a separate guarded Cancel remains available during startup.
+Stop failure keeps Disconnect retryable instead of claiming the tunnel has stopped. Settings explains Android
+Always-on and the difference between closing Flutter and disconnecting.
 
 ## Settings Rows
 

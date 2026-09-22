@@ -17,6 +17,7 @@ class SetupAction extends _$SetupAction {
   final _setupScheduler = SerialTaskScheduler();
   final _listenerScheduler = SerialTaskScheduler();
   _RunRequest? _latestRunRequest;
+  bool _hasRunObservation = false;
   DateTime? _startTime;
   bool get _requestedRunning => ref.read(vpnRunRequestedProvider);
 
@@ -26,7 +27,9 @@ class SetupAction extends _$SetupAction {
 
   bool get runningRequested =>
       _requestedRunning ||
-      (_latestRunRequest == null && ref.read(runTimeProvider) != null);
+      (!_hasRunObservation &&
+          _latestRunRequest == null &&
+          ref.read(runTimeProvider) != null);
 
   bool get _isRunning => runningRequested;
 
@@ -114,10 +117,18 @@ class SetupAction extends _$SetupAction {
     if (!ref.read(androidRunStateProvider.notifier).observe(observation)) {
       return;
     }
+    _hasRunObservation = true;
+    if (observation.state == VpnRunState.stopped &&
+        observation.failure == null &&
+        ref.read(vpnFailureProvider) == 'stop_failed') {
+      ref.read(vpnFailureProvider.notifier).value = null;
+    }
     if (ref.read(vpnPendingProvider) == null && !ref.read(suspendProvider)) {
       _requestedRunning =
-          observation.state == VpnRunState.starting ||
-          observation.state == VpnRunState.started;
+          observation.requested ??
+          (observation.failure != 'stop_failed' &&
+              (observation.state == VpnRunState.starting ||
+                  observation.state == VpnRunState.started));
     }
     final active =
         observation.startedAt > 0 &&
@@ -132,6 +143,7 @@ class SetupAction extends _$SetupAction {
   void observeCore(CoreRunObservation observation) {
     if (!ref.read(coreRunStateProvider.notifier).observe(observation)) return;
     if (system.isAndroid) return;
+    _hasRunObservation = true;
     if (ref.read(vpnPendingProvider) == null && !ref.read(suspendProvider)) {
       _requestedRunning = observation.requested;
     }
@@ -319,7 +331,7 @@ class SetupAction extends _$SetupAction {
     if (!_isCurrent(request)) {
       return;
     }
-    _requestedRunning = !request.running;
+    _requestedRunning = false;
     if (ref.read(vpnFailureProvider) != 'recovery_required') {
       ref.read(vpnFailureProvider.notifier).value = request.running
           ? 'start_failed'

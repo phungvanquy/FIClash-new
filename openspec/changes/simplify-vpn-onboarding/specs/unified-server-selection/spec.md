@@ -6,6 +6,32 @@ Provide one understandable server selection that consistently controls the defau
 
 ## ADDED Requirements
 
+### Requirement: Explicit non-disruptive node latency testing
+
+Home SHALL show each individual node's measured latency in milliseconds or an explicit Not tested, Testing, Timed out, Unreachable, or Test failed state. A labeled Test latency action SHALL test the committed inventory with bounded concurrency. One batch SHALL run at a time, with progress and repeated submissions disabled. Queue/channel/Core failures SHALL be distinguished from a contacted node's timeout or unreachable result. Results SHALL be scoped to the configuration generation and test URL; completion after replacement, Core loss, or disposal MUST NOT overwrite newer results.
+
+Manual tests SHALL NOT write the selected server/mode, restart listeners, close active traffic connections, or connect a disconnected VPN. Auto/Fallback SHALL remain modes, not be relabeled as individual measurements; existing health-check-based behavior remains in effect. The fastest measured node SHALL be highlighted without reordering the user's list or changing selection. Latency is a probe result, not a guarantee of internet access or throughput.
+
+#### Scenario: Normal and slow results
+
+- **WHEN** available nodes respond with different delays
+- **THEN** each delay is displayed in milliseconds and the fastest successful result is highlighted without changing selection
+
+#### Scenario: Offline, timeout, or infrastructure failure
+
+- **WHEN** a probe cannot connect, exceeds its probe deadline, or receives no usable Core response
+- **THEN** it respectively displays Unreachable, Timed out, or Test failed; progress always ends and retry is available
+
+#### Scenario: Repeated tests and replacement
+
+- **WHEN** a second test is requested during a batch or a profile is replaced while tests are in flight
+- **THEN** the duplicate batch is not started and old-generation results cannot appear in the replacement list
+
+#### Scenario: Test during an active VPN session
+
+- **WHEN** a user tests latency with a manually selected server and active VPN
+- **THEN** that selection, running intent, and active traffic sessions remain unchanged
+
 ### Requirement: Provider content refresh follows application lifetime
 The application SHALL coordinate subscription and provider-content refreshes as new committed configuration generations. Automatic content refresh SHALL pause while the Flutter application is closed. The native VPN SHALL continue using its committed configuration, including reachability health checks and Auto/Fallback failover. When the application returns, due refreshes SHALL resume through the same failure-preserving coordinator. Native provider timers, file watchers, and direct update/side-load operations SHALL NOT rewrite committed generation resources.
 

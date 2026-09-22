@@ -34,6 +34,8 @@ internal class NetworkObserveModule(private val service: Service) : ServiceModul
     }
     private val mainHandler = Handler(Looper.getMainLooper())
     private var currentDnsList = listOf<String>()
+    private var stopped = false
+    private var registered = false
 
     private val request = NetworkRequest.Builder().apply {
         addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
@@ -45,13 +47,13 @@ internal class NetworkObserveModule(private val service: Service) : ServiceModul
     }.build()
 
     private val callback = object : ConnectivityManager.NetworkCallback() {
-        override fun onAvailable(network: Network) {
+        override fun onAvailable(network: Network) = updateNetwork {
             networkInfos[network] = NetworkInfo()
             updateDns()
         }
 
-        override fun onLosing(network: Network, maxMsToLive: Int) {
-            val info = networkInfos[network] ?: return
+        override fun onLosing(network: Network, maxMsToLive: Int) = updateNetwork {
+            val info = networkInfos[network] ?: return@updateNetwork
             info.losingUntilMillis = System.currentTimeMillis() + maxMsToLive
             updateDns()
             if (maxMsToLive > 0) {
@@ -63,20 +65,27 @@ internal class NetworkObserveModule(private val service: Service) : ServiceModul
             }
         }
 
-        override fun onLost(network: Network) {
+        override fun onLost(network: Network) = updateNetwork {
             networkInfos.remove(network)
             updateDns()
         }
 
-        override fun onLinkPropertiesChanged(network: Network, linkProperties: LinkProperties) {
+        override fun onLinkPropertiesChanged(network: Network, linkProperties: LinkProperties) = updateNetwork {
             networkInfos[network]?.dnsList = linkProperties.dnsServers
             updateDns()
         }
     }
 
+    @Synchronized
+    private fun updateNetwork(block: () -> Unit) {
+        if (!stopped) block()
+    }
+
+    @Synchronized
     override fun start() {
         updateDns()
         connectivity?.registerNetworkCallback(request, callback)
+        registered = connectivity != null
     }
 
     private fun networkPriority(entry: Map.Entry<Network, NetworkInfo>): Int {
@@ -100,6 +109,7 @@ internal class NetworkObserveModule(private val service: Service) : ServiceModul
 
     @Synchronized
     private fun updateDns() {
+        if (stopped) return
         val dnsList = networkInfos.asSequence()
             .minByOrNull(::networkPriority)
             ?.value
@@ -114,13 +124,19 @@ internal class NetworkObserveModule(private val service: Service) : ServiceModul
         Core.updateDNS(dnsList.joinToString(","))
     }
 
+    @Synchronized
     override fun stop() {
+        stopped = true
         mainHandler.removeCallbacksAndMessages(null)
         try {
-            connectivity?.unregisterNetworkCallback(callback)
+            if (registered) {
+                connectivity?.unregisterNetworkCallback(callback)
+                registered = false
+            }
         } finally {
             networkInfos.clear()
-            updateDns()
+            currentDnsList = emptyList()
+            Core.updateDNS("")
         }
     }
 }

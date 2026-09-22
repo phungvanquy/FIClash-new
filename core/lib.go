@@ -372,6 +372,8 @@ func stopTun() {
 	handleStopTun()
 	if isRunning.Load() {
 		handleStopListener()
+	} else {
+		handleCloseConnections()
 	}
 }
 

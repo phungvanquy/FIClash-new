@@ -36,9 +36,18 @@ VpnConnection deriveVpnConnection({
   final canDisconnect = active || requested || runRequested || pending == true;
   final issue =
       failure ?? (android ? native?.failure : core?.failure ?? proxy.failure);
-  if (issue == 'recovery_required') {
+  if (issue == 'recovery_required' || issue == 'stop_failed') {
     return VpnConnection(
       phase: VpnConnectionPhase.failed,
+      canDisconnect: canDisconnect || issue == 'stop_failed',
+      failure: issue,
+    );
+  }
+  if (android && native == null && pending == null) {
+    return VpnConnection(
+      phase: issue == null
+          ? VpnConnectionPhase.checking
+          : VpnConnectionPhase.failed,
       canDisconnect: canDisconnect,
       failure: issue,
     );

@@ -83,7 +83,9 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m29(label) => "${label}はURLである必要があります";
 
-  static String m30(count) => "${count} 年前";
+  static String m30(value) => "${value} ミリ秒";
+
+  static String m31(count) => "${count} 年前";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -975,6 +977,10 @@ class MessageLookup extends MessageLookupByLibrary {
     "value": MessageLookupByLibrary.simpleMessage("値"),
     "vibrantScheme": MessageLookupByLibrary.simpleMessage("ビブラント"),
     "view": MessageLookupByLibrary.simpleMessage("表示"),
+    "vpnAndroidHelp": MessageLookupByLibrary.simpleMessage(
+      "「切断」を押し、未接続になるまでお待ちください。アプリを閉じても VPN は切断されません。Android が再接続する場合は、Android の設定 → VPN → FlClash で常時接続 VPN をオフにしてください。「VPN 以外の接続をブロック」が有効だと、切断後にインターネットに接続できない場合があります。Android の常時接続の警告と本アプリの接続通知は別のものです。",
+    ),
+    "vpnAndroidHelpTitle": MessageLookupByLibrary.simpleMessage("Android での切断"),
     "vpnApplySettings": MessageLookupByLibrary.simpleMessage("保存済みの設定を適用"),
     "vpnApplySettingsDescription": MessageLookupByLibrary.simpleMessage(
       "保存済みの DNS、ルール、スクリプトで再構築します。検証に成功した場合のみ、現在の設定を置き換えます。",
@@ -985,6 +991,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnCameraUnavailable": MessageLookupByLibrary.simpleMessage(
       "カメラを使用できません。システム設定でカメラへのアクセスを許可して再試行するか、QR 画像を選択してください。",
     ),
+    "vpnChecking": MessageLookupByLibrary.simpleMessage("接続を確認中…"),
     "vpnConfigChangeDetected": MessageLookupByLibrary.simpleMessage(
       "VPN関連の設定変更を検出しました",
     ),
@@ -1021,6 +1028,13 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnInvalidUrl": MessageLookupByLibrary.simpleMessage(
       "有効な HTTP または HTTPS のサブスクリプション URL を入力してください。",
     ),
+    "vpnLatencyFailed": MessageLookupByLibrary.simpleMessage("テスト失敗"),
+    "vpnLatencyFastest": MessageLookupByLibrary.simpleMessage("最速"),
+    "vpnLatencyMs": m30,
+    "vpnLatencyTesting": MessageLookupByLibrary.simpleMessage("テスト中…"),
+    "vpnLatencyTimeout": MessageLookupByLibrary.simpleMessage("タイムアウト"),
+    "vpnLatencyUnreachable": MessageLookupByLibrary.simpleMessage("到達できません"),
+    "vpnLatencyUntested": MessageLookupByLibrary.simpleMessage("未テスト"),
     "vpnLocalProxy": MessageLookupByLibrary.simpleMessage(
       "ローカルプロキシのみ · VPN は無効",
     ),
@@ -1058,12 +1072,16 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnSettingsActionFailed": MessageLookupByLibrary.simpleMessage(
       "操作を完了できませんでした。もう一度お試しください。",
     ),
+    "vpnStopFailed": MessageLookupByLibrary.simpleMessage(
+      "切断を確認できませんでした。「切断」で再試行してください。",
+    ),
     "vpnSubscriptionUrl": MessageLookupByLibrary.simpleMessage("サブスクリプション URL"),
     "vpnSuspended": MessageLookupByLibrary.simpleMessage("一時停止中"),
+    "vpnTestLatency": MessageLookupByLibrary.simpleMessage("遅延をテスト"),
     "vpnTip": MessageLookupByLibrary.simpleMessage("変更はVPNの再起動後に有効になります"),
     "webDAVConfiguration": MessageLookupByLibrary.simpleMessage("WebDAV設定"),
     "whitelistMode": MessageLookupByLibrary.simpleMessage("ホワイトリストモード"),
-    "yearsAgo": m30,
+    "yearsAgo": m31,
     "zhCN": MessageLookupByLibrary.simpleMessage("簡体字中国語"),
   };
 }

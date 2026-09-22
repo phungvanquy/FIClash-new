@@ -79,6 +79,8 @@ Paths below are relative to `test/` unless prefixed with `core/`.
 | Desktop falls back to proxy-only operation | `common/vpn_connection_test.dart`, `providers/setup_action_test.dart`, `manager/proxy_manager_test.dart`; real OS proxy/TUN: D1 |
 | Cancel an in-progress connection | `providers/setup_action_test.dart`, `pages/home_test.dart`, Android JVM arbitration and `core/desktop/` lifecycle tests |
 | Stop from outside Home | `plugins/service_test.dart`, `common/vpn_connection_test.dart`, Android JVM revoke/service-loss tests; notification/tile/tray: A1/D1 |
+| Start is requested after incomplete teardown | `android/tests/app/ServiceStateMachineTest.kt`: partial VPN/proxy cleanup, zero runtime, permission denial/service loss, blocked background preparation, explicit stop retry then start |
+| Delayed cleanup resolves a stop failure | Same JVM suite: resolved stop error, repeated cleanup failure, retained configuration failure, newer start superseding cleanup; real service teardown: A1/A2 |
 | Open advanced options | `pages/home_test.dart`, `widgets/tv_search_back_test.dart`, `common/tray_menu_test.dart` |
 | Back from Settings | `pages/home_test.dart`, `widgets/tv_search_back_test.dart` |
 | Large text and assistive technology | `pages/home_test.dart`, `widgets/vpn_import_test.dart`, localization/lint suites; native screen reader: A1/D1 |
@@ -87,6 +89,24 @@ Paths below are relative to `test/` unless prefixed with `core/`.
 Additional writer/restore guards: `providers/profile_draft_test.dart`, `features/overwrite_view_test.dart`, `views/vpn_configuration_test.dart`, `providers/backup_action_test.dart`, `database/single_profile_test.dart`, and `common/backup_task_test.dart` cover unpublished drafts, explicit Apply, cancellation/disposal, script/settings publication repair, concurrent library edits, restore strategies, and archive path rejection.
 
 ## Native smoke checks still required
+
+### Post-build review acceptance
+
+The 2026-09-22 feedback adds these checks. They apply to the next build containing this working-tree revision, not the earlier successful CI artifact.
+
+| Scenario | Automated coverage | Device acceptance still required |
+| --- | --- | --- |
+| Green connected / gray disconnected, transitions, error retry, repeated taps | `pages/home_test.dart`, `common/vpn_connection_test.dart` | Light/dark, small window, Android large text/TalkBack and Windows keyboard |
+| Normal/slow probes, timeout, unreachable, test failure | `providers/vpn_latency_test.dart`, `core/delay_failure_test.go` (real loopback HTTP, delayed response, silent socket, refused connection), model/protocol suites | Real nodes on Wi-Fi/mobile data; offline and reconnect; verify ms values and retry |
+| Duplicate batch, bounded probes, fastest without selection changes | Provider/widget latency suites | Keep a transfer running on a pinned server while testing; route and transfer must not reset |
+| Late result after profile/test-URL/Core change or disposal | `providers/vpn_latency_test.dart` | Replace configuration during a slow batch, reopen, verify no old measurements |
+| Partial startup, repeated stop, failed stop/retry, delayed startup superseded by stop | `android/tests/app/ServiceStateMachineTest.kt`, `providers/setup_action_test.dart` | Foreground and background repeated connect/cancel/stop; no unexpected reconnect |
+| Start after partial teardown and delayed cleanup recovery | State-machine failure injection: retained timer is not a healthy service, cleanup success clears only the stop error | After a disconnect error, retry Disconnect before reconnecting; verify no false Connected and no stale disconnect error after successful cleanup |
+| Module cleanup failure, late notification update, unbound resource cleanup | `android/tests/service/ModuleLifecycleTest.kt`, `ManagedServiceRegistryTest.kt` | Confirm tunnel/key, app foreground notification, interfaces/routes and sockets are released |
+| Native revoke/service loss and reattachment | State-machine, service bridge, setup suites | Android settings revoke/forget; close/reopen Flutter; kill/force-stop process; confirm no stale Connected |
+| Always-on independent of app auto-connect | Localized Settings help and `VPN_GUIDE.md`; state owner remains native | Test Always-on and block-without-VPN both off/on; distinguish Android's warning from FlClash's notification |
+
+For Android record `adb shell dumpsys connectivity`, `adb shell dumpsys activity services <application-id>`, and `adb shell dumpsys notification` before/after stop, plus logcat with secrets redacted. Check that this app's VPN network/foreground service and notification disappear; another app's VPN or Android's Always-on warning must not be mistaken for FlClash resources. Inspect per-process sockets/FDs where device permissions permit. Do not infer resource release merely from a gray button. The portable JVM harness does not run Android framework service/binder/notification code; new app/service module compilation and device checks remain CI/artifact gates.
 
 Use non-production subscription credentials and keep a backup. Record OS/device/build, result, and any logs with URLs/tokens redacted.
 

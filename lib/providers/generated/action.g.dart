@@ -91,7 +91,7 @@ final class SetupActionProvider extends $NotifierProvider<SetupAction, void> {
   }
 }
 
-String _$setupActionHash() => r'1afdf61a2c60636172301f1087a399532cc1bf65';
+String _$setupActionHash() => r'6ed5854ea3a329314377bcfd93595290c7205a69';
 
 abstract class _$SetupAction extends $Notifier<void> {
   void build();
@@ -754,6 +754,58 @@ abstract class _$VpnAction extends $Notifier<void> {
             as $ClassProviderElement<
               AnyNotifier<void, void>,
               void,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+@ProviderFor(VpnLatency)
+final vpnLatencyProvider = VpnLatencyProvider._();
+
+final class VpnLatencyProvider
+    extends $NotifierProvider<VpnLatency, VpnLatencyState> {
+  VpnLatencyProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'vpnLatencyProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$vpnLatencyHash();
+
+  @$internal
+  @override
+  VpnLatency create() => VpnLatency();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(VpnLatencyState value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<VpnLatencyState>(value),
+    );
+  }
+}
+
+String _$vpnLatencyHash() => r'faa5cb21a8929dcf47462100dd41502b7c6fb6f6';
+
+abstract class _$VpnLatency extends $Notifier<VpnLatencyState> {
+  VpnLatencyState build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<VpnLatencyState, VpnLatencyState>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<VpnLatencyState, VpnLatencyState>,
+              VpnLatencyState,
               Object?,
               Object?
             >;

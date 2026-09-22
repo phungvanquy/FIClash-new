@@ -49,6 +49,40 @@ void main() {
     );
   });
 
+  test(
+    'Android attachment waits for native evidence instead of showing off',
+    () {
+      expect(derive(android: true).phase, VpnConnectionPhase.checking);
+      expect(
+        derive(android: true, pending: true).phase,
+        VpnConnectionPhase.connecting,
+      );
+      expect(
+        derive(android: true, failure: 'core_unavailable').phase,
+        VpnConnectionPhase.failed,
+      );
+    },
+  );
+
+  test(
+    'failed teardown is retryable without inventing stopped or connected',
+    () {
+      for (final startedAt in [0, 100]) {
+        final result = derive(
+          android: true,
+          service: native.copyWith(
+            state: VpnRunState.stopping,
+            failure: 'stop_failed',
+            requested: false,
+            startedAt: startedAt,
+          ),
+        );
+        expect(result.phase, VpnConnectionPhase.failed);
+        expect(result.canDisconnect, isTrue);
+      }
+    },
+  );
+
   test('only an observed TUN is connected', () {
     expect(
       derive(observed: core.copyWith(tun: true)).phase,

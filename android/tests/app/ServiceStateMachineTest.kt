@@ -8,6 +8,8 @@ import com.follow.clash.service.models.NotificationParams
 import com.follow.clash.service.models.VpnOptions
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
@@ -15,6 +17,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -93,6 +96,10 @@ private class FakeHost(override val scope: CoroutineScope) : ServiceStateHost {
     var tile: TileGateway? = null
     var app: AppGateway? = null
     var beforeStartService: (() -> Unit)? = null
+    var beforeStopService: (() -> Unit)? = null
+    var stopFailure: Throwable? = null
+    var setupGate: CompletableDeferred<Unit>? = null
+    var tunnelActive = false
 
     override var runTimeMillis = 0L
     override val homeDirPath = "/data/user/0/com.follow.clash/files"
@@ -134,6 +141,7 @@ private class FakeHost(override val scope: CoroutineScope) : ServiceStateHost {
 
     override suspend fun quickSetup(initParams: String, setupParams: String): Result<String> {
         setupCalls++
+        setupGate?.await()
         lastInitParams = initParams
         lastSetupParams = setupParams
         return setupResult
@@ -143,11 +151,15 @@ private class FakeHost(override val scope: CoroutineScope) : ServiceStateHost {
         startCalls++
         beforeStartService?.invoke()
         runTimeMillis = startResult
+        tunnelActive = startResult != 0L && options.enable
         return startResult
     }
 
     override suspend fun stopService() {
         stopCalls++
+        beforeStopService?.invoke()
+        tunnelActive = false
+        stopFailure?.let { throw it }
         runTimeMillis = 0L
     }
 
@@ -156,6 +168,208 @@ private class FakeHost(override val scope: CoroutineScope) : ServiceStateHost {
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ServiceStateMachineTest {
+
+    @Test
+    fun `partial stop blocks starts until disconnect retry succeeds`() = runTest {
+        val host = FakeHost(backgroundScope)
+        val machine = ServiceStateMachine(host)
+        machine.syncSharedState(configuredState())
+        assertTrue(machine.requestStart().await())
+        assertTrue(host.tunnelActive)
+        host.stopFailure = IllegalStateException("module cleanup failed")
+        assertFalse(machine.requestStop().await())
+        assertFalse(host.tunnelActive)
+        assertTrue(host.runTimeMillis != 0L)
+
+        host.stopFailure = null
+        assertFalse(machine.requestStart().await())
+        assertEquals(1, host.startCalls)
+        assertEquals(1, host.stopCalls)
+        assertFalse(host.tunnelActive)
+        assertEquals(RunState.STOPPING, machine.snapshot().state)
+        assertEquals("stop_failed", machine.snapshot().failure)
+        assertFalse(machine.snapshot().requested)
+
+        assertTrue(machine.requestStop().await())
+        assertEquals(RunState.STOPPED, machine.snapshot().state)
+        assertNull(machine.snapshot().failure)
+        assertTrue(machine.requestStart().await())
+        assertEquals(2, host.startCalls)
+        assertTrue(host.tunnelActive)
+        assertEquals(RunState.STARTED, machine.snapshot().state)
+        assertNull(machine.snapshot().failure)
+    }
+
+    @Test
+    fun `successful delayed cleanup clears an earlier stop failure`() = runTest {
+        val host = FakeHost(backgroundScope)
+        host.setupGate = CompletableDeferred()
+        val machine = ServiceStateMachine(host)
+        val starting = launch { machine.handleStartAction() }
+        testScheduler.runCurrent()
+        host.stopFailure = IllegalStateException("partial startup cleanup failed")
+        assertFalse(machine.requestStop().await())
+        assertEquals("stop_failed", machine.snapshot().failure)
+
+        host.stopFailure = null
+        host.setupGate!!.complete(Unit)
+        starting.join()
+        assertEquals(2, host.stopCalls)
+        assertEquals(0, host.startCalls)
+        assertEquals(RunState.STOPPED, machine.snapshot().state)
+        assertNull(machine.snapshot().failure)
+        assertFalse(machine.snapshot().requested)
+    }
+
+    @Test
+    fun `failed proxy cleanup cannot be reused as an active proxy`() = runTest {
+        val host = FakeHost(backgroundScope)
+        host.vpnServiceActive = false
+        val machine = ServiceStateMachine(host)
+        machine.syncSharedState(configuredState(enable = false))
+        assertTrue(machine.requestStart().await())
+        host.stopFailure = IllegalStateException("module cleanup failed")
+        assertFalse(machine.requestStop().await())
+        assertFalse(machine.requestStart().await())
+        assertEquals(1, host.startCalls)
+        assertEquals(1, host.stopCalls)
+        assertEquals(RunState.STOPPING, machine.snapshot().state)
+        assertEquals("stop_failed", machine.snapshot().failure)
+        assertFalse(machine.snapshot().requested)
+    }
+
+    @Test
+    fun `zero-runtime failed cleanup survives denied starts and service loss`() = runTest {
+        val host = FakeHost(backgroundScope)
+        val machine = ServiceStateMachine(host)
+        machine.syncSharedState(configuredState())
+        host.stopFailure = IllegalStateException("partially initialized module")
+        assertFalse(machine.requestStop().await())
+        host.app = FakeApp(notificationGranted = false)
+        assertFalse(machine.requestStart().await())
+        machine.handleServiceLost(machine.captureRequestToken())
+        assertEquals(RunState.STOPPING, machine.snapshot().state)
+        assertEquals("stop_failed", machine.snapshot().failure)
+        assertFalse(machine.snapshot().requested)
+        assertEquals(0, host.startCalls)
+        host.stopFailure = null
+        machine.handleStopAction()
+        assertEquals(RunState.STOPPED, machine.snapshot().state)
+        assertNull(machine.snapshot().failure)
+    }
+
+    @Test
+    fun `background start cannot prepare core while cleanup needs retry`() = runTest {
+        val host = FakeHost(backgroundScope)
+        val machine = ServiceStateMachine(host)
+        host.stopFailure = IllegalStateException("partially initialized module")
+        assertFalse(machine.requestStop().await())
+        machine.handleStartAction()
+        assertEquals(0, host.setupCalls)
+        assertEquals(0, host.startCalls)
+        assertEquals(RunState.STOPPING, machine.snapshot().state)
+        assertEquals("stop_failed", machine.snapshot().failure)
+        assertFalse(machine.snapshot().requested)
+    }
+
+    @Test
+    fun `failed delayed cleanup retains a retryable stop failure`() = runTest {
+        val host = FakeHost(backgroundScope)
+        host.setupGate = CompletableDeferred()
+        val machine = ServiceStateMachine(host)
+        val starting = launch { machine.handleStartAction() }
+        testScheduler.runCurrent()
+        host.stopFailure = IllegalStateException("cleanup still failing")
+        assertFalse(machine.requestStop().await())
+        host.setupGate!!.complete(Unit)
+        starting.join()
+        assertEquals(RunState.STOPPING, machine.snapshot().state)
+        assertEquals("stop_failed", machine.snapshot().failure)
+        assertFalse(machine.snapshot().requested)
+        assertEquals(0, host.startCalls)
+    }
+
+    @Test
+    fun `successful cleanup preserves an unrelated configuration failure`() = runTest {
+        val host = FakeHost(backgroundScope)
+        host.setupResult = Result.success("invalid configuration")
+        val machine = ServiceStateMachine(host)
+        machine.handleStartAction()
+        assertEquals(1, host.stopCalls)
+        assertEquals(RunState.STOPPED, machine.snapshot().state)
+        assertEquals("configuration_failed", machine.snapshot().failure)
+        assertFalse(machine.snapshot().requested)
+    }
+
+    @Test
+    fun `delayed cleanup cannot overwrite a newer start`() = runTest {
+        val host = FakeHost(backgroundScope)
+        host.setupGate = CompletableDeferred()
+        val machine = ServiceStateMachine(host)
+        val starting = launch { machine.handleStartAction() }
+        testScheduler.runCurrent()
+        host.stopFailure = IllegalStateException("partial startup cleanup failed")
+        assertFalse(machine.requestStop().await())
+        host.stopFailure = null
+        lateinit var restarting: Deferred<Boolean>
+        host.beforeStopService = {
+            host.beforeStopService = null
+            restarting = machine.requestStart()
+        }
+        host.setupGate!!.complete(Unit)
+        starting.join()
+        assertTrue(restarting.await())
+        assertEquals(1, host.startCalls)
+        assertTrue(host.tunnelActive)
+        assertEquals(RunState.STARTED, machine.snapshot().state)
+        assertNull(machine.snapshot().failure)
+        assertTrue(machine.snapshot().requested)
+    }
+
+    @Test
+    fun `background setup cannot reconnect after a newer stop`() = runTest {
+        val host = FakeHost(backgroundScope)
+        host.setupGate = CompletableDeferred()
+        val machine = ServiceStateMachine(host)
+        val starting = launch { machine.handleStartAction() }
+        testScheduler.runCurrent()
+        assertEquals(1, host.setupCalls)
+        assertEquals(RunState.STARTING, machine.snapshot().state)
+        machine.handleStopAction()
+        host.setupGate!!.complete(Unit)
+        starting.join()
+        assertEquals(0, host.startCalls)
+        assertEquals(RunState.STOPPED, machine.snapshot().state)
+    }
+
+    @Test
+    fun `failed stop keeps stop intent and remains retryable even without runtime`() = runTest {
+        val host = FakeHost(backgroundScope)
+        val machine = ServiceStateMachine(host)
+        host.stopFailure = IllegalStateException("resource still owned")
+        assertFalse(machine.requestStop().await())
+        assertEquals(RunState.STOPPING, machine.snapshot().state)
+        assertEquals("stop_failed", machine.snapshot().failure)
+        assertFalse(machine.snapshot().requested)
+        host.stopFailure = null
+        machine.handleStopAction()
+        assertEquals(2, host.stopCalls)
+        assertEquals(RunState.STOPPED, machine.snapshot().state)
+        assertNull(machine.snapshot().failure)
+        assertEquals(0, host.startCalls)
+    }
+
+    @Test
+    fun `repeated pending stops coalesce and cleanup runs without a timer`() = runTest {
+        val host = FakeHost(backgroundScope)
+        val machine = ServiceStateMachine(host)
+        val first = machine.requestStop()
+        val second = machine.requestStop()
+        assertTrue(first === second)
+        assertTrue(first.await())
+        assertEquals(1, host.stopCalls)
+        assertFalse(machine.snapshot().requested)
+    }
 
     @Test
     fun `snapshot is passive while vpn permission is pending`() = runTest {
@@ -363,12 +577,12 @@ class ServiceStateMachineTest {
     }
 
     @Test
-    fun `stopping an already stopped service touches nothing`() = runTest {
+    fun `stopping without a runtime still checks for partially initialized resources`() = runTest {
         val host = FakeHost(backgroundScope)
         val machine = ServiceStateMachine(host)
 
         assertTrue(machine.requestStop().await())
-        assertEquals(0, host.stopCalls)
+        assertEquals(1, host.stopCalls)
     }
 
     @Test
@@ -527,7 +741,7 @@ class ServiceStateMachineTest {
     }
 
     @Test
-    fun `handleStopAction hands the stop to the tile when one is attached`() = runTest {
+    fun `handleStopAction completes natively even with an unresponsive Flutter tile`() = runTest {
         val host = FakeHost(backgroundScope)
         val machine = ServiceStateMachine(host)
         machine.syncSharedState(configuredState())
@@ -537,8 +751,9 @@ class ServiceStateMachineTest {
 
         machine.handleStopAction()
 
-        assertEquals(1, tile.stopCount)
-        assertEquals(0, host.stopCalls)
+        assertEquals(0, tile.stopCount)
+        assertEquals(1, host.stopCalls)
+        assertEquals(RunState.STOPPED, machine.snapshot().state)
     }
 
     @Test

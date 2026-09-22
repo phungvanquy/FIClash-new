@@ -94,6 +94,21 @@ class _ToolViewState extends ConsumerState<ToolsView> {
     );
     final items = [
       const VpnConfigurationSection(),
+      if (system.isAndroid)
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                context.appLocalizations.vpnAndroidHelpTitle,
+                style: context.textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Text(context.appLocalizations.vpnAndroidHelp),
+            ],
+          ),
+        ),
       _buildNavigationMenu([
         NavigationItem(
           icon: const Icon(Icons.view_timeline),

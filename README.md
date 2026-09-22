@@ -39,6 +39,8 @@ A multi-platform proxy client based on ClashMeta, simple and easy to use, open-s
 2. Choose **Auto**, **Fallback**, or a server from Home's single list.
 3. Press the large circular button to connect; press it again to disconnect. Grant VPN/TUN permission if requested.
 
+Connected is green; disconnected is gray. **Test latency** measures the servers and highlights the fastest without changing your selection. Connection transitions and latency tests show progress and prevent repeated submissions.
+
 The app keeps one profile. A successful import replaces it; a failed import keeps your saved setup. The gear opens Settings, including custom routing, configuration editing, backup, and recovery. Subscription/provider-list refresh pauses when Flutter is closed; the current native VPN configuration and health checks continue.
 
 See [VPN setup, routing, and migration](VPN_GUIDE.md) for connection-state meanings and recovery details. Existing preview images above may show the previous interface.

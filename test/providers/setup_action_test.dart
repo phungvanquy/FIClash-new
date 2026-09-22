@@ -391,11 +391,58 @@ void main() {
         );
 
         expect(container.read(runTimeProvider), isNotNull);
+        expect(action.runningRequested, isFalse);
+        expect(container.read(vpnFailureProvider), 'stop_failed');
+        final calls = action.coreRunningCalls.length;
+        await action.reconcileSuspension();
+        expect(action.coreRunningCalls.length, calls);
       },
     );
   });
 
   group('stop cleanup', () {
+    test(
+      'native failed stop and passive reattachment do not request a restart',
+      () {
+        final notifier = container.read(setupActionProvider.notifier);
+        notifier.observeAndroid(
+          const AndroidRunObservation(
+            session: 'native',
+            revision: 1,
+            state: VpnRunState.started,
+            startedAt: 100,
+            vpn: true,
+            requested: true,
+          ),
+        );
+        expect(notifier.runningRequested, isTrue);
+        notifier.observeAndroid(
+          const AndroidRunObservation(
+            session: 'native',
+            revision: 2,
+            state: VpnRunState.stopping,
+            startedAt: 100,
+            vpn: true,
+            requested: false,
+            failure: 'stop_failed',
+          ),
+        );
+        expect(notifier.runningRequested, isFalse);
+        container.read(vpnFailureProvider.notifier).value = 'stop_failed';
+        notifier.observeAndroid(
+          const AndroidRunObservation(
+            session: 'native',
+            revision: 3,
+            state: VpnRunState.stopped,
+            requested: false,
+          ),
+        );
+        expect(container.read(runTimeProvider), isNull);
+        expect(container.read(vpnFailureProvider), isNull);
+        expect(notifier.runningRequested, isFalse);
+        expect(action.coreRunningCalls, isEmpty);
+      },
+    );
     test('resets traffic counters and re-checks the ip', () async {
       markInitialized();
       await container.read(setupActionProvider.notifier).setRunning(true);

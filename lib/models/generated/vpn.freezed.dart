@@ -856,7 +856,7 @@ as String?,
 /// @nodoc
 mixin _$AndroidRunObservation {
 
- String get session; int get revision; VpnRunState get state; int get startedAt; bool get vpn; String? get failure;
+ String get session; int get revision; VpnRunState get state; bool? get requested; int get startedAt; bool get vpn; String? get failure;
 /// Create a copy of AndroidRunObservation
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -870,20 +870,20 @@ $AndroidRunObservationCopyWith<AndroidRunObservation> get copyWith => _$AndroidR
 @override
 bool operator ==(Object other) {
   final _this = this as AndroidRunObservation;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is AndroidRunObservation&&(identical(other.session, _this.session) || other.session == _this.session)&&(identical(other.revision, _this.revision) || other.revision == _this.revision)&&(identical(other.state, _this.state) || other.state == _this.state)&&(identical(other.startedAt, _this.startedAt) || other.startedAt == _this.startedAt)&&(identical(other.vpn, _this.vpn) || other.vpn == _this.vpn)&&(identical(other.failure, _this.failure) || other.failure == _this.failure));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AndroidRunObservation&&(identical(other.session, _this.session) || other.session == _this.session)&&(identical(other.revision, _this.revision) || other.revision == _this.revision)&&(identical(other.state, _this.state) || other.state == _this.state)&&(identical(other.requested, _this.requested) || other.requested == _this.requested)&&(identical(other.startedAt, _this.startedAt) || other.startedAt == _this.startedAt)&&(identical(other.vpn, _this.vpn) || other.vpn == _this.vpn)&&(identical(other.failure, _this.failure) || other.failure == _this.failure));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as AndroidRunObservation;
-  return Object.hash(runtimeType,_this.session,_this.revision,_this.state,_this.startedAt,_this.vpn,_this.failure);
+  return Object.hash(runtimeType,_this.session,_this.revision,_this.state,_this.requested,_this.startedAt,_this.vpn,_this.failure);
 }
 
 @override
 String toString() {
   final _this = this as AndroidRunObservation;
-  return 'AndroidRunObservation(session: ${_this.session}, revision: ${_this.revision}, state: ${_this.state}, startedAt: ${_this.startedAt}, vpn: ${_this.vpn}, failure: ${_this.failure})';
+  return 'AndroidRunObservation(session: ${_this.session}, revision: ${_this.revision}, state: ${_this.state}, requested: ${_this.requested}, startedAt: ${_this.startedAt}, vpn: ${_this.vpn}, failure: ${_this.failure})';
 }
 
 
@@ -894,7 +894,7 @@ abstract mixin class $AndroidRunObservationCopyWith<$Res>  {
   factory $AndroidRunObservationCopyWith(AndroidRunObservation value, $Res Function(AndroidRunObservation) _then) = _$AndroidRunObservationCopyWithImpl;
 @useResult
 $Res call({
- String session, int revision, VpnRunState state, int startedAt, bool vpn, String? failure
+ String session, int revision, VpnRunState state, bool? requested, int startedAt, bool vpn, String? failure
 });
 
 
@@ -911,12 +911,13 @@ class _$AndroidRunObservationCopyWithImpl<$Res>
 
 /// Create a copy of AndroidRunObservation
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? session = null,Object? revision = null,Object? state = null,Object? startedAt = null,Object? vpn = null,Object? failure = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? session = null,Object? revision = null,Object? state = null,Object? requested = freezed,Object? startedAt = null,Object? vpn = null,Object? failure = freezed,}) {
   return _then(AndroidRunObservation(
 session: null == session ? _self.session : session // ignore: cast_nullable_to_non_nullable
 as String,revision: null == revision ? _self.revision : revision // ignore: cast_nullable_to_non_nullable
 as int,state: null == state ? _self.state : state // ignore: cast_nullable_to_non_nullable
-as VpnRunState,startedAt: null == startedAt ? _self.startedAt : startedAt // ignore: cast_nullable_to_non_nullable
+as VpnRunState,requested: freezed == requested ? _self.requested : requested // ignore: cast_nullable_to_non_nullable
+as bool?,startedAt: null == startedAt ? _self.startedAt : startedAt // ignore: cast_nullable_to_non_nullable
 as int,vpn: null == vpn ? _self.vpn : vpn // ignore: cast_nullable_to_non_nullable
 as bool,failure: freezed == failure ? _self.failure : failure // ignore: cast_nullable_to_non_nullable
 as String?,
@@ -1004,10 +1005,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String session,  int revision,  VpnRunState state,  int startedAt,  bool vpn,  String? failure)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String session,  int revision,  VpnRunState state,  bool? requested,  int startedAt,  bool vpn,  String? failure)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _AndroidRunObservation() when $default != null:
-return $default(_that.session,_that.revision,_that.state,_that.startedAt,_that.vpn,_that.failure);case _:
+return $default(_that.session,_that.revision,_that.state,_that.requested,_that.startedAt,_that.vpn,_that.failure);case _:
   return orElse();
 
 }
@@ -1025,10 +1026,10 @@ return $default(_that.session,_that.revision,_that.state,_that.startedAt,_that.v
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String session,  int revision,  VpnRunState state,  int startedAt,  bool vpn,  String? failure)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String session,  int revision,  VpnRunState state,  bool? requested,  int startedAt,  bool vpn,  String? failure)  $default,) {final _that = this;
 switch (_that) {
 case _AndroidRunObservation():
-return $default(_that.session,_that.revision,_that.state,_that.startedAt,_that.vpn,_that.failure);case _:
+return $default(_that.session,_that.revision,_that.state,_that.requested,_that.startedAt,_that.vpn,_that.failure);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1045,10 +1046,10 @@ return $default(_that.session,_that.revision,_that.state,_that.startedAt,_that.v
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String session,  int revision,  VpnRunState state,  int startedAt,  bool vpn,  String? failure)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String session,  int revision,  VpnRunState state,  bool? requested,  int startedAt,  bool vpn,  String? failure)?  $default,) {final _that = this;
 switch (_that) {
 case _AndroidRunObservation() when $default != null:
-return $default(_that.session,_that.revision,_that.state,_that.startedAt,_that.vpn,_that.failure);case _:
+return $default(_that.session,_that.revision,_that.state,_that.requested,_that.startedAt,_that.vpn,_that.failure);case _:
   return null;
 
 }
@@ -1060,12 +1061,13 @@ return $default(_that.session,_that.revision,_that.state,_that.startedAt,_that.v
 @JsonSerializable()
 
 class _AndroidRunObservation implements AndroidRunObservation {
-  const _AndroidRunObservation({required this.session, required this.revision, required this.state, this.startedAt = 0, this.vpn = false, this.failure});
+  const _AndroidRunObservation({required this.session, required this.revision, required this.state, this.requested, this.startedAt = 0, this.vpn = false, this.failure});
   factory _AndroidRunObservation.fromJson(Map<String, dynamic> json) => _$AndroidRunObservationFromJson(json);
 
 @override final  String session;
 @override final  int revision;
 @override final  VpnRunState state;
+@override final  bool? requested;
 @override@JsonKey() final  int startedAt;
 @override@JsonKey() final  bool vpn;
 @override final  String? failure;
@@ -1083,18 +1085,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _AndroidRunObservation&&(identical(other.session, session) || other.session == session)&&(identical(other.revision, revision) || other.revision == revision)&&(identical(other.state, state) || other.state == state)&&(identical(other.startedAt, startedAt) || other.startedAt == startedAt)&&(identical(other.vpn, vpn) || other.vpn == vpn)&&(identical(other.failure, failure) || other.failure == failure));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _AndroidRunObservation&&(identical(other.session, session) || other.session == session)&&(identical(other.revision, revision) || other.revision == revision)&&(identical(other.state, state) || other.state == state)&&(identical(other.requested, requested) || other.requested == requested)&&(identical(other.startedAt, startedAt) || other.startedAt == startedAt)&&(identical(other.vpn, vpn) || other.vpn == vpn)&&(identical(other.failure, failure) || other.failure == failure));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,session,revision,state,startedAt,vpn,failure);
+    return Object.hash(runtimeType,session,revision,state,requested,startedAt,vpn,failure);
 }
 
 @override
 String toString() {
-    return 'AndroidRunObservation(session: $session, revision: $revision, state: $state, startedAt: $startedAt, vpn: $vpn, failure: $failure)';
+    return 'AndroidRunObservation(session: $session, revision: $revision, state: $state, requested: $requested, startedAt: $startedAt, vpn: $vpn, failure: $failure)';
 }
 
 
@@ -1105,7 +1107,7 @@ abstract mixin class _$AndroidRunObservationCopyWith<$Res> implements $AndroidRu
   factory _$AndroidRunObservationCopyWith(_AndroidRunObservation value, $Res Function(_AndroidRunObservation) _then) = __$AndroidRunObservationCopyWithImpl;
 @override @useResult
 $Res call({
- String session, int revision, VpnRunState state, int startedAt, bool vpn, String? failure
+ String session, int revision, VpnRunState state, bool? requested, int startedAt, bool vpn, String? failure
 });
 
 
@@ -1122,12 +1124,13 @@ class __$AndroidRunObservationCopyWithImpl<$Res>
 
 /// Create a copy of AndroidRunObservation
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? session = null,Object? revision = null,Object? state = null,Object? startedAt = null,Object? vpn = null,Object? failure = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? session = null,Object? revision = null,Object? state = null,Object? requested = freezed,Object? startedAt = null,Object? vpn = null,Object? failure = freezed,}) {
   return _then(_AndroidRunObservation(
 session: null == session ? _self.session : session // ignore: cast_nullable_to_non_nullable
 as String,revision: null == revision ? _self.revision : revision // ignore: cast_nullable_to_non_nullable
 as int,state: null == state ? _self.state : state // ignore: cast_nullable_to_non_nullable
-as VpnRunState,startedAt: null == startedAt ? _self.startedAt : startedAt // ignore: cast_nullable_to_non_nullable
+as VpnRunState,requested: freezed == requested ? _self.requested : requested // ignore: cast_nullable_to_non_nullable
+as bool?,startedAt: null == startedAt ? _self.startedAt : startedAt // ignore: cast_nullable_to_non_nullable
 as int,vpn: null == vpn ? _self.vpn : vpn // ignore: cast_nullable_to_non_nullable
 as bool,failure: freezed == failure ? _self.failure : failure // ignore: cast_nullable_to_non_nullable
 as String?,

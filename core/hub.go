@@ -66,6 +66,7 @@ func handleStopListener() bool {
 	defer configMu.Unlock()
 	isRunning.Store(false)
 	stopListeners()
+	handleCloseConnections()
 	resolver.ResetConnection()
 	return true
 }
@@ -277,10 +278,15 @@ func handleTestDelay(params *TestDelayParams) *Delay {
 		Url:   url,
 		Value: -1,
 	}
+	if !validDelayTestURL(url) {
+		delayData.Failure = "test_failed"
+		return delayData
+	}
 
 	proxy := lookupProxy(params.ProxyName)
 	if proxy == nil {
 		reportMissingDelayTestProxy(params.ProxyName)
+		delayData.Failure = "test_failed"
 		return delayData
 	}
 
@@ -304,11 +310,29 @@ func handleTestDelay(params *TestDelayParams) *Delay {
 
 	delay, err := proxy.URLTest(ctx, url, anyDelayTestStatus)
 	if err != nil {
+		delayData.Failure = delayFailure(ctx, err)
 		return delayData
 	}
 
-	delayData.Value = delayValue(delay)
+	delayData.Value = max(1, int32(delay))
 	return delayData
+}
+
+func validDelayTestURL(value string) bool {
+	parsed, err := url.ParseRequestURI(value)
+	return err == nil && parsed.Host != "" && (parsed.Scheme == "http" || parsed.Scheme == "https")
+}
+
+func delayFailure(ctx context.Context, err error) string {
+	var networkError net.Error
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) || errors.Is(err, context.DeadlineExceeded) ||
+		(errors.As(err, &networkError) && networkError.Timeout()) {
+		return "timeout"
+	}
+	if errors.Is(err, context.Canceled) {
+		return "test_failed"
+	}
+	return "unreachable"
 }
 
 func handleGetConnections() *statistic.Snapshot {

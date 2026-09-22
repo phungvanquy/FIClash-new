@@ -15,13 +15,14 @@ internal class SuspendModule(
     private val service: Service,
     private val scope: CoroutineScope,
 ) : ServiceModule {
+    private val gate = ModuleGate()
     private fun isScreenOn() =
         service.getSystemService<PowerManager>()?.isInteractive ?: true
 
     private val isDeviceIdle: Boolean
         get() = service.getSystemService<PowerManager>()?.isDeviceIdleMode ?: true
 
-    private fun updateSuspension(screenOn: Boolean) {
+    private fun updateSuspension(screenOn: Boolean) = gate.update {
         Core.suspended(!screenOn && isDeviceIdle)
     }
 
@@ -41,7 +42,7 @@ internal class SuspendModule(
         }
     }
 
-    override fun stop() {
+    override fun stop() = gate.stop {
         Core.suspended(false)
     }
 }

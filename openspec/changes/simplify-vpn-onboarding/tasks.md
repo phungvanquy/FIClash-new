@@ -1,5 +1,13 @@
 # Tasks
 
+## 9. Post-build usability and reliability review
+
+- [x] 9.1 Review Home/import/Settings feedback; add semantic connection colors, distinct transition/error presentation, transition action guards, and responsive accessibility tests.
+- [x] 9.2 Add snapshot-scoped, single-flight node latency tests with bounded concurrency, measured milliseconds, timeout/unreachable/test-failure outcomes, stale-result rejection, and fastest-node highlighting without changing selection or connection intent.
+- [x] 9.3 Harden Android teardown and notification cleanup, preserve native lifecycle ownership, retain truthful failed-stop observations, and test repeated stop, revoke, service loss, and reattachment.
+- [x] 9.4 Regenerate models/providers/localizations; run Flutter, Go, and available Android JVM checks; synchronize specifications, architecture, usage instructions, and device acceptance checklist. Record hardware-only checks as outstanding, not passed.
+- [x] 9.5 Block false successful starts after incomplete Android teardown, clear stale stop failures after successful delayed cleanup, and verify retry/latest-intent behavior with regression tests and synchronized specifications.
+
 ## 1. Single-profile storage foundations
 
 - [x] 1.1 Add profile revision/content-generation metadata, typed simple selection, routing preference, and cached server-catalog models with backward-compatible serialization; regenerate model output and verify legacy/current JSON round trips in `test/models/`.

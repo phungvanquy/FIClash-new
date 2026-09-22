@@ -8,7 +8,53 @@ part 'generated/vpn.g.dart';
 
 enum VpnRoutingMode { simple, custom }
 
+enum VpnLatencyStatus { testing, measured, timeout, unreachable, failed }
+
+class VpnNodeLatency {
+  const VpnNodeLatency(this.status, [this.milliseconds]);
+
+  factory VpnNodeLatency.fromDelay(Delay? delay) {
+    if (delay == null || delay.value == null) {
+      return const VpnNodeLatency(VpnLatencyStatus.failed);
+    }
+    if (delay.failure == null && delay.value! >= 0) {
+      return VpnNodeLatency(VpnLatencyStatus.measured, delay.value);
+    }
+    return VpnNodeLatency(switch (delay.failure) {
+      'timeout' => VpnLatencyStatus.timeout,
+      null || 'unreachable' => VpnLatencyStatus.unreachable,
+      _ => VpnLatencyStatus.failed,
+    });
+  }
+
+  final VpnLatencyStatus status;
+  final int? milliseconds;
+}
+
+class VpnLatencyState {
+  const VpnLatencyState({this.running = false, this.results = const {}});
+
+  final bool running;
+  final Map<String, VpnNodeLatency> results;
+
+  String? get fastestId {
+    String? fastest;
+    int? minimum;
+    for (final entry in results.entries) {
+      final value = entry.value.milliseconds;
+      if (entry.value.status == VpnLatencyStatus.measured &&
+          value != null &&
+          (minimum == null || value < minimum)) {
+        minimum = value;
+        fastest = entry.key;
+      }
+    }
+    return fastest;
+  }
+}
+
 enum VpnConnectionPhase {
+  checking,
   disconnected,
   connecting,
   connected,
@@ -74,6 +120,7 @@ abstract class AndroidRunObservation with _$AndroidRunObservation {
     required String session,
     required int revision,
     required VpnRunState state,
+    bool? requested,
     @Default(0) int startedAt,
     @Default(false) bool vpn,
     String? failure,

@@ -55,6 +55,126 @@ class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
   }
 
+  /// `Checking connection…`
+  String get vpnChecking {
+    return Intl.message(
+      'Checking connection…',
+      name: 'vpnChecking',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Test latency`
+  String get vpnTestLatency {
+    return Intl.message(
+      'Test latency',
+      name: 'vpnTestLatency',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Testing…`
+  String get vpnLatencyTesting {
+    return Intl.message(
+      'Testing…',
+      name: 'vpnLatencyTesting',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Not tested`
+  String get vpnLatencyUntested {
+    return Intl.message(
+      'Not tested',
+      name: 'vpnLatencyUntested',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `{value} ms`
+  String vpnLatencyMs(Object value) {
+    return Intl.message(
+      '$value ms',
+      name: 'vpnLatencyMs',
+      desc: '',
+      args: [value],
+    );
+  }
+
+  /// `Timed out`
+  String get vpnLatencyTimeout {
+    return Intl.message(
+      'Timed out',
+      name: 'vpnLatencyTimeout',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Unreachable`
+  String get vpnLatencyUnreachable {
+    return Intl.message(
+      'Unreachable',
+      name: 'vpnLatencyUnreachable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Test failed`
+  String get vpnLatencyFailed {
+    return Intl.message(
+      'Test failed',
+      name: 'vpnLatencyFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Fastest`
+  String get vpnLatencyFastest {
+    return Intl.message(
+      'Fastest',
+      name: 'vpnLatencyFastest',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Could not confirm disconnection. Tap Disconnect to retry.`
+  String get vpnStopFailed {
+    return Intl.message(
+      'Could not confirm disconnection. Tap Disconnect to retry.',
+      name: 'vpnStopFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Disconnecting on Android`
+  String get vpnAndroidHelpTitle {
+    return Intl.message(
+      'Disconnecting on Android',
+      name: 'vpnAndroidHelpTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Tap Disconnect and wait for Disconnected. Closing the app does not disconnect the VPN. If Android keeps restarting it, turn off Always-on VPN in Android Settings → VPN → FlClash. “Block connections without VPN” can block internet access after disconnecting. Android’s Always-on warning is separate from this app’s connection notification.`
+  String get vpnAndroidHelp {
+    return Intl.message(
+      'Tap Disconnect and wait for Disconnected. Closing the app does not disconnect the VPN. If Android keeps restarting it, turn off Always-on VPN in Android Settings → VPN → FlClash. “Block connections without VPN” can block internet access after disconnecting. Android’s Always-on warning is separate from this app’s connection notification.',
+      name: 'vpnAndroidHelp',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Apply saved configuration`
   String get vpnApplySettings {
     return Intl.message(

@@ -195,10 +195,8 @@ leaving a repo-wide policy as a comment reaches only the reader of that one file
   mutual exclusion against each other and against `patchSelectGroup` — but not against a whole config apply, which is
   what `configMu` made a proxy switch wait for, provider downloads included. `patchSelectGroup` takes `selectMu` under
   `configMu`, fixing the order as `configMu` → `selectMu`.
-- The delay-test semaphore is acquired with a slice of the caller's budget (`budget/delayTestQueueShare`), not
-  unconditionally and not with the whole deadline. Queueing and probing come out of one budget, so a test handed all of
-  it can spend it waiting and reach `URLTest` with nothing left, reporting a proxy it never contacted as unreachable.
-  The probe keeps the caller's original deadline, so whatever the queue did not use is still its own.
+- Queueing for the delay-test semaphore and probing each have their own bounded timeout. Keep the host guard above
+  their combined budget. A queue/channel failure is not a verdict on a node; only a probe deadline reports timeout.
 - A delay test that the Core does not answer is a fault of the Core or the channel, never a verdict on the proxy:
   `handleTestDelay` returns inside its own budget on every path. `asyncTestDelay` therefore returns null instead of a
   `-1` delay, and `ProxiesAction` leaves the last measurement in place and abandons the rest of the run. Writing a

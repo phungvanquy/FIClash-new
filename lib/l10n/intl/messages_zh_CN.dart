@@ -83,7 +83,9 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m29(label) => "${label}必须为URL";
 
-  static String m30(count) => "${count} 年前";
+  static String m30(value) => "${value} 毫秒";
+
+  static String m31(count) => "${count} 年前";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -843,6 +845,12 @@ class MessageLookup extends MessageLookupByLibrary {
     "value": MessageLookupByLibrary.simpleMessage("值"),
     "vibrantScheme": MessageLookupByLibrary.simpleMessage("活力"),
     "view": MessageLookupByLibrary.simpleMessage("查看"),
+    "vpnAndroidHelp": MessageLookupByLibrary.simpleMessage(
+      "点击断开连接并等待显示已断开。关闭应用不会断开 VPN。如果 Android 不断重启 VPN，请在 Android 设置 → VPN → FlClash 中关闭始终开启 VPN。“阻止未使用 VPN 的连接”可能会在断开后阻止上网。Android 的始终开启警告与本应用的连接通知不同。",
+    ),
+    "vpnAndroidHelpTitle": MessageLookupByLibrary.simpleMessage(
+      "在 Android 上断开连接",
+    ),
     "vpnApplySettings": MessageLookupByLibrary.simpleMessage("应用已保存的配置"),
     "vpnApplySettingsDescription": MessageLookupByLibrary.simpleMessage(
       "使用已保存的 DNS、规则和脚本重新生成配置。仅在验证成功后替换当前配置。",
@@ -851,6 +859,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnCameraUnavailable": MessageLookupByLibrary.simpleMessage(
       "相机不可用。请在系统设置中允许访问相机后重试，或选择二维码图片。",
     ),
+    "vpnChecking": MessageLookupByLibrary.simpleMessage("正在检查连接…"),
     "vpnConfigChangeDetected": MessageLookupByLibrary.simpleMessage(
       "检测到VPN相关配置改动",
     ),
@@ -887,6 +896,13 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnInvalidUrl": MessageLookupByLibrary.simpleMessage(
       "请输入有效的 HTTP 或 HTTPS 订阅链接。",
     ),
+    "vpnLatencyFailed": MessageLookupByLibrary.simpleMessage("测试失败"),
+    "vpnLatencyFastest": MessageLookupByLibrary.simpleMessage("最快"),
+    "vpnLatencyMs": m30,
+    "vpnLatencyTesting": MessageLookupByLibrary.simpleMessage("测试中…"),
+    "vpnLatencyTimeout": MessageLookupByLibrary.simpleMessage("超时"),
+    "vpnLatencyUnreachable": MessageLookupByLibrary.simpleMessage("无法连接"),
+    "vpnLatencyUntested": MessageLookupByLibrary.simpleMessage("未测试"),
     "vpnLocalProxy": MessageLookupByLibrary.simpleMessage("仅本地代理 · VPN 未启用"),
     "vpnPasteClipboard": MessageLookupByLibrary.simpleMessage("从剪贴板粘贴"),
     "vpnPermissionDenied": MessageLookupByLibrary.simpleMessage(
@@ -920,12 +936,16 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnSettingsActionFailed": MessageLookupByLibrary.simpleMessage(
       "无法完成操作，请重试。",
     ),
+    "vpnStopFailed": MessageLookupByLibrary.simpleMessage(
+      "无法确认连接已断开。请点击断开连接重试。",
+    ),
     "vpnSubscriptionUrl": MessageLookupByLibrary.simpleMessage("订阅链接"),
     "vpnSuspended": MessageLookupByLibrary.simpleMessage("已暂停"),
+    "vpnTestLatency": MessageLookupByLibrary.simpleMessage("测试延迟"),
     "vpnTip": MessageLookupByLibrary.simpleMessage("重启VPN后改变生效"),
     "webDAVConfiguration": MessageLookupByLibrary.simpleMessage("WebDAV配置"),
     "whitelistMode": MessageLookupByLibrary.simpleMessage("白名单模式"),
-    "yearsAgo": m30,
+    "yearsAgo": m31,
     "zhCN": MessageLookupByLibrary.simpleMessage("中文简体"),
   };
 }

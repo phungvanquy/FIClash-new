@@ -176,6 +176,16 @@ Alternative considered: delete advanced features. Rejected because the user aske
 
 ## Verification Approach
 
+### Post-build reliability review
+
+Use semantic green/gray feedback plus distinct transition and failure treatments, keeping text and icons available for accessibility. Disable repeated UI transitions while retaining explicit startup cancellation. Keep failed teardown visible without pretending the tunnel is gone.
+
+Node latency is transient snapshot-scoped state, not profile or selection data. Reuse bounded probe scheduling and the Core delay protocol with an optional failure code distinguishing probe deadline, unreachable endpoint, and channel/queue failure. Highlight the fastest measured node without sorting modes or changing routing. Reject late results across generation/Core changes and guard batch submissions.
+
+Android cleanup must not use the runtime timer as proof there are no resources to release. Preserve failed teardown ownership for retry and surface failures through ServiceState observations. Serialize notification publication with stop so coroutine cancellation cannot race a final foreground update. Keep optimistic MethodChannel acknowledgements and native latest-intent arbitration. Android Always-on is independent system policy; document it rather than promising an app override.
+
+Keep unresolved cleanup failure in the native state machine independently of transient observations. New requests clear presentation errors, so checking only the last observation cannot prevent reuse of a partially stopped service. Reject native starts and background preparation while cleanup requires retry, even with a retained timer or after service loss; only successful owned cleanup clears that condition. Explicit Disconnect remains available. Successful delayed cleanup clears only the resolved `stop_failed` error, preserving unrelated configuration/start failures and current-request checks. A later explicit start can then establish the tunnel normally.
+
 Use behavioral failure injection for the risky boundaries: HTTP errors, invalid adapters/references, empty providers, candidate cleanup, disk/DB failures, crash recovery, stale imports/refreshes/selections, and failed runtime restoration. Extend `test/models/profile_save_test.dart`, the provider/database/backup suites, and `test/common/task_test.dart`; add a focused import-coordinator suite and storage migration fixtures.
 
 Extend protocol and native state tests for preparation handles and Android run-state observation, including `test/core/protocol_contract_test.dart`, `test/core/desktop/`, and `android/tests/app/ServiceStateMachineTest.kt`. Use `test/pages/home_test.dart`, `test/views/add_profile_view_test.dart`, and connection-control widget tests for the new user flow. Verify localized labels, semantics, keyboard focus, duplicate QR detections, and long server lists.

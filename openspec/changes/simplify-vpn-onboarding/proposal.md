@@ -14,6 +14,7 @@ FlClash currently separates configuration import, profile selection, proxy group
 - **BREAKING**: Use the chosen server or automatic group for all traffic handled by the VPN by default, as confirmed by the user. Preserve configuration routing and advanced proxy-group controls behind Settings.
 - Place a large circular connect/disconnect control centrally above the server list. Display actual VPN connection progress and failures rather than interpreting Core readiness as a successful VPN connection.
 - Move advanced configuration, diagnostics, appearance, backup/restore, and other existing tools into a Settings section reached through a small corner gear icon. Retain platform navigation, accessibility, and localization support.
+- Post-build review: add explicit connected/disconnected colors, guarded transitions and retryable errors; snapshot-scoped node latency testing with fastest highlighting; and failure-preserving Android teardown, background stops, and Always-on guidance.
 
 ## Capabilities
 

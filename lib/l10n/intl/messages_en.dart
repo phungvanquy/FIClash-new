@@ -94,7 +94,9 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m29(label) => "${label} must be a URL";
 
-  static String m30(count) =>
+  static String m30(value) => "${value} ms";
+
+  static String m31(count) =>
       "${Intl.plural(count, one: '1 year ago', other: '${count} years ago')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
@@ -1170,6 +1172,12 @@ class MessageLookup extends MessageLookupByLibrary {
     "value": MessageLookupByLibrary.simpleMessage("Value"),
     "vibrantScheme": MessageLookupByLibrary.simpleMessage("Vibrant"),
     "view": MessageLookupByLibrary.simpleMessage("View"),
+    "vpnAndroidHelp": MessageLookupByLibrary.simpleMessage(
+      "Tap Disconnect and wait for Disconnected. Closing the app does not disconnect the VPN. If Android keeps restarting it, turn off Always-on VPN in Android Settings → VPN → FlClash. “Block connections without VPN” can block internet access after disconnecting. Android’s Always-on warning is separate from this app’s connection notification.",
+    ),
+    "vpnAndroidHelpTitle": MessageLookupByLibrary.simpleMessage(
+      "Disconnecting on Android",
+    ),
     "vpnApplySettings": MessageLookupByLibrary.simpleMessage(
       "Apply saved configuration",
     ),
@@ -1182,6 +1190,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnCameraUnavailable": MessageLookupByLibrary.simpleMessage(
       "Camera unavailable. Allow camera access in system settings, try again, or choose a QR image.",
     ),
+    "vpnChecking": MessageLookupByLibrary.simpleMessage("Checking connection…"),
     "vpnConfigChangeDetected": MessageLookupByLibrary.simpleMessage(
       "VPN-related configuration change detected",
     ),
@@ -1224,6 +1233,15 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnInvalidUrl": MessageLookupByLibrary.simpleMessage(
       "Enter a valid HTTP or HTTPS subscription URL.",
     ),
+    "vpnLatencyFailed": MessageLookupByLibrary.simpleMessage("Test failed"),
+    "vpnLatencyFastest": MessageLookupByLibrary.simpleMessage("Fastest"),
+    "vpnLatencyMs": m30,
+    "vpnLatencyTesting": MessageLookupByLibrary.simpleMessage("Testing…"),
+    "vpnLatencyTimeout": MessageLookupByLibrary.simpleMessage("Timed out"),
+    "vpnLatencyUnreachable": MessageLookupByLibrary.simpleMessage(
+      "Unreachable",
+    ),
+    "vpnLatencyUntested": MessageLookupByLibrary.simpleMessage("Not tested"),
     "vpnLocalProxy": MessageLookupByLibrary.simpleMessage(
       "Local proxy only · VPN is not active",
     ),
@@ -1265,10 +1283,14 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnSettingsActionFailed": MessageLookupByLibrary.simpleMessage(
       "The operation could not be completed. Please try again.",
     ),
+    "vpnStopFailed": MessageLookupByLibrary.simpleMessage(
+      "Could not confirm disconnection. Tap Disconnect to retry.",
+    ),
     "vpnSubscriptionUrl": MessageLookupByLibrary.simpleMessage(
       "Subscription URL",
     ),
     "vpnSuspended": MessageLookupByLibrary.simpleMessage("Suspended"),
+    "vpnTestLatency": MessageLookupByLibrary.simpleMessage("Test latency"),
     "vpnTip": MessageLookupByLibrary.simpleMessage(
       "Changes take effect after restarting the VPN",
     ),
@@ -1276,7 +1298,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "WebDAV configuration",
     ),
     "whitelistMode": MessageLookupByLibrary.simpleMessage("Whitelist mode"),
-    "yearsAgo": m30,
+    "yearsAgo": m31,
     "zhCN": MessageLookupByLibrary.simpleMessage("Simplified Chinese"),
   };
 }

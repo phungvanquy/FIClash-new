@@ -20,6 +20,7 @@ import '../helpers/test_profiles.dart';
 
 class _Setup extends SetupAction {
   final requests = <bool>[];
+  Completer<bool>? gate;
 
   @override
   void build() {}
@@ -27,7 +28,7 @@ class _Setup extends SetupAction {
   @override
   Future<bool> setRunning(bool running, {bool initialize = false}) async {
     requests.add(running);
-    return true;
+    return await gate?.future ?? true;
   }
 }
 
@@ -78,6 +79,28 @@ class _Vpn extends VpnAction {
   }
 }
 
+class _Latency extends VpnLatency {
+  int calls = 0;
+  Completer<void>? gate;
+
+  @override
+  VpnLatencyState build() => const VpnLatencyState();
+
+  void publish(VpnLatencyState next) => state = next;
+
+  @override
+  Future<void> testAll() async {
+    if (state.running) return;
+    calls++;
+    state = const VpnLatencyState(running: true);
+    try {
+      await gate?.future;
+    } finally {
+      state = const VpnLatencyState();
+    }
+  }
+}
+
 Profile configured({int count = 3, bool custom = false}) => Profile(
   id: 1,
   autoUpdateDuration: const Duration(hours: 12),
@@ -109,6 +132,7 @@ void main() {
   late _Setup setup;
   late _Proxies proxies;
   late _Vpn vpn;
+  late _Latency latency;
 
   setUpAll(() async => AppLocalizations.load(const Locale('en')));
 
@@ -116,12 +140,14 @@ void main() {
     setup = _Setup();
     proxies = _Proxies();
     vpn = _Vpn();
+    latency = _Latency();
     container = ProviderContainer(
       overrides: [
         profilesProvider.overrideWith(TestProfiles.new),
         setupActionProvider.overrideWith(() => setup),
         proxiesActionProvider.overrideWith(() => proxies),
         vpnActionProvider.overrideWith(() => vpn),
+        vpnLatencyProvider.overrideWith(() => latency),
       ],
     );
     globalState.container = container;
@@ -142,6 +168,7 @@ void main() {
     WidgetTester tester, {
     Size size = const Size(1000, 800),
     double scale = 1,
+    bool dark = false,
   }) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = size;
@@ -157,7 +184,9 @@ void main() {
               size: size,
               textScaler: TextScaler.linear(scale),
             ),
-            child: const HomePage(),
+            child: dark
+                ? Theme(data: ThemeData.dark(), child: const HomePage())
+                : const HomePage(),
           ),
         ),
       ),
@@ -227,8 +256,10 @@ void main() {
     setProfile(configured());
     container.read(vpnPendingProvider.notifier).value = true;
     await pump(tester);
-    expect(find.text('Connecting...'), findsOneWidget);
+    expect(find.text('Connecting...'), findsNWidgets(2));
     await tester.tap(find.byKey(const Key('vpn-connect')));
+    expect(setup.requests, isEmpty);
+    await tester.tap(find.byKey(const Key('vpn-cancel-connect')));
     expect(setup.requests, [false]);
   });
 
@@ -255,6 +286,79 @@ void main() {
     expect(setup.requests, [false]);
   });
 
+  homeTest('connection and status use green when connected and gray when off', (
+    tester,
+  ) async {
+    setProfile(configured());
+    await pump(tester);
+    Color? buttonColor() => tester
+        .widget<FilledButton>(find.byKey(const Key('vpn-connect')))
+        .style!
+        .backgroundColor!
+        .resolve({});
+    Color? statusColor() =>
+        tester.widget<Text>(find.byKey(const Key('vpn-status'))).style!.color;
+    expect(buttonColor(), Colors.grey.shade800);
+    expect(statusColor(), Colors.grey.shade800);
+    container
+        .read(coreRunStateProvider.notifier)
+        .observe(
+          const CoreRunObservation(
+            session: 'colors',
+            revision: 1,
+            requested: true,
+            active: true,
+            tun: true,
+          ),
+        );
+    await tester.pump();
+    expect(buttonColor(), Colors.green.shade800);
+    expect(statusColor(), Colors.green.shade800);
+    expect(find.byIcon(Icons.shield), findsOneWidget);
+  });
+
+  homeTest('submitting and disconnecting disable repeated actions', (
+    tester,
+  ) async {
+    setProfile(configured());
+    setup.gate = Completer<bool>();
+    await pump(tester);
+    final button = find.byKey(const Key('vpn-connect'));
+    await tester.tap(button);
+    await tester.tap(button);
+    expect(setup.requests, [true]);
+    await tester.pump();
+    expect(tester.widget<FilledButton>(button).onPressed, isNull);
+    setup.gate!.complete(true);
+    await tester.pump();
+    container.read(vpnPendingProvider.notifier).value = false;
+    await tester.pump();
+    expect(tester.widget<FilledButton>(button).onPressed, isNull);
+    expect(
+      tester.widget<Text>(find.byKey(const Key('vpn-status'))).data,
+      'Disconnecting…',
+    );
+    expect(find.byKey(const Key('vpn-cancel-connect')), findsNothing);
+  });
+
+  homeTest('failed disconnect is red and offers retry rather than Connect', (
+    tester,
+  ) async {
+    setProfile(configured());
+    container.read(vpnFailureProvider.notifier).value = 'stop_failed';
+    await pump(tester);
+    expect(
+      tester.widget<Text>(find.byKey(const Key('vpn-status'))).style!.color,
+      Colors.red.shade800,
+    );
+    expect(
+      find.text('Could not confirm disconnection. Tap Disconnect to retry.'),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('vpn-connect')));
+    expect(setup.requests, [false]);
+  });
+
   homeTest('a rejected selection retains Auto and clears progress', (
     tester,
   ) async {
@@ -276,6 +380,80 @@ void main() {
       findsOneWidget,
     );
   });
+
+  homeTest('connection colors remain readable in the dark theme', (
+    tester,
+  ) async {
+    setProfile(configured());
+    await pump(tester, dark: true);
+    expect(
+      tester.widget<Text>(find.byKey(const Key('vpn-status'))).style!.color,
+      Colors.grey.shade300,
+    );
+    container
+        .read(coreRunStateProvider.notifier)
+        .observe(
+          const CoreRunObservation(
+            session: 'dark',
+            revision: 1,
+            requested: true,
+            active: true,
+            tun: true,
+          ),
+        );
+    await tester.pump();
+    final style = tester
+        .widget<FilledButton>(find.byKey(const Key('vpn-connect')))
+        .style!;
+    expect(style.backgroundColor!.resolve({}), Colors.green.shade300);
+    expect(style.foregroundColor!.resolve({}), Colors.black);
+  });
+
+  homeTest(
+    'latency loading prevents duplicate tests and displays measured and failed nodes',
+    (tester) async {
+      setProfile(configured(count: 4));
+      latency.gate = Completer<void>();
+      await pump(tester);
+      final button = find.byKey(const Key('vpn-test-latency'));
+      expect(find.text('Not tested'), findsWidgets);
+      await tester.tap(button);
+      await tester.pump();
+      expect(tester.widget<TextButton>(button).onPressed, isNull);
+      expect(find.text('Testing…'), findsOneWidget);
+      await tester.tap(button);
+      expect(latency.calls, 1);
+      latency.gate!.complete();
+      await tester.pump();
+      latency.publish(
+        const VpnLatencyState(
+          results: {
+            'server-0': VpnNodeLatency(VpnLatencyStatus.measured, 18),
+            'server-1': VpnNodeLatency(VpnLatencyStatus.timeout),
+            'server-2': VpnNodeLatency(VpnLatencyStatus.unreachable),
+            'server-3': VpnNodeLatency(VpnLatencyStatus.failed),
+          },
+        ),
+      );
+      await tester.pump();
+      expect(find.text('18 ms'), findsOneWidget);
+      expect(find.text('Fastest'), findsOneWidget);
+      expect(find.text('Timed out'), findsOneWidget);
+      expect(find.text('Unreachable'), findsOneWidget);
+      await tester.drag(
+        find.byKey(const PageStorageKey('vpn-servers')),
+        const Offset(0, -200),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Test failed'), findsOneWidget);
+      expect(setup.requests, isEmpty);
+      expect(proxies.selections, isEmpty);
+      expect(
+        container.read(currentProfileProvider)!.snapshot.selection,
+        const VpnSelection.auto(),
+      );
+    },
+  );
 
   homeTest('Home selection returns custom routing to simple mode', (
     tester,

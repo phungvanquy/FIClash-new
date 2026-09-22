@@ -83,6 +83,24 @@ void main() {
   });
 
   group('Delay', () {
+    test('optional probe failure matches Go wire data and old replies', () {
+      final delay = Delay.fromJson({
+        'url': 'https://probe.test',
+        'name': 'node',
+        'value': -1,
+        'failure': 'timeout',
+      });
+      expect(delay.failure, 'timeout');
+      expect(delay.toJson()['failure'], 'timeout');
+      expect(
+        const Delay(
+          name: 'node',
+          url: 'https://probe.test',
+          value: 20,
+        ).toJson().containsKey('failure'),
+        isFalse,
+      );
+    });
     test('fromJson and toJson', () {
       final json = {'name': 'P1', 'url': 'test.com', 'value': 42};
       final delay = Delay.fromJson(json);

@@ -1,6 +1,44 @@
 # Implementation checkpoint
 
-## Final available-host verification
+## 2026-09-22 Android disconnect follow-up
+
+Progress: 42/44 tasks complete. Task 9.5 resolves the two additional state-machine bugs reproduced during the read-only review. Native compilation/device gates 8.3/8.4 remain open.
+
+- Unresolved cleanup failure is retained independently of observations. Native starts, including proxy-only and background preparation paths, are rejected with a retryable disconnect error until cleanup succeeds; retained runtime/binding bookkeeping cannot be adopted as a healthy service. Permission denial and service loss do not hide cleanup still requiring retry. After successful Disconnect retry, an explicit start establishes the service normally.
+- Successful delayed cleanup clears the resolved `stop_failed` error without clearing unrelated configuration/startup errors. Failure remains retryable and late cleanup cannot overwrite a newer request.
+- Eight regression cases cover partial VPN/proxy teardown, zero-runtime cleanup, denied starts/service loss, blocked background preparation, successful/failed delayed cleanup, preserved configuration failure, and a newer start during cleanup. The first two regressions failed before the production fix; all 110 portable JVM tests pass afterward using the real state-machine sources and interface-only host scaffold.
+- The focused Flutter connection-presentation, Android service-bridge, and Android-manager run passes all 37 tests. Strict OpenSpec validation, comment-density and diff-whitespace checks pass. No Dart model/provider/localization source changed in this follow-up, so no additional code generation was required.
+- Specifications, architecture guidance, validation mapping and Android usage instructions describe retry-before-reconnect behavior. These tests reproduce code-level edge cases, not the user's device symptom. Actual VPN-key/notification removal and Android framework compilation still require CI/artifact validation; no commit or push was requested or performed.
+
+## 2026-09-22 post-build UX, latency, and Android reliability
+
+Progress: 41/43 tasks complete. Post-build implementation tasks 9.1–9.4 are complete; native compilation/device gates 8.3/8.4 remain open for this revision.
+
+The user's Android symptom has not been reproduced on this VPS; Android version and Always-on settings were requested but are not available here. Code inspection identified failure paths, not proof that one particular path caused that report:
+
+- Home's button stayed enabled during transitions. It now has a synchronous submission guard, disabled working states, explicit startup cancellation, semantic light/dark colors, and text/icons. Initial Android attachment shows Checking connection instead of assuming Disconnected.
+- Android stop skipped cleanup with zero runtime and swallowed controller/module cleanup errors. Actual service instances are now inventoried independently of bindings, partial resources are cleaned, failures remain retryable, and runtime/binding ownership is released only after successful cleanup. The Go stop path also closes tracked traffic connections.
+- Notification updates could race cancellation and recreate foreground state after removal. Publication/stop is serialized; partial module startup and failed cleanup retain retry ownership, and late network callbacks cannot repopulate stopped state.
+- Background stops depended on Flutter callbacks. They now run through native arbitration directly. Stops coalesce, background setup cannot override a newer stop, and running bindings survive Flutter detachment. Native requested intent is carried separately from runtime; failed-stop observations no longer become reconnect intent in Flutter.
+- Home latency uses unique catalog targets and a bounded, single-flight batch. Results distinguish timeout/unreachable/test failures, reject stale generation/URL/Core/disposal completions, and highlight the fastest node without selection writes or traffic resets. Loopback tests caught sub-millisecond success being converted to failure; successful probes now display at least 1 ms.
+
+Verification on the Linux arm64 development host:
+
+| Check | Result |
+| --- | --- |
+| `flutter pub get` | Passed; dependencies not upgraded. |
+| Model/provider and four-locale generation | Passed; generated output not hand-edited; localization output normalized by formatter. |
+| Full `flutter test --reporter expanded` | 2,071 passed, 3 existing skips. |
+| Focused run after final theme/attachment/retry refinements | 121 passed: Home, latency, setup, connection, protocol, service bridge, Android manager. |
+| `flutter analyze --no-fatal-infos` | No errors/warnings; one pre-existing const-constructor info in `test/widgets/scrollbar_inset_test.dart:18`. |
+| Go wrapper tests and vet | Passed with `CGO_ENABLED=0`, dropping `CAP_CHOWN` for the existing non-root ownership assertion. The unrestricted-root run fails that assertion because root can chown the fixture. No Core coverage instrumentation. |
+| Probe tests | Real loopback normal/slow HTTP, silent deadline and refused sockets, plus failure classification/wire compatibility. |
+| Portable Kotlin/JVM | 102 passed using real state-machine/model, module lifecycle/gate and registry sources with an interface-only host scaffold. Not an Android framework/binder/plugin build. |
+| Formatting, comment density, diff whitespace, strict OpenSpec validation | Passed. |
+
+Actual VPN-key/foreground notification removal, OS route/FD/socket cleanup, Always-on, process termination and native UI rendering still require CI-built artifacts and devices. See `validation.md` for acceptance cases. No commit or push was requested or performed for this round. Unrelated pre-existing OpenSpec/Claude skill files were preserved.
+
+## Initial redesign available-host verification (historical)
 
 Progress: 37/39 tasks complete. Implementation, documentation, and task 8.2 are complete. Task 8.3 stays open because the touched Android modules/Flutter service bridge could not be compiled against an Android SDK; task 8.4 stays open because actual platform smoke tests could not run. On 2026-09-21 the user approved handing these checks off to CI-built artifacts and later manual testing outside this development VPS. Native validation is deferred, not passed; no native environment provisioning on this host is required for the development handoff. The change is not archived or declared fully verified.
 

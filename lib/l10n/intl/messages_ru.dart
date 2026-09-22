@@ -94,7 +94,9 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m29(label) => "Значение «${label}» должно быть URL";
 
-  static String m30(count) =>
+  static String m30(value) => "${value} мс";
+
+  static String m31(count) =>
       "${Intl.plural(count, one: '${count} год назад', few: '${count} года назад', many: '${count} лет назад', other: '${count} года назад')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
@@ -1224,6 +1226,12 @@ class MessageLookup extends MessageLookupByLibrary {
     "value": MessageLookupByLibrary.simpleMessage("Значение"),
     "vibrantScheme": MessageLookupByLibrary.simpleMessage("Яркая"),
     "view": MessageLookupByLibrary.simpleMessage("Просмотр"),
+    "vpnAndroidHelp": MessageLookupByLibrary.simpleMessage(
+      "Нажмите «Отключить» и дождитесь статуса «Отключено». Закрытие приложения не отключает VPN. Если Android снова запускает VPN, выключите «Постоянная VPN» в настройках Android → VPN → FlClash. Функция «Блокировать соединения без VPN» может блокировать интернет после отключения. Системное предупреждение о постоянной VPN — не уведомление этого приложения о подключении.",
+    ),
+    "vpnAndroidHelpTitle": MessageLookupByLibrary.simpleMessage(
+      "Отключение на Android",
+    ),
     "vpnApplySettings": MessageLookupByLibrary.simpleMessage(
       "Применить сохранённую конфигурацию",
     ),
@@ -1235,6 +1243,9 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "vpnCameraUnavailable": MessageLookupByLibrary.simpleMessage(
       "Камера недоступна. Разрешите доступ в настройках системы, повторите попытку или выберите изображение QR-кода.",
+    ),
+    "vpnChecking": MessageLookupByLibrary.simpleMessage(
+      "Проверка подключения…",
     ),
     "vpnConfigChangeDetected": MessageLookupByLibrary.simpleMessage(
       "Обнаружено изменение настроек VPN",
@@ -1280,6 +1291,13 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnInvalidUrl": MessageLookupByLibrary.simpleMessage(
       "Введите корректную ссылку на подписку HTTP или HTTPS.",
     ),
+    "vpnLatencyFailed": MessageLookupByLibrary.simpleMessage("Ошибка проверки"),
+    "vpnLatencyFastest": MessageLookupByLibrary.simpleMessage("Самый быстрый"),
+    "vpnLatencyMs": m30,
+    "vpnLatencyTesting": MessageLookupByLibrary.simpleMessage("Проверка…"),
+    "vpnLatencyTimeout": MessageLookupByLibrary.simpleMessage("Время истекло"),
+    "vpnLatencyUnreachable": MessageLookupByLibrary.simpleMessage("Недоступен"),
+    "vpnLatencyUntested": MessageLookupByLibrary.simpleMessage("Не проверено"),
     "vpnLocalProxy": MessageLookupByLibrary.simpleMessage(
       "Только локальный прокси · VPN не активен",
     ),
@@ -1323,10 +1341,16 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnSettingsActionFailed": MessageLookupByLibrary.simpleMessage(
       "Не удалось выполнить действие. Попробуйте ещё раз.",
     ),
+    "vpnStopFailed": MessageLookupByLibrary.simpleMessage(
+      "Не удалось подтвердить отключение. Нажмите «Отключить» ещё раз.",
+    ),
     "vpnSubscriptionUrl": MessageLookupByLibrary.simpleMessage(
       "Ссылка на подписку",
     ),
     "vpnSuspended": MessageLookupByLibrary.simpleMessage("Приостановлено"),
+    "vpnTestLatency": MessageLookupByLibrary.simpleMessage(
+      "Проверить задержку",
+    ),
     "vpnTip": MessageLookupByLibrary.simpleMessage(
       "Изменения вступят в силу после перезапуска VPN",
     ),
@@ -1336,7 +1360,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "whitelistMode": MessageLookupByLibrary.simpleMessage(
       "Режим белого списка",
     ),
-    "yearsAgo": m30,
+    "yearsAgo": m31,
     "zhCN": MessageLookupByLibrary.simpleMessage("Упрощённый китайский"),
   };
 }

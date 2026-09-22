@@ -6,6 +6,48 @@ Make subscription import, server choice, and connection control directly accessi
 
 ## ADDED Requirements
 
+### Requirement: Unambiguous connection feedback
+
+The central button and status indicator SHALL be green when fully connected and neutral gray when disconnected. Connecting, disconnecting, suspended/proxy-only operation, and errors SHALL have distinct text, icons, and visual treatment in light and dark themes. Progress SHALL disable repeated connection actions while an explicit one-shot Cancel action permits stopping pending startup. A failed stop SHALL remain actionable and MUST NOT be presented as successful disconnection. Errors SHALL use actionable localized copy rather than raw platform exceptions.
+
+#### Scenario: Repeated transition taps
+
+- **WHEN** a user taps Connect or Disconnect repeatedly before the first request finishes
+- **THEN** only one same-intent UI request is submitted, progress remains visible, and completed state comes from platform observation
+
+### Requirement: Android disconnection releases owned resources
+
+Native ServiceState SHALL remain the intent owner. Stop SHALL attempt cleanup even after partial startup, close the owned TUN and traffic resources, stop background modules, remove the foreground notification, and release service bindings. A late notification update MUST NOT recreate a stopped notification. STOPPED SHALL only be published after the owned cleanup succeeds; failed teardown SHALL report a retryable failure without converting it into a new start intent. Platform acknowledgements MUST NOT substitute for observed completion.
+
+#### Scenario: Stop fails or a resource is partially initialized
+
+- **WHEN** teardown fails or startup has not established a run timer
+- **THEN** cleanup is still attempted, a failure is visible and retryable, and the app does not silently reconnect or claim confirmed disconnection
+
+#### Scenario: Start is requested after incomplete teardown
+
+- **WHEN** a start is requested after teardown failed, including proxy-only operation or startup without a run timer
+- **THEN** native arbitration rejects the start with a retryable disconnect error until owned cleanup succeeds
+- **AND** it does not reuse retained runtime/binding bookkeeping as proof of connection or begin background configuration preparation
+- **AND** a successful Disconnect retry allows a later explicit start to establish the service normally
+
+#### Scenario: Delayed cleanup resolves a stop failure
+
+- **WHEN** superseded background startup finishes and its final cleanup succeeds after an earlier failed stop
+- **THEN** the current stop intent becomes Disconnected without retaining the resolved stop error
+- **AND** unrelated startup/configuration errors remain visible, failed cleanup remains retryable, and no late observation overwrites a newer request
+
+#### Scenario: Background stop or permission revocation
+
+- **WHEN** Android revokes the VPN or notification/system controls stop it while Flutter is absent
+- **THEN** native cleanup runs and reattaching Flutter reads the resulting state without restarting a manually stopped VPN
+
+#### Scenario: Android Always-on VPN controls the service
+
+- **WHEN** Android Always-on VPN is enabled independently of app auto-connect
+- **THEN** in-app guidance explains that Android may restart the service and that Always-on and blocking without VPN are controlled in Android VPN settings
+- **AND** an Android-owned warning notification is not treated as proof that the app's tunnel is active
+
 ### Requirement: Import-first home
 
 Without a usable profile, the initial screen SHALL present Scan QR, Paste from clipboard, and manual URL entry without requiring navigation to another primary section. A successful import SHALL reveal the connection controls and server list on Home. After setup, a visible compact Import/Replace action SHALL reopen the same intake flow. Importing SHALL show progress and recoverable errors without hiding or clearing a previously committed server list.
@@ -70,7 +112,12 @@ The application SHALL display Connected, Connecting, and Disconnected, with Disc
 #### Scenario: Permission or startup fails
 
 - **WHEN** VPN permission is denied or the current startup attempt fails
-- **THEN** Home returns to Disconnected, displays a useful error, retains the profile/selection, and offers retry
+- **THEN** Home shows a useful retryable error without claiming successful connection, and retains the profile/selection
+
+#### Scenario: Reattach before native state arrives
+
+- **WHEN** Android Home has not yet received its native run-state snapshot
+- **THEN** it displays Checking connection with repeated actions disabled rather than assuming the VPN is disconnected
 
 #### Scenario: Desktop falls back to proxy-only operation
 
