@@ -6,7 +6,7 @@ Open FlClash and import the HTTP(S) subscription/configuration URL supplied by y
 
 “VPN token” means the complete subscription URL, including its embedded token. There is no provider-specific short-code decoder or new raw protocol-token importer. Treat the URL, exported YAML, and backups as credentials; do not publish them.
 
-After import, Home shows Auto, Fallback, and the usable servers from the configuration and its providers. Choose a node and press the central circular button. Selection works before connecting and is remembered. Importing alone does not ask for VPN permission or connect a disconnected VPN.
+After import, Home shows Auto, Fallback, and the usable servers from the configuration and its providers. Choose a node and press the circular button in the compact connection panel. The panel sits above the list on phones and beside it on wide or short landscape windows. Selection works before connecting and is remembered. Importing alone does not ask for VPN permission or connect a disconnected VPN.
 
 - **Auto** chooses a responsive server using periodic latency checks.
 - **Fallback** uses the first healthy server in source order.
@@ -22,7 +22,7 @@ Fresh installations request VPN/TUN defaults when you explicitly connect. Existi
 
 When reopening on Android, Checking connection means the app is waiting for its native state snapshot; it does not assume that a previously running VPN is off. If the check fails or takes more than five seconds, choose **Try again** to recheck or **Disconnect** to request a safe stop. An unknown status never becomes permission to start a second connection.
 
-Once connected, the button and status badge turn bright green. **Current node** shows the server reported by Core, including the node chosen by Auto or Fallback and its provider where applicable. Home refreshes this display while in the foreground without switching nodes or interrupting traffic. It describes the outbound used for new traffic; existing sessions can remain on an earlier node. If the node cannot be confirmed, Home says so. With custom routing, different connections may use different nodes according to the rules.
+Once connected, the button and status badge turn bright green, with a soft glow around the button. Decorative transitions respect reduced-motion preferences. **Current node** stays visible above the server list as you scroll, without covering any rows. It shows the server reported by Core, including the node chosen by Auto or Fallback and its provider where applicable. Home refreshes this display while in the foreground without switching nodes or interrupting traffic. It describes the outbound used for new traffic; existing sessions can remain on an earlier node. If the node cannot be confirmed, Home says so. With custom routing, different connections may use different nodes according to the rules. The card disappears when the VPN leaves Connected; the main status always shows the current connection phase. Long names are also available by hovering or long-pressing the card and to screen readers.
 
 Closing the Flutter app pauses subscription and provider-content refresh. If the native VPN remains running, it uses the last committed configuration; health checks, Auto, and Fallback continue. Due content refresh resumes when Flutter returns. Choosing Exit/Disconnect or having the operating system stop the native service is different from merely closing Flutter.
 

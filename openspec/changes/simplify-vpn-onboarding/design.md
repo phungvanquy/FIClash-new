@@ -38,16 +38,18 @@ Observed implementation constraints:
 
 Keep `HomePage` under the existing manager stack and desktop window header. Replace its multi-destination content with a dedicated VPN home view. Push Settings and its detail screens through the existing navigator; retain focus, back handling, overlays, platform chrome, and app-wide feedback helpers. Remove the bottom navigation/sidebar from the primary experience and migrate persisted page labels to Home.
 
-The configured layout has a trailing gear and compact Import action, a centered connection area, and a separately scrollable server list. On a short window, scale the connection area's spacing and button size within accessible limits; do not let a long list push the control off-screen.
+The configured layout has a trailing gear, compact replacement action, and independently scrollable connection controls and server inventory. On phones the circular button sits beside profile/status/action text in a compact header capped at 220 logical pixels or 36% of available height. At 800 pixels wide, use a 280-pixel control rail beside the list; short landscape windows below 360 pixels high and at least 480 pixels wide use a proportional rail. Center the wide layout within 1200 pixels. Keep Settings' top-level list within 840 pixels. Controls remain scrollable under large text or short-window constraints rather than overflowing or displacing the inventory entirely.
 
 ```text
-FlClash               Import   [gear]
-
-             Disconnected
-            (   Connect   )
-                 Auto
-
-Servers
+FlClash                         [gear]
+  (power)   My VPN
+            Connected
+            Disconnect
+       Replace configuration
+Servers                  Test latency
+  Connected · Current node
+  Server A · Auto
+-------------------------------------
   selected  Auto       Best available
             Fallback   First available
             Server A
@@ -55,6 +57,12 @@ Servers
 ```
 
 With no profile, the same shell shows the three intake methods instead of a server list. There is no wizard, new-profile naming step, or success confirmation gate. Reuse Material You colors, `AppShape.circle`, shape tokens, list rows, and sheets. Keep dashboard-style statistics and customization out of Home; retain useful diagnostics within Settings.
+
+The server toolbar and Core-observed current-node card occupy normal layout space above the ListView, not an overlay. Only confirmed Connected shows the card; it includes connected text/icon, the observed leaf, and Auto/Fallback/provider context when available. Unknown/loading and custom-routing explanations stay truthful. It updates without scrolling, changing selection, or issuing lifecycle commands. A selected row remains a separate concept from the current outbound; disconnecting, failed, and disconnected phases remove the card immediately.
+
+Node rows use title-small names, body-small metadata, a nominal 64-pixel minimum height, compact padding, and at least 48-pixel interactive targets. Long names can occupy two lines; full text remains available to semantics and tooltips. Measured latency remains bold and at least 16 pixels before accessibility scaling. Narrow rows below 360 pixels or large text stack the latency below metadata; ordinary rows place it to the right. The fixed toolbar switches its labeled latency action to a named icon only when narrow space and large text require it. List order and fastest highlighting do not change selection.
+
+Connected retains the bright-green button/badge with black foreground. The button gains a non-pulsing green shadow (light: 14% opacity/16-pixel blur; dark: 20%/20-pixel blur). Button color, shadow, and ordinary badge-size changes ease over 220 ms, but status text, error feedback, enabled actions, and connected-card visibility follow current domain state immediately. Reduced-motion mode bypasses badge-size animation, sets decorative transition durations to zero, and uses a static progress arc on the connection button and latency toolbar. No new timers, Core calls, assets, or localized strings are introduced by this refinement.
 
 Alternative considered: keep the current shell and add a beginner dashboard. Rejected because Profiles, Proxies, and Tools would still compete as primary destinations and retain the extra navigation steps.
 

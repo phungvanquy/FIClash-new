@@ -59,7 +59,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     return HomeBackScopeContainer(
       child: Scaffold(
         appBar: AppBar(
-          title: const Text(appName),
+          title: Text(appName, style: context.textTheme.titleLarge),
           automaticallyImplyLeading: false,
           actions: [
             IconButton(
@@ -117,18 +117,35 @@ class _ConfiguredHome extends StatelessWidget {
       builder: (context, constraints) {
         final control = _ConnectionControl(profile: profile);
         final servers = VpnServerList(profile: profile);
-        if (constraints.maxWidth >= 760) {
-          return Row(
-            children: [
-              Expanded(child: control),
-              const VerticalDivider(width: 1),
-              Expanded(child: servers),
-            ],
+        final landscape =
+            constraints.maxHeight < 360 && constraints.maxWidth >= 480;
+        if (constraints.maxWidth >= 800 || landscape) {
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1200),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: landscape
+                        ? (constraints.maxWidth * .34).clamp(160, 280)
+                        : 280,
+                    child: control,
+                  ),
+                  const VerticalDivider(width: 1),
+                  Expanded(child: servers),
+                ],
+              ),
+            ),
           );
         }
         return Column(
           children: [
-            Expanded(child: control),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: (constraints.maxHeight * .36).clamp(0, 220),
+              ),
+              child: control,
+            ),
             const Divider(height: 1),
             Expanded(child: servers),
           ],
@@ -250,107 +267,117 @@ class _ConnectionControlState extends ConsumerState<_ConnectionControl> {
       'state_unavailable' => text.vpnStateUnavailable,
       _ => text.vpnConnectionFailed,
     };
+    final motion = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 220);
     return LayoutBuilder(
-      builder: (context, constraints) => SingleChildScrollView(
-        key: const Key('vpn-controls-scroll'),
-        padding: const EdgeInsets.all(20),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            minHeight: (constraints.maxHeight - 40).clamp(0, double.infinity),
+      builder: (context, constraints) {
+        final horizontal = constraints.maxWidth >= 300;
+        final button = _ConnectionButton(
+          color: color,
+          foreground: foreground,
+          connected: connected,
+          working: working || _submittedIntent != null,
+          label: action,
+          duration: motion,
+          dimension: horizontal ? 96 : 112,
+          onPressed: !working && _submittedIntent == null && (ready || active)
+              ? () => _toggle(!active)
+              : null,
+        );
+        final statusIndicator = Container(
+          key: const Key('vpn-status-indicator'),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: ShapeDecoration(
+            color: connected ? color : Colors.transparent,
+            shape: AppShape.sm,
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              if (profile.label.isNotEmpty) ...[
-                Text(
+              Icon(icon, size: 18, color: connected ? foreground : color),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  status,
+                  key: const Key('vpn-status'),
+                  style: context.textTheme.titleSmall?.copyWith(
+                    color: connected ? foreground : color,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+        final details = Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: horizontal
+              ? CrossAxisAlignment.start
+              : CrossAxisAlignment.center,
+          children: [
+            if (profile.label.isNotEmpty)
+              Tooltip(
+                message: profile.label,
+                excludeFromSemantics: true,
+                child: Text(
                   profile.label,
-                  textAlign: TextAlign.center,
-                  style: context.textTheme.titleMedium,
-                ),
-                const SizedBox(height: 16),
-              ],
-              Semantics(
-                liveRegion: true,
-                child: Container(
-                  key: const Key('vpn-status-indicator'),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: ShapeDecoration(
-                    color: connected ? color : Colors.transparent,
-                    shape: AppShape.sm,
-                  ),
-                  child: Wrap(
-                    alignment: WrapAlignment.center,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 8,
-                    children: [
-                      Icon(icon, color: connected ? foreground : color),
-                      Text(
-                        status,
-                        key: const Key('vpn-status'),
-                        textAlign: TextAlign.center,
-                        style: context.textTheme.titleLarge?.copyWith(
-                          color: connected ? foreground : color,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.textTheme.bodyMedium?.copyWith(
+                    color: context.colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
-              SizedBox.square(
-                dimension: constraints.maxHeight < 400 ? 136 : 184,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    if (working || _submittedIntent != null)
-                      CircularProgressIndicator(color: color),
-                    Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: Tooltip(
-                        message: action,
-                        child: FilledButton(
-                          key: const Key('vpn-connect'),
-                          style: FilledButton.styleFrom(
-                            shape: AppShape.circle,
-                            backgroundColor: color,
-                            foregroundColor: foreground,
-                            disabledBackgroundColor: color,
-                            disabledForegroundColor: foreground,
-                          ),
-                          onPressed:
-                              !working &&
-                                  _submittedIntent == null &&
-                                  (ready || active)
-                              ? () => _toggle(!active)
-                              : null,
-                          child: Semantics(
-                            label: action,
-                            child: const Icon(
-                              Icons.power_settings_new,
-                              size: 48,
-                            ),
-                          ),
-                        ),
-                      ),
+            const SizedBox(height: 6),
+            Semantics(
+              liveRegion: true,
+              child:
+                  motion == Duration.zero ||
+                      observed.phase == VpnConnectionPhase.failed
+                  ? statusIndicator
+                  : AnimatedSize(
+                      duration: motion,
+                      curve: Curves.easeOutCubic,
+                      alignment: horizontal
+                          ? AlignmentDirectional.centerStart
+                          : Alignment.center,
+                      child: statusIndicator,
                     ),
-                  ],
-                ),
+            ),
+            if (!working) ...[
+              const SizedBox(height: 6),
+              Text(action, style: context.textTheme.bodyMedium),
+            ],
+            if (observed.phase == VpnConnectionPhase.connecting)
+              TextButton(
+                key: const Key('vpn-cancel-connect'),
+                onPressed: _submittedIntent == false
+                    ? null
+                    : () => _toggle(false),
+                child: Text(text.cancel),
               ),
-              const SizedBox(height: 12),
-              Text(action, textAlign: TextAlign.center),
-              if (connected) const _ActiveNode(),
-              if (observed.phase == VpnConnectionPhase.connecting)
-                TextButton(
-                  key: const Key('vpn-cancel-connect'),
-                  onPressed: _submittedIntent == false
-                      ? null
-                      : () => _toggle(false),
-                  child: Text(text.cancel),
-                ),
+          ],
+        );
+        return SingleChildScrollView(
+          key: const Key('vpn-controls-scroll'),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (horizontal)
+                Row(
+                  children: [
+                    button,
+                    const SizedBox(width: 16),
+                    Expanded(child: details),
+                  ],
+                )
+              else ...[
+                button,
+                const SizedBox(height: 12),
+                details,
+              ],
               if (failure != null) ...[
                 const SizedBox(height: 12),
                 Semantics(
@@ -378,7 +405,7 @@ class _ConnectionControlState extends ConsumerState<_ConnectionControl> {
                 const SizedBox(height: 12),
                 Text(text.vpnCustomRouting, textAlign: TextAlign.center),
               ],
-              const SizedBox(height: 12),
+              const SizedBox(height: 4),
               TextButton.icon(
                 onPressed: () => showVpnImportDialog(context),
                 icon: const Icon(Icons.sync_alt),
@@ -386,7 +413,90 @@ class _ConnectionControlState extends ConsumerState<_ConnectionControl> {
               ),
             ],
           ),
-        ),
+        );
+      },
+    );
+  }
+}
+
+class _ConnectionButton extends StatelessWidget {
+  const _ConnectionButton({
+    required this.color,
+    required this.foreground,
+    required this.connected,
+    required this.working,
+    required this.label,
+    required this.duration,
+    required this.dimension,
+    required this.onPressed,
+  });
+
+  final Color color;
+  final Color foreground;
+  final bool connected;
+  final bool working;
+  final String label;
+  final Duration duration;
+  final double dimension;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return SizedBox.square(
+      dimension: dimension,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (working)
+            CircularProgressIndicator(
+              strokeWidth: 2,
+              value: duration == Duration.zero ? .75 : null,
+              color: color,
+            ),
+          Padding(
+            padding: const EdgeInsets.all(6),
+            child: AnimatedContainer(
+              key: const Key('vpn-connect-glow'),
+              duration: duration,
+              curve: Curves.easeOutCubic,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(
+                      0xFF00C853,
+                    ).withValues(alpha: connected ? (dark ? .20 : .14) : 0),
+                    blurRadius: dark ? 20 : 16,
+                    spreadRadius: 1,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Tooltip(
+                message: label,
+                excludeFromSemantics: true,
+                child: FilledButton(
+                  key: const Key('vpn-connect'),
+                  style: FilledButton.styleFrom(
+                    shape: AppShape.circle,
+                    padding: EdgeInsets.zero,
+                    animationDuration: duration,
+                    backgroundColor: color,
+                    foregroundColor: foreground,
+                    disabledBackgroundColor: color,
+                    disabledForegroundColor: foreground,
+                  ),
+                  onPressed: onPressed,
+                  child: Semantics(
+                    label: label,
+                    child: const Icon(Icons.power_settings_new, size: 32),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -413,29 +523,71 @@ class _ActiveNode extends ConsumerWidget {
       VpnFallbackSelection() => text.fallback,
       _ => null,
     };
-    return Padding(
-      padding: const EdgeInsets.only(top: 16),
+    final tone = Theme.of(context).brightness == Brightness.dark
+        ? Colors.green.shade300
+        : Colors.green.shade800;
+    final detail = !custom && server != null
+        ? [?mode, ?server.provider].join(' · ')
+        : '';
+    return Container(
+      key: const Key('vpn-active-node'),
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: ShapeDecoration(
+        color: Color.alphaBlend(
+          tone.withValues(alpha: .08),
+          context.colorScheme.surface,
+        ),
+        shape: AppShape.lg,
+      ),
       child: Semantics(
         liveRegion: true,
-        child: Column(
-          key: const Key('vpn-active-node'),
+        child: Row(
           children: [
-            Text(text.vpnCurrentNode, style: context.textTheme.labelLarge),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: context.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+            Icon(Icons.check_circle, size: 20, color: tone),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Tooltip(
+                excludeFromSemantics: true,
+                message: [
+                  text.connected,
+                  text.vpnCurrentNode,
+                  label,
+                  if (detail.isNotEmpty) detail,
+                ].join('\n'),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${text.connected} · ${text.vpnCurrentNode}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.textTheme.labelMedium?.copyWith(
+                        color: tone,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (detail.isNotEmpty)
+                      Text(
+                        detail,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textTheme.bodySmall?.copyWith(
+                          color: context.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
-            if (!custom &&
-                server != null &&
-                (mode != null || server.provider != null))
-              Text(
-                [?mode, ?server.provider].join(' · '),
-                textAlign: TextAlign.center,
-              ),
           ],
         ),
       ),
@@ -505,116 +657,224 @@ class _VpnServerListState extends ConsumerState<VpnServerList> {
         ref.watch(initProvider) &&
         ref.watch(coreStatusProvider) == CoreStatus.connected &&
         snapshot.generation != null;
-    return ListView.builder(
-      key: const PageStorageKey('vpn-servers'),
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-      itemCount: snapshot.servers.length + 3,
-      itemBuilder: (context, itemIndex) {
-        if (itemIndex == 0) {
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(8, 12, 8, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Wrap(
-                  alignment: WrapAlignment.spaceBetween,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 12,
-                  children: [
-                    Text(text.vpnServers, style: context.textTheme.titleMedium),
-                    TextButton.icon(
-                      key: const Key('vpn-test-latency'),
-                      onPressed: latency.running || !canTest
-                          ? null
-                          : () =>
-                                ref.read(vpnLatencyProvider.notifier).testAll(),
-                      icon: latency.running
-                          ? const SizedBox.square(
-                              dimension: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.speed),
-                      label: Text(
-                        latency.running
-                            ? text.vpnLatencyTesting
-                            : text.vpnTestLatency,
-                      ),
-                    ),
-                  ],
-                ),
-                if (_error != null)
-                  Semantics(
-                    liveRegion: true,
-                    child: Text(
-                      _error!,
-                      style: TextStyle(color: context.colorScheme.error),
-                    ),
-                  ),
-              ],
-            ),
-          );
-        }
-        final index = itemIndex - 1;
-        final server = index < 2 ? null : snapshot.servers[index - 2];
-        final selection = switch (index) {
-          0 => const VpnSelection.auto(),
-          1 => const VpnSelection.fallback(),
-          _ => VpnSelection.server(server!.id),
-        };
-        final title = index == 0
-            ? text.auto
-            : index == 1
-            ? text.fallback
-            : server!.name;
-        final subtitle = index == 0
-            ? text.vpnAutoDescription
-            : index == 1
-            ? text.vpnFallbackDescription
-            : [server!.type, ?server.provider].join(' · ');
-        final selected =
-            snapshot.routing == VpnRoutingMode.simple &&
-            snapshot.selection == selection;
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 4),
-          child: Semantics(
-            selected: selected,
-            child: ListTile(
-              key: ValueKey(selection),
-              shape: AppShape.xl,
-              selected: selected,
-              selectedTileColor: context.colorScheme.secondaryContainer,
-              title: Text(title),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(subtitle),
-                  if (server != null)
-                    _NodeLatency(
-                      result: latency.results[server.id],
-                      fastest: server.id == fastest,
-                    ),
-                ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _ServerToolbar(
+          running: latency.running,
+          onTest: latency.running || !canTest || transitioning
+              ? null
+              : () => ref.read(vpnLatencyProvider.notifier).testAll(),
+        ),
+        if (connection.phase == VpnConnectionPhase.connected)
+          const _ActiveNode(),
+        if (_error != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: Semantics(
+              liveRegion: true,
+              child: Text(
+                _error!,
+                style: TextStyle(color: context.colorScheme.error),
               ),
-              leading: Icon(
-                index == 0
-                    ? Icons.auto_awesome
-                    : index == 1
-                    ? Icons.swap_calls
-                    : Icons.public,
-              ),
-              trailing: _pending == selection
-                  ? const SizedBox.square(
-                      dimension: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Icon(selected ? Icons.check_circle : Icons.circle_outlined),
-              onTap: _pending == selection || transitioning
-                  ? null
-                  : () => _select(selection),
             ),
           ),
-        );
-      },
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final stacked =
+                  constraints.maxWidth < 360 ||
+                  MediaQuery.textScalerOf(context).scale(14) > 20;
+              return ListView.builder(
+                key: const PageStorageKey('vpn-servers'),
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+                itemCount: snapshot.servers.length + 2,
+                itemBuilder: (context, index) {
+                  final server = index < 2 ? null : snapshot.servers[index - 2];
+                  final selection = switch (index) {
+                    0 => const VpnSelection.auto(),
+                    1 => const VpnSelection.fallback(),
+                    _ => VpnSelection.server(server!.id),
+                  };
+                  final title = index == 0
+                      ? text.auto
+                      : index == 1
+                      ? text.fallback
+                      : server!.name;
+                  final subtitle = index == 0
+                      ? text.vpnAutoDescription
+                      : index == 1
+                      ? text.vpnFallbackDescription
+                      : [server!.type, ?server.provider].join(' · ');
+                  final selected =
+                      snapshot.routing == VpnRoutingMode.simple &&
+                      snapshot.selection == selection;
+                  final measurement = server == null
+                      ? null
+                      : _NodeLatency(
+                          result: latency.results[server.id],
+                          fastest: server.id == fastest,
+                        );
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Semantics(
+                      selected: selected,
+                      child: Tooltip(
+                        message: '$title\n$subtitle',
+                        excludeFromSemantics: true,
+                        child: ListTile(
+                          key: ValueKey(selection),
+                          shape: AppShape.xl,
+                          dense: true,
+                          minTileHeight: 64,
+                          minVerticalPadding: 8,
+                          minLeadingWidth: 20,
+                          horizontalTitleGap: 12,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                          ),
+                          selected: selected,
+                          selectedTileColor:
+                              context.colorScheme.secondaryContainer,
+                          title: Text(
+                            title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.textTheme.titleSmall?.copyWith(
+                              fontWeight: selected
+                                  ? FontWeight.bold
+                                  : FontWeight.w500,
+                            ),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                subtitle,
+                                maxLines: server == null ? null : 1,
+                                overflow: server == null
+                                    ? null
+                                    : TextOverflow.ellipsis,
+                                style: context.textTheme.bodySmall?.copyWith(
+                                  color: context.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              if (stacked && measurement != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 6),
+                                  child: measurement,
+                                ),
+                            ],
+                          ),
+                          leading: Icon(
+                            selected
+                                ? Icons.check_circle
+                                : index == 0
+                                ? Icons.auto_awesome
+                                : index == 1
+                                ? Icons.swap_calls
+                                : Icons.public,
+                            size: 20,
+                          ),
+                          trailing: _pending == selection
+                              ? const SizedBox.square(
+                                  dimension: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : !stacked && measurement != null
+                              ? ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 132,
+                                  ),
+                                  child: measurement,
+                                )
+                              : null,
+                          onTap: _pending == selection || transitioning
+                              ? null
+                              : () => _select(selection),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ServerToolbar extends StatelessWidget {
+  const _ServerToolbar({required this.running, required this.onTest});
+
+  final bool running;
+  final VoidCallback? onTest;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = context.appLocalizations;
+    final label = running ? text.vpnLatencyTesting : text.vpnTestLatency;
+    final icon = running
+        ? SizedBox.square(
+            dimension: 16,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              value: MediaQuery.disableAnimationsOf(context) ? .75 : null,
+            ),
+          )
+        : const Icon(Icons.speed, size: 18);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact =
+              constraints.maxWidth < 400 &&
+              MediaQuery.textScalerOf(context).scale(14) > 20;
+          return Row(
+            children: [
+              Expanded(
+                child: Tooltip(
+                  message: text.vpnServers,
+                  excludeFromSemantics: true,
+                  child: Text(
+                    text.vpnServers,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.textTheme.titleSmall,
+                  ),
+                ),
+              ),
+              if (compact)
+                IconButton(
+                  key: const Key('vpn-test-latency'),
+                  tooltip: label,
+                  onPressed: onTest,
+                  icon: icon,
+                )
+              else
+                Flexible(
+                  child: TextButton.icon(
+                    key: const Key('vpn-test-latency'),
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(48, 48),
+                    ),
+                    onPressed: onTest,
+                    icon: icon,
+                    label: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
@@ -652,35 +912,34 @@ class _NodeLatency extends StatelessWidget {
         : measured
         ? scheme.onPrimaryContainer
         : scheme.onSurfaceVariant;
-    return Padding(
-      padding: const EdgeInsets.only(top: 8, bottom: 4),
-      child: Wrap(
-        spacing: 8,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: ShapeDecoration(color: background, shape: AppShape.sm),
-            child: Text(
-              label,
-              style: context.textTheme.titleMedium?.copyWith(
-                color: foreground,
-                fontWeight: FontWeight.bold,
-              ),
+    return Wrap(
+      spacing: 6,
+      runSpacing: 2,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: ShapeDecoration(color: background, shape: AppShape.sm),
+          child: Text(
+            label,
+            style:
+                (measured
+                        ? context.textTheme.titleMedium
+                        : context.textTheme.labelMedium)
+                    ?.copyWith(color: foreground, fontWeight: FontWeight.bold),
+          ),
+        ),
+        if (fastest)
+          Text(
+            text.vpnLatencyFastest,
+            style: context.textTheme.labelMedium?.copyWith(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.green.shade300
+                  : Colors.green.shade800,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          if (fastest)
-            Text(
-              text.vpnLatencyFastest,
-              style: context.textTheme.labelMedium?.copyWith(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.green.shade300
-                    : Colors.green.shade800,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-        ],
-      ),
+      ],
     );
   }
 }

@@ -95,17 +95,42 @@ Android SHALL offer live camera QR scanning and image import. Desktop SHALL offe
 
 ### Requirement: Focused main screen
 
-With a usable profile, Home SHALL prominently display a large circular connect/disconnect button centered horizontally in the main control area, a text connection status, the selected target, and the unified server list. The connect control SHALL remain directly accessible while browsing a long list. Dashboard customization, traffic charts, routing toggles, profile lists, and diagnostic tools MUST NOT occupy the default Home surface.
+With a usable profile, Home SHALL prominently display a compact circular connect/disconnect button, a text connection status, the selected target, and the unified server list. Phones SHALL use a compact connection header; wide and short landscape windows SHALL place controls beside the list. Control and inventory regions SHALL scroll independently when necessary. Node rows SHALL use consistent compact spacing and typography without reducing interactive targets below 48 logical pixels; names, selection, and latency MUST remain readable. Wide Home and top-level Settings content SHALL have bounded widths. Dashboard customization, traffic charts, routing toggles, profile lists, and diagnostic tools MUST NOT occupy the default Home surface.
 
 #### Scenario: Long server list
 
 - **WHEN** a profile contains enough servers to require scrolling
 - **THEN** the user can scroll the list and still reach the connect/disconnect control without changing screens
 
+#### Scenario: Short window with large text
+
+- **WHEN** Home is displayed in a short landscape window or with text enlarged to 250%
+- **THEN** controls remain independently scrollable, the server inventory retains usable space, and rows expand or stack latency without overlapping adjacent content
+- **AND** the latency action remains accessible by its localized label or named icon without duplicate concurrent tests
+
 #### Scenario: No usable profile
 
 - **WHEN** there is no committed profile or import is not yet complete
 - **THEN** the application does not start an empty VPN configuration from the connect control
+
+### Requirement: Sticky observed connected node
+
+While fully connected, Home SHALL keep a read-only current-node card above the scrolling inventory. It SHALL occupy its own layout space, include connected text and an icon, and display the leaf node reported by Core rather than assuming the selected server or automatic group is the active outbound. Auto/Fallback and provider context SHALL be shown where applicable. Resolving/unavailable observations and custom routing SHALL retain truthful explanations rather than stale node claims. Long names SHALL remain available through semantics and a tooltip. The card MUST NOT change selection, scroll position, or VPN state.
+
+#### Scenario: Scroll while Auto or Fallback changes its outbound
+
+- **WHEN** a connected user scrolls a long server list and Core reports a new active node
+- **THEN** the fixed card updates to that observed node, remains visible without covering rows or controls, and does not switch the committed selection
+
+#### Scenario: Connection leaves Connected
+
+- **WHEN** the observed phase becomes disconnecting, disconnected, failed, suspended, or proxy-only
+- **THEN** the connected-node card is removed immediately and the main status describes the current phase without waiting for decorative animation
+
+#### Scenario: Active outbound is unknown or routing is custom
+
+- **WHEN** the VPN is connected but the outbound cannot be resolved, or multiple routing rules can choose different nodes
+- **THEN** the fixed card identifies that condition instead of claiming the selected node handles all traffic
 
 ### Requirement: Connection status reflects confirmed operation
 
@@ -147,6 +172,14 @@ The application SHALL display Connected, Connecting, and Disconnected, with Disc
 ### Requirement: Prominent successful connection and latency feedback
 
 Confirmed VPN connection SHALL use a bright green circular control and status badge with contrasting text/icons in light and dark themes. Measured node latency SHALL use a larger bold milliseconds label on a contrasting badge. Timeout, unreachable, failure, and untested labels SHALL remain explicit and localized; fastest highlighting MUST NOT change selection. Layouts MUST remain usable with large text on narrow screens.
+
+The confirmed-connected button SHALL have a soft, non-pulsing green glow adapted to the theme. Color, shadow, and ordinary status-size transitions SHALL be subtle and short, without delaying observed status text, errors, or action guards. Reduced-motion preferences SHALL disable decorative transitions and replace the connection/latency-toolbar spinning progress indicator with a static busy indicator. Leaving Connected SHALL remove the connected glow; an error MUST remain immediately visible even during an interrupted transition.
+
+#### Scenario: Theme and motion preferences
+
+- **WHEN** a confirmed connection is displayed in either light or dark theme
+- **THEN** the glow remains subtle, foreground text/icons remain contrasting, and no continuous decorative animation runs
+- **AND** with reduced motion enabled, connection and test actions preserve their guards and status feedback without decorative animation
 
 #### Scenario: Read connected feedback and measured latency
 

@@ -211,6 +211,12 @@ and disposal are checked again at completion even when provider subscriptions ar
 selection/running intent or closes traffic connections. Fastest highlighting preserves catalog order and mode entries.
 
 Home uses green/gray for connected/disconnected and distinct orange/blue/red transition/error states with text/icons.
+Its compact connection header becomes a side rail on wide or short landscape windows. Controls and inventory scroll
+independently; the toolbar and observed current-node card reserve space above the list, never overlay rows. The card
+exists only during confirmed Connected and reads `VpnActiveNode`, not the persisted selection. Compact rows retain
+48-pixel targets and bold latency badges, stacking measurements under large text or narrow constraints. Button glow
+and color transitions are short and theme-aware, not pulsing; reduced motion disables decoration animations. Error
+text, action guards and card visibility follow state immediately. Top-level Settings content has a bounded width.
 The circular button is disabled during transitions; a separate guarded Cancel remains available during startup.
 Stop failure keeps Disconnect retryable instead of claiming the tunnel has stopped. Settings explains Android
 Always-on and the difference between closing Flutter and disconnecting.

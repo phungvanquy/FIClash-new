@@ -1,5 +1,11 @@
 # Tasks
 
+## 11. Compact, accessible Home refinement
+
+- [x] 11.1 Rebalance responsive Home and Settings layout, typography and spacing; make connection controls and node rows compact without shrinking touch targets or hiding latency/selection feedback.
+- [x] 11.2 Pin the Core-observed active node above the scrolling inventory without overlap or stale connected claims; add theme-aware connected glow and restrained state transitions respecting reduced motion.
+- [x] 11.3 Verify scrolling, observed-node changes, transitions, themes, accessibility, large text and short/narrow/wide windows; synchronize design/specifications and device acceptance guidance.
+
 ## 10. Import, refresh, and replacement performance
 
 - [x] 10.1 Reuse source-matched, integrity-checked geographic data with bounded freshness across immutable generations; correct restored resource paths and stream snapshot integrity checks without weakening validation or rollback.

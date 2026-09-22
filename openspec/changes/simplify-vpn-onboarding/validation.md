@@ -2,6 +2,19 @@
 
 This matrix names coverage for every delta-spec scenario. Automated tests use temporary files/SQLite and fake HTTP/Core/platform boundaries unless explicitly identified as Go or JVM tests. They do not replace native GUI/device smoke tests.
 
+## Compact Home and sticky current node
+
+`test/pages/home_test.dart` covers compact header/row proportions, named 48-pixel touch targets, retained keyboard actions, sticky-node/list bounds before and after scrolling, observed-node changes without selection commands, immediate card removal outside Connected, light/dark connected glow, error interruption, reduced motion, and long names at 250% text scaling in narrow/short/wide windows. Existing current-node and latency provider suites cover stale observation rejection and non-mutating single-flight probes. Settings navigation and committed selection remain covered. Local light/dark Flutter-rendered previews were visually inspected with fonts and shadows enabled; these are not native-device screenshots.
+
+For Android and Windows artifacts, verify all of the following under native screen readers, keyboard/touch input, both themes, and reduced motion:
+
+- Import, connect, scroll far down the inventory, and force Auto/Fallback failover. The card stays above the rows, names Core's current outbound, and never overlaps content or changes selection. Disconnect/error removes it immediately.
+- Use long server/provider names and 250% text scaling; rotate a phone and resize a short desktop window. Controls remain scrollable, rows stack latency where needed, and full names are available through tooltip/semantics. The latency toolbar stays reachable even at the bottom of a long list.
+- Confirm the connected glow is soft and static, color changes are brief, status/action guards do not wait for animation, and reduced motion removes decorative transitions. Repeated Connect/Disconnect/Test taps still do not submit duplicates.
+- Check bold measured latency and explicit failure states, selected-row feedback, Settings width/back navigation, and unchanged active traffic while scrolling, measuring, or opening Settings.
+
+Native rendering, assistive technology and actual tunnel behavior remain deferred artifact gates; no native pass is inferred from widget tests.
+
 ## Deferred native validation and artifact handoff
 
 On 2026-09-21 the user approved continuing with this VPS as a development-only host and testing CI-built artifacts on native devices later. Native compilation and smoke checks are deferred, not assumed to have passed. Tasks 8.3 and 8.4 stay open until their results are recorded; missing local SDKs, GUI sessions, and devices do not require further provisioning here.

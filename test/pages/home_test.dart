@@ -187,6 +187,7 @@ void main() {
     Size size = const Size(1000, 800),
     double scale = 1,
     bool dark = false,
+    bool reducedMotion = false,
   }) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = size;
@@ -201,6 +202,7 @@ void main() {
             data: MediaQueryData(
               size: size,
               textScaler: TextScaler.linear(scale),
+              disableAnimations: reducedMotion,
             ),
             child: dark
                 ? Theme(data: ThemeData.dark(), child: const HomePage())
@@ -274,7 +276,7 @@ void main() {
     setProfile(configured());
     container.read(vpnPendingProvider.notifier).value = true;
     await pump(tester);
-    expect(find.text('Connecting...'), findsNWidgets(2));
+    expect(find.text('Connecting...'), findsOneWidget);
     await tester.tap(find.byKey(const Key('vpn-connect')));
     expect(setup.requests, isEmpty);
     await tester.tap(find.byKey(const Key('vpn-cancel-connect')));
@@ -605,6 +607,7 @@ void main() {
     const Size(320, 568),
     const Size(480, 320),
     const Size(1100, 800),
+    const Size(3200, 320),
   ]) {
     homeTest('large text and ${size.width} layout do not overflow', (
       tester,
@@ -636,6 +639,10 @@ void main() {
     await tester.tap(find.byKey(const Key('vpn-settings')));
     await tester.pumpAndSettle();
     expect(find.byType(ToolsView), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(toolsStoreKey)).width,
+      lessThanOrEqualTo(840),
+    );
     expect(find.text('Settings'), findsNWidgets(2));
     expect(find.byType(ProfilesView), findsNothing);
     Navigator.of(tester.element(find.byType(ToolsView))).pop();
@@ -732,4 +739,222 @@ void main() {
     expect(find.byType(ToolsView), findsOneWidget);
     handle.dispose();
   });
+
+  for (final size in [const Size(390, 844), const Size(1000, 800)]) {
+    homeTest('observed node stays pinned without overlap at ${size.width}', (
+      tester,
+    ) async {
+      final profile = configured(count: 120);
+      setProfile(profile);
+      container
+          .read(coreRunStateProvider.notifier)
+          .observe(
+            const CoreRunObservation(
+              session: 'pinned',
+              revision: 1,
+              active: true,
+              tun: true,
+            ),
+          );
+      await pump(tester, size: size);
+      activeNode.publish(profile.snapshot.servers[97]);
+      await tester.pumpAndSettle();
+      final pinned = find.byKey(const Key('vpn-active-node'));
+      final list = find.byKey(const PageStorageKey('vpn-servers'));
+      final before = tester.getRect(pinned);
+      expect(before.bottom, lessThanOrEqualTo(tester.getRect(list).top));
+      await tester.drag(list, const Offset(0, -2400));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(pinned), before);
+      expect(
+        find.descendant(of: pinned, matching: find.text('Server 97')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: pinned, matching: find.textContaining('Connected')),
+        findsOneWidget,
+      );
+      activeNode.publish(profile.snapshot.servers[98]);
+      await tester.pump();
+      expect(
+        find.descendant(of: pinned, matching: find.text('Server 98')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: pinned, matching: find.text('Server 97')),
+        findsNothing,
+      );
+      expect(proxies.selections, isEmpty);
+      expect(setup.requests, isEmpty);
+      container.read(vpnPendingProvider.notifier).value = false;
+      await tester.pump();
+      expect(pinned, findsNothing);
+    });
+  }
+
+  homeTest('mobile controls leave most space for compact accessible rows', (
+    tester,
+  ) async {
+    setProfile(configured(count: 30));
+    await pump(tester, size: const Size(390, 844));
+    final control = tester.getRect(
+      find.byKey(const Key('vpn-controls-scroll')),
+    );
+    final list = tester.getRect(
+      find.byKey(const PageStorageKey('vpn-servers')),
+    );
+    expect(control.height, lessThanOrEqualTo(220));
+    expect(list.height, greaterThan(control.height * 2));
+    final row = find.byKey(const ValueKey(VpnSelection.server('server-0')));
+    expect(tester.getSize(row).height, inInclusiveRange(48, 80));
+    expect(
+      tester.getSize(find.byKey(const Key('vpn-connect'))).shortestSide,
+      greaterThanOrEqualTo(48),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final dark in [false, true]) {
+    homeTest(
+      'connected glow is soft and state-scoped in ${dark ? 'dark' : 'light'} theme',
+      (tester) async {
+        setProfile(configured());
+        await pump(tester, dark: dark);
+        AnimatedContainer glow() => tester.widget<AnimatedContainer>(
+          find.byKey(const Key('vpn-connect-glow')),
+        );
+        BoxShadow shadow() =>
+            (glow().decoration! as BoxDecoration).boxShadow!.single;
+        expect(shadow().color.a, 0);
+        container
+            .read(coreRunStateProvider.notifier)
+            .observe(
+              const CoreRunObservation(
+                session: 'glow',
+                revision: 1,
+                active: true,
+                tun: true,
+              ),
+            );
+        await tester.pump();
+        expect(glow().duration, const Duration(milliseconds: 220));
+        expect(shadow().color.a, closeTo(dark ? .20 : .14, .01));
+        expect(shadow().blurRadius, dark ? 20 : 16);
+        await tester.pump(const Duration(milliseconds: 240));
+        container.read(vpnFailureProvider.notifier).value = 'stop_failed';
+        await tester.pump();
+        expect(find.byKey(const Key('vpn-active-node')), findsNothing);
+        expect(
+          tester.widget<Text>(find.byKey(const Key('vpn-status'))).data,
+          currentAppLocalizations.vpnConnectionFailed,
+        );
+        expect(shadow().color.a, 0);
+        expect(
+          tester
+              .widget<FilledButton>(find.byKey(const Key('vpn-connect')))
+              .onPressed,
+          isNotNull,
+        );
+        await tester.pump(const Duration(milliseconds: 240));
+        expect(tester.binding.transientCallbackCount, 0);
+      },
+    );
+  }
+
+  homeTest(
+    'reduced motion disables decorative transitions without changing actions',
+    (tester) async {
+      setProfile(configured());
+      await pump(tester, reducedMotion: true);
+      container.read(vpnPendingProvider.notifier).value = true;
+      await tester.pump();
+      final glow = tester.widget<AnimatedContainer>(
+        find.byKey(const Key('vpn-connect-glow')),
+      );
+      expect(glow.duration, Duration.zero);
+      expect(
+        tester
+            .widget<CircularProgressIndicator>(
+              find.byType(CircularProgressIndicator),
+            )
+            .value,
+        .75,
+      );
+      expect(
+        tester
+            .widget<FilledButton>(find.byKey(const Key('vpn-connect')))
+            .onPressed,
+        isNull,
+      );
+      await tester.tap(find.byKey(const Key('vpn-cancel-connect')));
+      expect(setup.requests, [false]);
+    },
+  );
+
+  homeTest('compact Home retains named accessible touch targets', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    try {
+      setProfile(configured());
+      await pump(tester, size: const Size(390, 844));
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    } finally {
+      semantics.dispose();
+    }
+  });
+
+  for (final size in [
+    const Size(320, 568),
+    const Size(480, 320),
+    const Size(1100, 800),
+    const Size(3200, 320),
+  ]) {
+    homeTest(
+      'connected long names and large text remain scrollable at ${size.width}',
+      (tester) async {
+        final profile = configured(count: 80);
+        setProfile(profile);
+        container
+            .read(coreRunStateProvider.notifier)
+            .observe(
+              const CoreRunObservation(
+                session: 'scaled',
+                revision: 1,
+                active: true,
+                tun: true,
+              ),
+            );
+        await pump(tester, size: size, scale: 2.5);
+        activeNode.publish(
+          profile.snapshot.servers.first.copyWith(
+            name:
+                'An unusually long connected server name that must stay readable',
+            provider: 'Provider with a very long name',
+          ),
+        );
+        await tester.pump();
+        final list = find.byKey(const PageStorageKey('vpn-servers'));
+        final pinned = find.byKey(const Key('vpn-active-node'));
+        expect(tester.takeException(), isNull);
+        expect(
+          tester.getRect(pinned).bottom,
+          lessThanOrEqualTo(tester.getRect(list).top),
+        );
+        expect(tester.getSize(list).height, greaterThan(40));
+        await tester.drag(list, const Offset(0, -500));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(
+          tester
+              .widget<Tooltip>(
+                find.descendant(of: pinned, matching: find.byType(Tooltip)),
+              )
+              .message,
+          'Connected\nCurrent node\nAn unusually long connected server name that must stay readable\nAuto · Provider with a very long name',
+        );
+      },
+    );
+  }
 }

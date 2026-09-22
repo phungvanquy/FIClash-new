@@ -137,11 +137,17 @@ class _ToolViewState extends ConsumerState<ToolsView> {
     ];
     return CommonScaffold(
       title: context.appLocalizations.settings,
-      body: ListView.builder(
-        key: toolsStoreKey,
-        itemCount: items.length,
-        itemBuilder: (_, index) => items[index],
-        padding: const EdgeInsets.only(bottom: 20),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 840),
+          child: ListView.builder(
+            key: toolsStoreKey,
+            itemCount: items.length,
+            itemBuilder: (_, index) => items[index],
+            padding: const EdgeInsets.only(bottom: 20),
+          ),
+        ),
       ),
     );
   }

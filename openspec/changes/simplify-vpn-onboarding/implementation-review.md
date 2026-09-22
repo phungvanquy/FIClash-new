@@ -1,5 +1,18 @@
 # Implementation checkpoint
 
+## 2026-09-22 Compact Home and sticky current-node refinement
+
+Progress: 51/53 tasks complete. Tasks 11.1–11.3 are complete; native gates 8.3/8.4 remain open under the agreed artifact handoff.
+
+The user requested a compact, balanced interface with a sticky actual connected node and restrained connected glow. The refinement uses the existing UI skill's Material You typography, shape tokens, touch-target and feedback guidance; existing localized labels are reused. No Core, native lifecycle, provider, model, dependency, or generated-code changes were needed.
+
+- Phone controls are a compact horizontal header; wide and short landscape windows use a bounded side rail. Main content and top-level Settings have maximum widths. Rows use compact title/metadata styles while preserving bold measured latency and accessible touch targets; narrow/large-text rows stack latency.
+- The toolbar and read-only current-node card reserve space above the list. The card follows the existing Core-observation provider, not the selected row, and clears immediately outside confirmed Connected. Scrolling and observation changes do not issue selection/lifecycle commands. Unknown/custom-routing explanations and full-name semantics/tooltips remain available.
+- Bright-green connected feedback gains a soft theme-aware, non-pulsing shadow. Decorative transitions last 220 ms; reduced motion bypasses size animation and uses zero-duration decoration changes/static connection and toolbar progress arcs. Status/errors and guarded actions remain immediate.
+- Layout tests exposed and resolved narrow/short, enlarged-text toolbar overflows and an extra-wide short-window rail sizing issue. Reduced-motion tests exposed a zero-duration AnimatedSize layout assertion; that mode now bypasses AnimatedSize entirely. Light/dark rendered previews were visually inspected with actual fonts/icons and shadows enabled; temporary preview instrumentation was removed afterward.
+
+Verification: all **56 focused Home/current-node/latency tests pass**, including sticky bounds, actual-node updates, 250% text at 320/480/1100/3200-pixel widths, 320-pixel-high windows, error/glow transitions, reduced motion, named Android-sized touch targets, Settings width/navigation and existing selection guards. The final full Flutter suite passed **2,129 tests with 3 existing skips and no failures** (`/tmp/flclash-ui-full-tests.log`). Dependency resolution, formatting, strict OpenSpec validation, comment-density and whitespace checks pass. Analysis has no errors/warnings and only the existing const info in `scrollbar_inset_test.dart:18` (`/tmp/flclash-ui-analyze-final.log`). Native Android/Windows rendering, screen-reader and real VPN checks remain CI-artifact/device gates, not inferred passes. No commit or push has been requested or performed for this refinement.
+
 ## 2026-09-22 import, update, and replacement follow-up
 
 Progress: 48/50 tasks complete. Follow-up tasks 10.1–10.3 are complete; native gates 8.3/8.4 remain open.
