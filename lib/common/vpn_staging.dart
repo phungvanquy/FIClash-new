@@ -12,6 +12,7 @@ import 'package:yaml/yaml.dart';
 import 'profile_store.dart';
 import 'vpn_configuration.dart';
 import 'vpn_intake.dart';
+import 'vpn_import_progress.dart';
 import 'yaml.dart';
 
 class VpnDownload {
@@ -60,12 +61,14 @@ class VpnCandidateStager {
     required this.fetch,
     required this.prepare,
     required this.discard,
+    this.clock = DateTime.now,
   });
 
   final ProfileGenerationStore store;
   final VpnResourceFetch fetch;
   final Future<PreparedConfigResult> Function(PrepareConfigParams) prepare;
   final Future<bool> Function(PreparedConfigRef) discard;
+  final DateTime Function() clock;
 
   static const geoResources = {
     'GeoSite.dat': (GeoResource.GEOSITE, 'geosite'),
@@ -90,6 +93,7 @@ class VpnCandidateStager {
     Set<String>? refreshResources,
     Profile? committed,
     Map<String, List<int>> resources = const {},
+    VpnProgressCallback? onProgress,
   }) async {
     checkCurrent();
     final sourceBytes = List<int>.unmodifiable(source);
@@ -102,7 +106,7 @@ class VpnCandidateStager {
         if (!geoResources.containsKey(resource.key)) {
           throw const FormatException('Unexpected staged resource');
         }
-        await store.write(generation, resource.key, resource.value);
+        await store.write(generation, 'geo/${resource.key}', resource.value);
       }
       final decoded = loadYaml(utf8.decode(sourceBytes));
       if (decoded is! Map) {
@@ -112,6 +116,28 @@ class VpnCandidateStager {
         jsonDecode(jsonEncode(decoded)) as Map<String, dynamic>,
       );
       checkCurrent();
+      void progress(VpnImportProgress value) {
+        try {
+          onProgress?.call(value);
+        } catch (_) {}
+      }
+
+      String geoUrl(String name) {
+        final resource = geoResources[name]!;
+        final configured = raw['geox-url'];
+        return _httpUrl(
+          (configured is Map ? configured[resource.$2] : null) ??
+              defaultGeoXUrl[resource.$1],
+        );
+      }
+
+      final geoMetadata = <String, Object>{
+        for (final name in resources.keys)
+          name: _geoMetadata(
+            geoUrl(name),
+            DateTime.fromMillisecondsSinceEpoch(0),
+          ),
+      };
       final refreshedAt = DateTime.now().toUtc();
       final schedule = _providerSchedule(
         raw,
@@ -128,6 +154,7 @@ class VpnCandidateStager {
         localResource,
         localOnly,
         refreshResources,
+        progress,
       );
       await store.write(
         generation,
@@ -138,6 +165,7 @@ class VpnCandidateStager {
       Future<PreparedConfigResult> load({required bool probe}) async {
         while (true) {
           checkCurrent();
+          progress(const VpnImportProgress(VpnImportStep.validation));
           try {
             return await prepare(
               PrepareConfigParams(
@@ -156,25 +184,36 @@ class VpnCandidateStager {
                 !downloaded.add(name)) {
               rethrow;
             }
-            final configured = raw['geox-url'];
-            final url = configured is Map ? configured[resource.$2] : null;
+            progress(const VpnImportProgress(VpnImportStep.geodata));
+            final url = geoUrl(name);
+            final cachedResource = await _cachedGeodata(
+              committed,
+              name,
+              url,
+              raw['geo-update-interval'],
+              localOnly,
+            );
             final cached = File(p.join(store.home.path, name));
             final List<int> bytes;
-            if (await FileSystemEntity.type(cached.path, followLinks: false) ==
-                FileSystemEntityType.file) {
+            final DateTime fetchedAt;
+            if (cachedResource != null) {
+              (bytes, fetchedAt) = cachedResource;
+            } else if (localOnly &&
+                committed?.snapshot.generation == null &&
+                await FileSystemEntity.type(cached.path, followLinks: false) ==
+                    FileSystemEntityType.file) {
               bytes = await cached.readAsBytes();
+              fetchedAt = DateTime.fromMillisecondsSinceEpoch(0);
             } else {
               if (localOnly) {
                 throw const VpnLocalResourceUnavailable();
               }
-              bytes = (await fetch(
-                _httpUrl(url ?? defaultGeoXUrl[resource.$1]),
-                const {},
-                cancel,
-              )).bytes;
+              bytes = (await fetch(url, const {}, cancel)).bytes;
+              fetchedAt = clock();
             }
             checkCurrent();
             await store.write(generation, 'geo/$name', bytes);
+            geoMetadata[name] = _geoMetadata(url, fetchedAt);
           }
         }
       }
@@ -227,6 +266,14 @@ class VpnCandidateStager {
           providerRefresh: schedule,
         ),
       );
+      progress(const VpnImportProgress(VpnImportStep.saving));
+      if (geoMetadata.isNotEmpty) {
+        await store.write(
+          generation,
+          'geo-cache.json',
+          utf8.encode(jsonEncode(geoMetadata)),
+        );
+      }
       await store.seal(candidate);
       checkCurrent();
       accepted = true;
@@ -255,8 +302,10 @@ class VpnCandidateStager {
     VpnLocalResource? localResource,
     bool localOnly,
     Set<String>? refreshResources,
+    VpnProgressCallback progress,
   ) async {
     final pending = <Future<void> Function()>[];
+    var completed = 0;
     for (final section in ['proxy-providers', 'rule-providers']) {
       final definitions = raw[section];
       if (definitions == null) continue;
@@ -298,17 +347,102 @@ class VpnCandidateStager {
           final relative = 'providers/$section/$key';
           await store.write(generation, relative, bytes);
           definition['path'] = store.resource(generation, relative).path;
+          progress(
+            VpnImportProgress(
+              VpnImportStep.providers,
+              completed: ++completed,
+              total: pending.length,
+            ),
+          );
         });
       }
     }
     var index = 0;
+    var failed = false;
+    if (pending.isNotEmpty) {
+      progress(
+        VpnImportProgress(VpnImportStep.providers, total: pending.length),
+      );
+    }
     await Future.wait(
       List.generate(pending.length.clamp(0, 4), (_) async {
-        while (index < pending.length) {
-          await pending[index++]();
+        while (!failed && index < pending.length) {
+          try {
+            await pending[index++]();
+          } catch (_) {
+            failed = true;
+            rethrow;
+          }
         }
       }),
     );
+  }
+
+  static Map<String, Object> _geoMetadata(String url, DateTime fetchedAt) => {
+    'source': sha256.convert(utf8.encode(url)).toString(),
+    'fetchedAt': fetchedAt.toUtc().toIso8601String(),
+  };
+
+  Future<(List<int>, DateTime)?> _cachedGeodata(
+    Profile? committed,
+    String name,
+    String url,
+    Object? interval,
+    bool localOnly,
+  ) async {
+    final generation = committed?.snapshot.generation;
+    if (generation == null) return null;
+    try {
+      final metadata = await store.readVerifiedResource(
+        generation,
+        'geo-cache.json',
+      );
+      if (metadata == null) {
+        if (!localOnly) return null;
+        final effective = await store.readVerifiedResource(
+          generation,
+          'effective.yaml',
+        );
+        if (effective == null) return null;
+        final raw = loadYaml(utf8.decode(effective));
+        if (raw is! Map) return null;
+        final configured = raw['geox-url'];
+        final resource = geoResources[name]!;
+        final previousUrl = _httpUrl(
+          (configured is Map ? configured[resource.$2] : null) ??
+              defaultGeoXUrl[resource.$1],
+        );
+        if (previousUrl != url) return null;
+        final bytes = await store.readVerifiedResource(generation, 'geo/$name');
+        return bytes == null
+            ? null
+            : (bytes, DateTime.fromMillisecondsSinceEpoch(0));
+      }
+      final entry = (jsonDecode(utf8.decode(metadata)) as Map)[name];
+      if (entry is! Map ||
+          entry['source'] != sha256.convert(utf8.encode(url)).toString()) {
+        return null;
+      }
+      final fetchedAt = DateTime.parse(entry['fetchedAt'] as String);
+      final age = clock().difference(fetchedAt);
+      final lifetime = Duration(
+        hours: interval is int && interval > 0 ? interval : 24,
+      );
+      if (!localOnly &&
+          (fetchedAt.millisecondsSinceEpoch <= 0 ||
+              age.isNegative ||
+              age >= lifetime)) {
+        return null;
+      }
+      final bytes = await store.readVerifiedResource(generation, 'geo/$name');
+      return bytes == null ? null : (bytes, fetchedAt);
+    } on FileSystemException {
+      return null;
+    } on FormatException {
+      return null;
+    } on TypeError {
+      return null;
+    }
   }
 
   static List<VpnProviderRefresh> _providerSchedule(

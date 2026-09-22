@@ -52,6 +52,18 @@ Native ServiceState SHALL remain the intent owner. Stop SHALL attempt cleanup ev
 
 Without a usable profile, the initial screen SHALL present Scan QR, Paste from clipboard, and manual URL entry without requiring navigation to another primary section. A successful import SHALL reveal the connection controls and server list on Home. After setup, a visible compact Import/Replace action SHALL reopen the same intake flow. Importing SHALL show progress and recoverable errors without hiding or clearing a previously committed server list.
 
+Import/replacement and Settings' manual update SHALL display the current preparation/commit stage, including completed/total provider resources where applicable. A cancelled import SHALL show cancellation cleanup before enabling another submission. The replacement dialog SHALL ignore outside taps, block back/cancel during final commit, and offer Close when idle. Errors SHALL not expose credential-bearing download details. A timeout SHALL provide localized connection-check/retry guidance. Replacement help SHALL explain both failure preservation and possible traffic interruption on successful activation.
+
+#### Scenario: A slow import remains understandable
+
+- **WHEN** required server/rule lists or geographic resources take time to prepare
+- **THEN** the user sees the current stage rather than an unexplained generic import spinner, without a misleading overall percentage
+
+#### Scenario: Manual update times out
+
+- **WHEN** a download deadline expires during Settings' manual update
+- **THEN** progress clears, the saved configuration remains unchanged, and localized retry guidance appears without exposing the subscription URL
+
 #### Scenario: First launch
 
 - **WHEN** a new user opens the app with no profile

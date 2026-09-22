@@ -14,9 +14,14 @@ class _ImportAction extends VpnAction {
   final urls = <String>[];
   final pending = <Completer<VpnImportResult>>[];
   var cancelled = 0;
+  VpnProgressCallback? progress;
 
   @override
-  Future<VpnImportResult> importUrl(String url) {
+  Future<VpnImportResult> importUrl(
+    String url, {
+    VpnProgressCallback? onProgress,
+  }) {
+    progress = onProgress;
     cancel();
     urls.add(url);
     final request = Completer<VpnImportResult>();
@@ -161,7 +166,7 @@ void main() {
     },
   );
 
-  testWidgets('cancel releases controls and ignores a late result', (
+  testWidgets('cancel waits for cleanup before releasing controls', (
     tester,
   ) async {
     await pumpPanel(tester);
@@ -172,14 +177,25 @@ void main() {
     await tester.tap(find.text(currentAppLocalizations.import));
     await tester.pump();
     await tester.tap(find.text(currentAppLocalizations.cancel));
-    await tester.pumpAndSettle();
+    await tester.pump();
     expect(action.cancelled, 1);
-    expect(find.text(currentAppLocalizations.import), findsOneWidget);
+    expect(
+      find.text(currentAppLocalizations.vpnImportCancelling),
+      findsOneWidget,
+    );
+    expect(find.byType(FilledButton), findsNothing);
+    action.progress?.call(const VpnImportProgress(VpnImportStep.validation));
+    await tester.pump();
+    expect(
+      find.text(currentAppLocalizations.vpnImportCancelling),
+      findsOneWidget,
+    );
     action.pending.single.complete(
-      const VpnImportResult(VpnImportOutcome.success),
+      const VpnImportResult(VpnImportOutcome.cancelled),
     );
     await tester.pumpAndSettle();
     expect(imported, 0);
+    expect(find.text(currentAppLocalizations.import), findsOneWidget);
   });
 
   testWidgets('disposing cancels only this panel request', (tester) async {
@@ -200,20 +216,74 @@ void main() {
     expect(imported, 0);
   });
 
-  testWidgets('cancel after paste immediately releases retry controls', (
+  testWidgets('timeout offers a safe retry without exposing download details', (
+    tester,
+  ) async {
+    await pumpPanel(tester);
+    await tester.tap(find.text(currentAppLocalizations.vpnPasteClipboard));
+    await tester.pump();
+    action.pending.single.complete(
+      VpnImportResult(
+        VpnImportOutcome.failed,
+        error: TimeoutException('private-token'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.text(currentAppLocalizations.vpnImportTimedOut),
+      findsOneWidget,
+    );
+    expect(find.textContaining('private-token'), findsNothing);
+    expect(find.text(currentAppLocalizations.vpnRetry), findsOneWidget);
+  });
+
+  testWidgets('cancel after paste releases retry controls after cleanup', (
     tester,
   ) async {
     await pumpPanel(tester);
     await tester.tap(find.text(currentAppLocalizations.vpnPasteClipboard));
     await tester.pump();
     await tester.tap(find.text(currentAppLocalizations.cancel));
-    await tester.pumpAndSettle();
-    final button = tester.widget<FilledButton>(find.byType(FilledButton));
-    expect(button.onPressed, isNotNull);
+    await tester.pump();
+    expect(find.byType(FilledButton), findsNothing);
     action.pending.single.complete(
       const VpnImportResult(VpnImportOutcome.cancelled),
     );
     await tester.pumpAndSettle();
+    final button = tester.widget<FilledButton>(find.byType(FilledButton));
+    expect(button.onPressed, isNotNull);
+  });
+
+  testWidgets('shows stage counts and protects activation from cancellation', (
+    tester,
+  ) async {
+    await pumpPanel(tester);
+    await tester.tap(find.text(currentAppLocalizations.vpnPasteClipboard));
+    await tester.pump();
+    action.progress?.call(
+      const VpnImportProgress(VpnImportStep.providers, completed: 2, total: 4),
+    );
+    await tester.pump();
+    expect(
+      find.text(currentAppLocalizations.vpnImportProviders(2, 4)),
+      findsOneWidget,
+    );
+    action.progress?.call(const VpnImportProgress(VpnImportStep.activating));
+    await tester.pump();
+    expect(
+      find.text(currentAppLocalizations.vpnImportActivating),
+      findsOneWidget,
+    );
+    expect(
+      tester.widget<TextButton>(find.byType(TextButton)).onPressed,
+      isNull,
+    );
+    expect(tester.widget<PopScope>(find.byType(PopScope)).canPop, isFalse);
+    action.pending.single.complete(
+      const VpnImportResult(VpnImportOutcome.success),
+    );
+    await tester.pumpAndSettle();
+    expect(imported, 1);
   });
 
   testWidgets(

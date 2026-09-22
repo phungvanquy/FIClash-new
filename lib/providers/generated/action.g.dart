@@ -142,7 +142,7 @@ final class BackupActionProvider extends $NotifierProvider<BackupAction, void> {
   }
 }
 
-String _$backupActionHash() => r'583a237a4dcad4cc190d464fa3c3f813a4b8830c';
+String _$backupActionHash() => r'4c913649cd88659538cda9ceb8634599639cde35';
 
 abstract class _$BackupAction extends $Notifier<void> {
   void build();
@@ -741,7 +741,7 @@ final class VpnActionProvider extends $NotifierProvider<VpnAction, void> {
   }
 }
 
-String _$vpnActionHash() => r'2cb9f3542ce70fd841fa8791fe4de93ffe745f43';
+String _$vpnActionHash() => r'4662ca671e92601a3866b75ec609b4c23a9b793b';
 
 abstract class _$VpnAction extends $Notifier<void> {
   void build();

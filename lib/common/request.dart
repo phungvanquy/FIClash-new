@@ -15,14 +15,20 @@ class Request {
   String? userAgent;
 
   ProviderReader? _read;
+  final Duration vpnDownloadTimeout;
 
   void attach(ProviderReader read) {
     _read = read;
   }
 
-  Request({Dio? subscriptionClient}) {
+  Request({
+    Dio? subscriptionClient,
+    this.vpnDownloadTimeout = const Duration(seconds: 90),
+  }) {
     dio = Dio(BaseOptions(headers: {'User-Agent': browserUa}));
-    _clashDio = subscriptionClient ?? Dio();
+    _clashDio =
+        subscriptionClient ??
+        Dio(BaseOptions(connectTimeout: const Duration(seconds: 15)));
     if (subscriptionClient != null) return;
     _clashDio.httpClientAdapter = IOHttpClientAdapter(
       createHttpClient: () {
@@ -60,16 +66,40 @@ class Request {
     Map<String, List<String>> headers,
     CancelToken cancel,
   ) async {
-    final response = await _clashDio.get<List<int>>(
-      url,
-      cancelToken: cancel,
-      options: Options(
-        responseType: ResponseType.bytes,
-        headers: headers,
-        receiveTimeout: const Duration(seconds: 30),
-        sendTimeout: const Duration(seconds: 30),
-      ),
+    final transfer = CancelToken();
+    var finished = false;
+    unawaited(
+      cancel.whenCancel.then((_) {
+        if (!finished) transfer.cancel();
+      }),
     );
+    if (cancel.isCancelled) transfer.cancel();
+    final Response<List<int>> response;
+    try {
+      response = await _clashDio
+          .get<List<int>>(
+            url,
+            cancelToken: transfer,
+            options: Options(
+              responseType: ResponseType.bytes,
+              headers: headers,
+              receiveTimeout: const Duration(seconds: 30),
+              sendTimeout: const Duration(seconds: 30),
+            ),
+          )
+          .timeout(
+            vpnDownloadTimeout,
+            onTimeout: () {
+              transfer.cancel();
+              throw TimeoutException(
+                'VPN resource download timed out',
+                vpnDownloadTimeout,
+              );
+            },
+          );
+    } finally {
+      finished = true;
+    }
     String? filename;
     try {
       filename = getFileNameForDisposition(

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:fl_clash/models/models.dart';
@@ -170,7 +171,7 @@ class ProfileGenerationStore {
           .relative(entry.path, from: directory(generation).path)
           .split(p.separator)
           .join('/');
-      files[relative] = sha256.convert(await entry.readAsBytes()).toString();
+      files[relative] = (await sha256.bind(entry.openRead()).first).toString();
     }
     if (!files.containsKey('source.yaml') ||
         !files.containsKey('effective.yaml')) {
@@ -209,13 +210,39 @@ class ProfileGenerationStore {
       for (final entry in files.entries) {
         final file = resource(generation, entry.key);
         await _requireFile(file);
-        if (sha256.convert(await file.readAsBytes()).toString() !=
+        if ((await sha256.bind(file.openRead()).first).toString() !=
             entry.value) {
           throw const FormatException('Generation resource checksum mismatch');
         }
       }
     }
     return profile;
+  }
+
+  Future<List<int>?> readVerifiedResource(
+    String generation,
+    String relative,
+  ) async {
+    await load(generation, verify: false);
+    final manifest = resource(generation, 'manifest.json');
+    final data = jsonDecode(await manifest.readAsString()) as Map;
+    final checksum = (data['files'] as Map)[relative];
+    if (checksum == null) return null;
+    final file = resource(generation, relative);
+    await _requireFile(file);
+    final bytes = BytesBuilder(copy: false);
+    final digest = await sha256
+        .bind(
+          file.openRead().map((chunk) {
+            bytes.add(chunk);
+            return chunk;
+          }),
+        )
+        .first;
+    if (digest.toString() != checksum) {
+      throw const FormatException('Generation resource checksum mismatch');
+    }
+    return bytes.takeBytes();
   }
 
   Future<File> source(Profile profile) async {

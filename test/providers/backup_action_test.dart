@@ -429,19 +429,20 @@ void main() {
     expect(await database.singleProfile.current(), latest);
   });
 
-  test(
-    'new backups restore sealed provider and geo resources offline',
-    () async {
-      catalog = const [
-        VpnServer(
-          id: 'provider/subscription/QQ',
-          name: 'A',
-          target: 'A',
-          type: 'Socks5',
-          provider: 'subscription',
-        ),
-      ];
-      const sourceYaml = '''
+  for (final legacyGeoPath in [false, true]) {
+    test(
+      'backups restore sealed provider and geo resources offline (legacy path: $legacyGeoPath)',
+      () async {
+        catalog = const [
+          VpnServer(
+            id: 'provider/subscription/QQ',
+            name: 'A',
+            target: 'A',
+            type: 'Socks5',
+            provider: 'subscription',
+          ),
+        ];
+        const sourceYaml = '''
 proxy-providers:
   subscription:
     type: file
@@ -452,59 +453,75 @@ proxy-groups:
     use: [subscription]
 rules: ['MATCH,Pick']
 ''';
-      final imported = await vpn.submit(
-        VpnImportRequest(
-          profile: profile,
-          bytes: utf8.encode(sourceYaml),
-          localOnly: true,
-          localResource: (_, _, _) async => utf8.encode(yaml),
-          resources: {
-            'GeoSite.dat': [1, 2, 3],
-          },
-        ),
-      );
-      expect(
-        imported.outcome,
-        VpnImportOutcome.success,
-        reason: '${imported.error}',
-      );
-      final old = imported.profile!;
-      final archivePath = await action.backup();
-      final entries = await VpnArchiveStore(home).verify(File(archivePath));
-      expect(
-        entries.keys,
-        contains('profiles/generations/${old.snapshot.generation}/GeoSite.dat'),
-      );
-      expect(
-        entries.keys.any((key) => key.contains('/providers/proxy-providers/')),
-        isTrue,
-      );
-      final decoded = await readBackupArchive(
-        backupFilePath: archivePath,
-        restoreDirPath: '${staging.path}/decoded',
-        homeDirPath: home.path,
-      );
-      expect(await database.singleProfile.current(), old);
-      await action.applyRestore(decoded, RestoreOption.all);
-      final restored = (await database.singleProfile.current())!;
-      expect(restored.snapshot.generation, isNot(old.snapshot.generation));
-      expect(restored.id, isNot(old.id));
-      expect(await database.profilesDao.query().get(), [restored]);
-      expect(await (await store.source(restored)).readAsString(), sourceYaml);
-      expect(
-        await store
-            .resource(restored.snapshot.generation!, 'GeoSite.dat')
-            .readAsBytes(),
-        [1, 2, 3],
-      );
-      expect(
-        await VpnProfileResources(
-          store,
-        ).provider(restored, 'proxy-providers', 'subscription', {}),
-        utf8.encode(yaml),
-      );
-    },
-  );
+        final imported = await vpn.submit(
+          VpnImportRequest(
+            profile: profile,
+            bytes: utf8.encode(sourceYaml),
+            localOnly: true,
+            localResource: (_, _, _) async => utf8.encode(yaml),
+            resources: {
+              'GeoSite.dat': [1, 2, 3],
+            },
+          ),
+        );
+        expect(
+          imported.outcome,
+          VpnImportOutcome.success,
+          reason: '${imported.error}',
+        );
+        final old = imported.profile!;
+        if (legacyGeoPath) {
+          final generation = old.snapshot.generation!;
+          await store
+              .resource(generation, 'geo/GeoSite.dat')
+              .rename(store.resource(generation, 'GeoSite.dat').path);
+          final manifest = store.resource(generation, 'manifest.json');
+          final metadata = jsonDecode(await manifest.readAsString()) as Map;
+          final files = metadata['files'] as Map;
+          files['GeoSite.dat'] = files.remove('geo/GeoSite.dat');
+          await manifest.writeAsString(jsonEncode(metadata));
+        }
+        final archivePath = await action.backup();
+        final entries = await VpnArchiveStore(home).verify(File(archivePath));
+        expect(
+          entries.keys,
+          contains(
+            'profiles/generations/${old.snapshot.generation}/${legacyGeoPath ? '' : 'geo/'}GeoSite.dat',
+          ),
+        );
+        expect(
+          entries.keys.any(
+            (key) => key.contains('/providers/proxy-providers/'),
+          ),
+          isTrue,
+        );
+        final decoded = await readBackupArchive(
+          backupFilePath: archivePath,
+          restoreDirPath: '${staging.path}/decoded',
+          homeDirPath: home.path,
+        );
+        expect(await database.singleProfile.current(), old);
+        await action.applyRestore(decoded, RestoreOption.all);
+        final restored = (await database.singleProfile.current())!;
+        expect(restored.snapshot.generation, isNot(old.snapshot.generation));
+        expect(restored.id, isNot(old.id));
+        expect(await database.profilesDao.query().get(), [restored]);
+        expect(await (await store.source(restored)).readAsString(), sourceYaml);
+        expect(
+          await store
+              .resource(restored.snapshot.generation!, 'geo/GeoSite.dat')
+              .readAsBytes(),
+          [1, 2, 3],
+        );
+        expect(
+          await VpnProfileResources(
+            store,
+          ).provider(restored, 'proxy-providers', 'subscription', {}),
+          utf8.encode(yaml),
+        );
+      },
+    );
+  }
 
   test(
     'concurrent library edits cancel restore without losing the edit',

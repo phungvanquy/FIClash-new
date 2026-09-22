@@ -388,14 +388,26 @@ void main() {
     'URL imports replace the sole profile and preserve embedded credentials',
     () async {
       final first = (await submit()).profile!;
+      final progress = <VpnImportStep>[];
       final result = await action.importUrl(
         'https://example.test/config?token=a%2Fb',
+        onProgress: (value) => progress.add(value.step),
       );
       expect(result.outcome, VpnImportOutcome.success);
       expect(fetched, ['https://example.test/config?token=a%2Fb']);
       expect(await database.profilesDao.query().get(), [result.profile]);
       expect(result.profile!.snapshot.revision, first.snapshot.revision + 1);
       expect(result.profile!.snapshot.selection, const VpnSelection.auto());
+      expect(progress.first, VpnImportStep.download);
+      expect(progress.last, VpnImportStep.finalizing);
+      progress.clear();
+      final refreshed = await action.refresh(
+        result.profile!,
+        onProgress: (value) => progress.add(value.step),
+      );
+      expect(refreshed.outcome, VpnImportOutcome.success);
+      expect(progress.first, VpnImportStep.download);
+      expect(progress.last, VpnImportStep.finalizing);
     },
   );
 

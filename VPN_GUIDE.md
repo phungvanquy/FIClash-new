@@ -48,6 +48,10 @@ Use Replace configuration on Home or in Settings to import a new URL. FlClash do
 
 Connected replacement keeps the current connection intent, but existing sessions may reconnect when the new configuration activates. Disconnecting while an import is pending wins: finishing the import does not reconnect you. Cancelling or submitting a newer import prevents older work from replacing it.
 
+Import, replacement, and Settings → Update now show the current stage: downloading, preparing server/rule lists, preparing geographic databases, checking, saving, applying, and finishing. List counts show completed resources, not an overall percentage. Cancel remains busy until cleanup finishes; once applying begins, wait for completion rather than closing the dialog. Close is available while the dialog is idle.
+
+The first import may download large geographic databases. Later updates reuse verified data from the same source until its configured refresh interval expires (24 hours by default); provider lists and the subscription are still refreshed. Each download has a 90-second total deadline, while validation and safe activation can take additional time. A timeout leaves the saved configuration unchanged and offers Retry. Diagnostic logs include stage durations without subscription URLs or tokens; these timings can help identify a slow provider or device-processing stage.
+
 ## Settings and routing
 
 The gear opens Settings. Network/DNS options, rules, scripts, diagnostics, appearance, application preferences, backup, and configuration recovery live there.

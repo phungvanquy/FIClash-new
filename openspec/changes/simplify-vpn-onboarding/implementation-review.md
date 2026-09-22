@@ -1,5 +1,21 @@
 # Implementation checkpoint
 
+## 2026-09-22 import, update, and replacement follow-up
+
+Progress: 48/50 tasks complete. Follow-up tasks 10.1–10.3 are complete; native gates 8.3/8.4 remain open.
+
+The user approved improving the replacement process together with import/update performance. The implementation preserves detached Core validation, immutable snapshots, the serialized activation/database commit, and rollback. It does not change native lifecycle ownership or the Core submodule.
+
+- Geographic resources now reuse verified bytes from the committed generation when their source-URL hash and original fetch timestamp permit it. Online freshness is the positive configured interval in hours, or 24 hours. Offline edits can reuse older verified data; corrupt/mismatched data cannot fall back to unrelated global files. Legacy global files remain available for offline preparation without a committed generation. Copies never renew freshness, and unstamped restored data must be downloaded on a later online update.
+- Restored geographic files now go into `geo/`, where detached parsing expects them. Backup restoration reads both current `geo/` and legacy generation-root resources, with checksum verification.
+- Snapshot hashing streams file contents. Provider preparation retains four workers, stops dequeuing on failure, and awaits active workers before cleanup. HTTP transfers have 15-second connect, 30-second send/receive inactivity, and 90-second whole-transfer limits; cancellation reaches the actual transfer. No timer abandons a commit or rollback.
+- Import/replacement and manual update show request-scoped stages and provider counts. Cancellation holds controls until cleanup returns; final commit blocks cancellation/back dismissal. The dialog has an idle Close action and cannot be dismissed by outside taps. Localized timeout guidance does not expose download credentials. Existing UI tokens/patterns are retained and all four ARBs regenerated.
+- Sanitized stage-duration summaries identify slow downloads, preparation, snapshot saving, activation, or finalization without logging URLs, tokens, or resource names. Real-device speedups have not been measured.
+
+Verification: all 110 focused storage/staging/coordinator/HTTP/import-widget/manual-update/action/backup tests pass. They include current and legacy backup layouts, cache expiry/source mismatch/corruption, offline compatibility, cancellation cleanup, queue failure, timeout propagation, and connected replacement rollback. The final full Flutter suite against the finished code passed **2,117 tests with 3 existing skips and no failures** (`/tmp/flclash-replacement-final-full-tests.log`). An earlier overlapping run mixed newly edited test expectations with older compiled production code; the fresh full run supersedes it. Dependency resolution, generation, formatting (545 files unchanged), strict OpenSpec validation, and comment-density/whitespace checks pass. Analysis has no errors/warnings and only the existing `scrollbar_inset_test.dart:18` const info (`/tmp/flclash-replacement-analyze.log`).
+
+Android/Windows native timing, slow-network, large-text, live connected replacement, and offline backup restore checks remain artifact/device gates in `validation.md`, as the user previously requested. No commit or push has been performed for this follow-up.
+
 ## 2026-09-22 Android status and current-node display follow-up
 
 Progress: 45/47 tasks complete. Follow-up tasks 9.6–9.8 are complete; native gates 8.3/8.4 remain open.

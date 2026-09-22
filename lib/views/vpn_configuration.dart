@@ -8,6 +8,7 @@ import 'package:fl_clash/views/profiles/edit.dart';
 import 'package:fl_clash/views/profiles/overwrite/overwrite.dart';
 import 'package:fl_clash/views/proxies/proxies.dart';
 import 'package:fl_clash/widgets/vpn_import.dart';
+import 'package:fl_clash/widgets/vpn_import_progress.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -109,12 +110,14 @@ class _VpnConfigurationSectionState
     extends ConsumerState<VpnConfigurationSection> {
   bool _busy = false;
   String? _error;
+  VpnImportProgress? _progress;
 
   Future<void> _run(Future<void> Function() action) async {
     if (_busy) return;
     setState(() {
       _busy = true;
       _error = null;
+      _progress = null;
     });
     try {
       await action();
@@ -125,7 +128,12 @@ class _VpnConfigurationSectionState
         );
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _progress = null;
+        });
+      }
     }
   }
 
@@ -172,7 +180,13 @@ class _VpnConfigurationSectionState
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         ListHeader(title: text.vpnConfiguration),
-        if (_busy) const LinearProgressIndicator(),
+        if (_busy)
+          _progress == null
+              ? const LinearProgressIndicator()
+              : Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: VpnImportProgressView(progress: _progress),
+                ),
         if (_error != null)
           Padding(
             padding: const EdgeInsets.all(16),
@@ -220,7 +234,27 @@ class _VpnConfigurationSectionState
                   ? null
                   : () => _run(() async {
                       final action = ref.read(vpnActionProvider.notifier);
-                      action.requireSuccess(await action.refresh(profile));
+                      final result = await action.refresh(
+                        profile,
+                        onProgress: (value) {
+                          if (mounted && _busy) {
+                            setState(() => _progress = value);
+                          }
+                        },
+                      );
+                      if (!mounted) return;
+                      setState(
+                        () => _error = switch (result.outcome) {
+                          VpnImportOutcome.success ||
+                          VpnImportOutcome.cancelled => null,
+                          VpnImportOutcome.recoveryRequired =>
+                            text.vpnRecoveryRequired,
+                          VpnImportOutcome.failed =>
+                            result.timedOut
+                                ? text.vpnImportTimedOut
+                                : text.vpnImportFailed,
+                        },
+                      );
                     }),
             ),
           ListItem.open(

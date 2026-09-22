@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:fl_clash/common/request.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +9,7 @@ class _SubscriptionClient extends Mock implements Dio {}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(() => registerFallbackValue(CancelToken()));
 
   test(
     'VPN resource downloads preserve tokens, headers, and cancellation',
@@ -18,7 +21,7 @@ void main() {
       when(
         () => client.get<List<int>>(
           url,
-          cancelToken: cancel,
+          cancelToken: any(named: 'cancelToken'),
           options: any(named: 'options'),
         ),
       ).thenAnswer((invocation) async {
@@ -50,12 +53,70 @@ void main() {
       verify(
         () => client.get<List<int>>(
           url,
-          cancelToken: cancel,
+          cancelToken: any(named: 'cancelToken'),
           options: any(named: 'options'),
         ),
       ).called(1);
     },
   );
+
+  test(
+    'download deadline cancels HTTP without cancelling the parent request',
+    () async {
+      final client = _SubscriptionClient();
+      final parent = CancelToken();
+      final pending = Completer<Response<List<int>>>();
+      late CancelToken transfer;
+      when(
+        () => client.get<List<int>>(
+          any(),
+          cancelToken: any(named: 'cancelToken'),
+          options: any(named: 'options'),
+        ),
+      ).thenAnswer((call) {
+        transfer = call.namedArguments[#cancelToken] as CancelToken;
+        return pending.future;
+      });
+      await expectLater(
+        Request(
+          subscriptionClient: client,
+          vpnDownloadTimeout: const Duration(milliseconds: 10),
+        ).fetchVpnResource('https://example.test/slow', const {}, parent),
+        throwsA(isA<TimeoutException>()),
+      );
+      expect(transfer.isCancelled, isTrue);
+      expect(parent.isCancelled, isFalse);
+      pending.complete(
+        Response(
+          data: [1],
+          requestOptions: RequestOptions(path: '/slow'),
+        ),
+      );
+    },
+  );
+
+  test('parent cancellation reaches the in-flight HTTP transfer', () async {
+    final client = _SubscriptionClient();
+    final parent = CancelToken();
+    late CancelToken transfer;
+    when(
+      () => client.get<List<int>>(
+        any(),
+        cancelToken: any(named: 'cancelToken'),
+        options: any(named: 'options'),
+      ),
+    ).thenAnswer((call) async {
+      transfer = call.namedArguments[#cancelToken] as CancelToken;
+      throw await transfer.whenCancel;
+    });
+    final pending = Request(
+      subscriptionClient: client,
+    ).fetchVpnResource('https://example.test/slow', const {}, parent);
+    final expectation = expectLater(pending, throwsA(isA<DioException>()));
+    parent.cancel();
+    await expectation;
+    expect(transfer.isCancelled, isTrue);
+  });
 
   test('getTextResponseForUrl propagates the typed DioException', () async {
     // flutter_test's mocked HttpClient answers every request with HTTP 400,

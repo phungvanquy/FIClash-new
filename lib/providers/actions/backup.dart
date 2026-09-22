@@ -278,14 +278,17 @@ class BackupAction extends _$BackupAction {
         );
         final geo = <String, List<int>>{};
         for (final name in VpnCandidateStager.geoResources.keys) {
-          var file = File('${resources.home.path}/$name');
-          if (original.snapshot.generation != null) {
-            final staged = resources.resource(
-              original.snapshot.generation!,
-              name,
-            );
-            if (await staged.exists()) file = staged;
+          final generation = original.snapshot.generation;
+          if (generation != null) {
+            final bytes =
+                await resources.readVerifiedResource(generation, 'geo/$name') ??
+                await resources.readVerifiedResource(generation, name);
+            if (bytes != null) {
+              geo[name] = bytes;
+              continue;
+            }
           }
+          final file = File('${resources.home.path}/$name');
           if (await FileSystemEntity.type(file.path, followLinks: false) ==
               FileSystemEntityType.file) {
             geo[name] = await file.readAsBytes();

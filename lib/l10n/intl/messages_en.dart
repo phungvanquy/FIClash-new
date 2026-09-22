@@ -94,9 +94,12 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m29(label) => "${label} must be a URL";
 
-  static String m30(value) => "${value} ms";
+  static String m30(completed, total) =>
+      "Preparing server and rule lists… ${completed}/${total}";
 
-  static String m31(count) =>
+  static String m31(value) => "${value} ms";
+
+  static String m32(count) =>
       "${Intl.plural(count, one: '1 year ago', other: '${count} years ago')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
@@ -1221,13 +1224,38 @@ class MessageLookup extends MessageLookupByLibrary {
       "Use the first available server in order",
     ),
     "vpnHome": MessageLookupByLibrary.simpleMessage("Home"),
+    "vpnImportActivating": MessageLookupByLibrary.simpleMessage(
+      "Applying configuration… Please wait.",
+    ),
+    "vpnImportCancelling": MessageLookupByLibrary.simpleMessage(
+      "Cancelling… Please wait for cleanup.",
+    ),
     "vpnImportDescription": MessageLookupByLibrary.simpleMessage(
       "Import the subscription URL from your VPN provider.",
+    ),
+    "vpnImportDownloading": MessageLookupByLibrary.simpleMessage(
+      "Downloading configuration…",
     ),
     "vpnImportFailed": MessageLookupByLibrary.simpleMessage(
       "Could not import the configuration. Your saved configuration has not been replaced. Check the URL and connection, then try again.",
     ),
+    "vpnImportFinalizing": MessageLookupByLibrary.simpleMessage(
+      "Finishing configuration update…",
+    ),
+    "vpnImportGeodata": MessageLookupByLibrary.simpleMessage(
+      "Preparing geographic databases…",
+    ),
+    "vpnImportProviders": m30,
+    "vpnImportSaving": MessageLookupByLibrary.simpleMessage(
+      "Verifying and saving configuration…",
+    ),
+    "vpnImportTimedOut": MessageLookupByLibrary.simpleMessage(
+      "A configuration download took too long. Your saved configuration has not been replaced. Check your connection and try again.",
+    ),
     "vpnImportTitle": MessageLookupByLibrary.simpleMessage("Set up your VPN"),
+    "vpnImportValidating": MessageLookupByLibrary.simpleMessage(
+      "Checking configuration…",
+    ),
     "vpnImporting": MessageLookupByLibrary.simpleMessage(
       "Importing configuration…",
     ),
@@ -1236,7 +1264,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "vpnLatencyFailed": MessageLookupByLibrary.simpleMessage("Test failed"),
     "vpnLatencyFastest": MessageLookupByLibrary.simpleMessage("Fastest"),
-    "vpnLatencyMs": m30,
+    "vpnLatencyMs": m31,
     "vpnLatencyTesting": MessageLookupByLibrary.simpleMessage("Testing…"),
     "vpnLatencyTimeout": MessageLookupByLibrary.simpleMessage("Timed out"),
     "vpnLatencyUnreachable": MessageLookupByLibrary.simpleMessage(
@@ -1278,6 +1306,9 @@ class MessageLookup extends MessageLookupByLibrary {
       "Your saved configuration is safe, but the VPN could not be restored. Retry recovery in Settings.",
     ),
     "vpnReplace": MessageLookupByLibrary.simpleMessage("Replace configuration"),
+    "vpnReplaceSafety": MessageLookupByLibrary.simpleMessage(
+      "Your saved configuration is kept if the replacement fails. Applying a successful replacement may briefly interrupt VPN traffic.",
+    ),
     "vpnRetry": MessageLookupByLibrary.simpleMessage("Try again"),
     "vpnRoutingNodes": MessageLookupByLibrary.simpleMessage(
       "Nodes depend on routing rules",
@@ -1311,7 +1342,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "WebDAV configuration",
     ),
     "whitelistMode": MessageLookupByLibrary.simpleMessage("Whitelist mode"),
-    "yearsAgo": m31,
+    "yearsAgo": m32,
     "zhCN": MessageLookupByLibrary.simpleMessage("Simplified Chinese"),
   };
 }

@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:fl_clash/database/database.dart';
 import 'package:fl_clash/models/models.dart';
 
 import 'profile_store.dart';
 import 'vpn_intake.dart';
+import 'vpn_import_progress.dart';
 import 'vpn_staging.dart';
 
 enum VpnImportOutcome { success, cancelled, failed, recoveryRequired }
@@ -17,6 +20,17 @@ class VpnImportResult {
   final Profile? profile;
   final VpnImportPhase? phase;
   final Object? error;
+
+  bool get timedOut => switch (error) {
+    TimeoutException() => true,
+    DioException(
+      type: DioExceptionType.connectionTimeout ||
+          DioExceptionType.sendTimeout ||
+          DioExceptionType.receiveTimeout,
+    ) =>
+      true,
+    _ => false,
+  };
 }
 
 class VpnImportCancelled implements Exception {
@@ -52,6 +66,7 @@ class VpnImportRequest {
     this.effectiveSource,
     this.testUrl,
     this.resources = const {},
+    this.onProgress,
   });
 
   final Profile profile;
@@ -72,6 +87,7 @@ class VpnImportRequest {
   final Map<String, dynamic>? effectiveSource;
   final String? testUrl;
   final Map<String, List<int>> resources;
+  final VpnProgressCallback? onProgress;
 }
 
 class VpnImportCoordinator {
@@ -155,6 +171,13 @@ class VpnImportCoordinator {
       request.checkCurrent?.call();
     }
 
+    void progress(VpnImportProgress value) {
+      if (_disposed || intent != _intent || cancelToken.isCancelled) return;
+      try {
+        request.onProgress?.call(value);
+      } catch (_) {}
+    }
+
     try {
       checkCurrent();
       var profile = request.profile;
@@ -186,6 +209,7 @@ class VpnImportCoordinator {
       }
       checkCurrent();
       phase = VpnImportPhase.download;
+      progress(const VpnImportProgress(VpnImportStep.download));
       final VpnDownload download;
       if (request.bytes != null) {
         download = VpnDownload(request.bytes!);
@@ -206,6 +230,7 @@ class VpnImportCoordinator {
         order: 0,
       );
       phase = VpnImportPhase.preparation;
+      progress(const VpnImportProgress(VpnImportStep.validation));
       candidate = await stager.stage(
         profile: profile,
         source: download.bytes,
@@ -223,6 +248,7 @@ class VpnImportCoordinator {
         recordFetchTime: request.recordFetchTime,
         migrateSelection: request.migrateSelection,
         committed: previous,
+        onProgress: progress,
       );
       phase = VpnImportPhase.commit;
       final prepared = candidate;
@@ -274,6 +300,7 @@ class VpnImportCoordinator {
         var runtimeAttempted = false;
         try {
           checkCurrent();
+          progress(const VpnImportProgress(VpnImportStep.activating));
           await store.beginCommit(journal);
           checkCurrent();
           runtimeAttempted = true;
@@ -302,6 +329,7 @@ class VpnImportCoordinator {
           rethrow;
         }
         try {
+          progress(const VpnImportProgress(VpnImportStep.finalizing));
           await publish(prepared.profile);
           await store.finishCommit(journal);
         } catch (error, stackTrace) {

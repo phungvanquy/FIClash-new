@@ -144,6 +144,19 @@ class VpnAction extends _$VpnAction {
       cancel();
     }
     final intent = _intent;
+    final stopwatch = Stopwatch()..start();
+    final timings = <VpnImportStep, int>{};
+    VpnImportStep? step;
+    var stepStarted = 0;
+    void recordTiming() {
+      final current = step;
+      final elapsed = stopwatch.elapsedMilliseconds;
+      if (current != null) {
+        timings[current] = (timings[current] ?? 0) + elapsed - stepStarted;
+      }
+      stepStarted = elapsed;
+    }
+
     try {
       final importer = await coordinator;
       if (_disposed || intent != _intent) {
@@ -169,6 +182,13 @@ class VpnAction extends _$VpnAction {
           effectiveSource: request.effectiveSource,
           testUrl: request.testUrl,
           resources: request.resources,
+          onProgress: (progress) {
+            if (progress.step != step) {
+              recordTiming();
+              step = progress.step;
+            }
+            request.onProgress?.call(progress);
+          },
           checkCurrent: () {
             request.checkCurrent?.call();
             if (_preparationSettings != settings) {
@@ -208,6 +228,13 @@ class VpnAction extends _$VpnAction {
       return const VpnImportResult(VpnImportOutcome.cancelled);
     } catch (error) {
       return VpnImportResult(VpnImportOutcome.failed, error: error);
+    } finally {
+      recordTiming();
+      stopwatch.stop();
+      commonPrint.log(
+        'VPN configuration processing ${stopwatch.elapsedMilliseconds}ms: '
+        '${timings.entries.map((entry) => '${entry.key.name}=${entry.value}ms').join(', ')}',
+      );
     }
   }
 
@@ -229,18 +256,27 @@ class VpnAction extends _$VpnAction {
     return _submit(request, registerIntent: false);
   }
 
-  Future<VpnImportResult> importUrl(String url) =>
-      submit(VpnImportRequest(profile: Profile.normal(url: url)));
+  Future<VpnImportResult> importUrl(
+    String url, {
+    VpnProgressCallback? onProgress,
+  }) => submit(
+    VpnImportRequest(
+      profile: Profile.normal(url: url),
+      onProgress: onProgress,
+    ),
+  );
 
   Future<VpnImportResult> refresh(
     Profile profile, {
     void Function()? checkCurrent,
+    VpnProgressCallback? onProgress,
   }) => submit(
     VpnImportRequest(
       profile: profile,
       refreshRevision: profile.snapshot.revision,
       expectedProfile: profile,
       checkCurrent: checkCurrent,
+      onProgress: onProgress,
     ),
   );
 
@@ -374,7 +410,11 @@ class VpnAction extends _$VpnAction {
       case VpnImportOutcome.cancelled:
         throw const VpnImportCancelled();
       case VpnImportOutcome.failed:
-        throw MessageException(currentAppLocalizations.vpnImportFailed);
+        throw MessageException(
+          result.timedOut
+              ? currentAppLocalizations.vpnImportTimedOut
+              : currentAppLocalizations.vpnImportFailed,
+        );
       case VpnImportOutcome.recoveryRequired:
         throw MessageException(currentAppLocalizations.vpnRecoveryRequired);
     }

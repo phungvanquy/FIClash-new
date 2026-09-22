@@ -6,6 +6,48 @@ Let users install and maintain one VPN subscription without risking a working co
 
 ## ADDED Requirements
 
+### Requirement: Bounded downloads and reusable geographic resources
+
+Subscription, provider, and geographic-resource HTTP transfers SHALL have a 90-second total deadline, with 15-second connection and 30-second send/receive inactivity limits in the production client. A deadline MUST cancel the transfer and report a retryable failure, not a successful import or a user cancellation. Cancellation SHALL reach in-flight HTTP work. Provider preparation SHALL run at most four transfers concurrently, stop scheduling further work after failure, and await started workers before removing candidate files.
+
+The application SHALL reuse geographic data from the committed immutable snapshot only when its sealed checksum and source URL identity match. Online reuse SHALL expire at the configured positive `geo-update-interval` in hours, or 24 hours by default, without renewing freshness merely by copying data. Offline edits MAY reuse older verified, source-matched data. Missing, corrupt, mismatched, or expired online cache entries SHALL require a fresh download. Restored geographic resources SHALL be staged under the Core parser's `geo/` directory; restores SHALL continue to accept older generation-root resources. Restored data without a trustworthy fetch time MUST NOT be marked freshly downloaded.
+
+#### Scenario: Repeated refresh reuses a valid database
+
+- **WHEN** the new configuration requires the same geographic source before its cached copy expires
+- **THEN** the new generation contains verified copied bytes and retains their original fetch time without downloading that database again
+
+#### Scenario: Geographic source changes or cache is corrupt
+
+- **WHEN** the source URL differs, its resource checksum fails, or the cached copy expires
+- **THEN** online preparation fetches and validates a fresh candidate copy without modifying the prior generation
+
+#### Scenario: Resource deadline expires
+
+- **WHEN** a subscription or required resource exceeds a download deadline
+- **THEN** its HTTP transfer is cancelled, candidate work is cleaned up, and the previous profile remains available with localized retry guidance
+
+#### Scenario: Offline generation backup restore
+
+- **WHEN** a backup contains sealed provider and geographic resources
+- **THEN** restore makes the geographic bytes available at the parser's required paths without network access, including backups that used the older generation-root layout
+
+### Requirement: Truthful replacement progress
+
+Manual import/replacement and subscription update SHALL report request-scoped downloading, provider-list preparation with completed/total counts, geographic-data preparation, validation, snapshot saving, activation, and finalization as applicable. Observer failures MUST NOT change transaction outcomes. Cancelled/superseded requests MUST NOT publish later progress into a newer request. Diagnostic stage timings SHALL omit URLs, tokens, and resource names. Progress SHALL remain indeterminate rather than claiming a whole-operation percentage from provider counts.
+
+The import panel SHALL remain busy after Cancel until cancellation and cleanup finish. Cancel and back dismissal SHALL be disabled during final activation/publication, and accidental outside taps SHALL NOT dismiss the replacement dialog. Replacement copy SHALL explain failure preservation and the possibility of brief traffic interruption on successful activation. Full detached validation and journal/rollback guarantees SHALL remain in force; progress or download deadlines MUST NOT abandon an in-flight commit.
+
+#### Scenario: Cancellation is still cleaning up
+
+- **WHEN** a user cancels preparation while work remains in flight
+- **THEN** the panel shows cancelling and prevents resubmission until the operation returns after cleanup
+
+#### Scenario: Activation is in progress
+
+- **WHEN** a fully prepared replacement enters the serialized final commit
+- **THEN** the panel displays applying/finalizing, blocks cancellation and back dismissal, and reports success only after the existing activation/durable-commit contract is satisfied
+
 ### Requirement: Common URL intake
 
 The application SHALL accept one HTTP or HTTPS configuration URL through manual entry, an explicit clipboard-paste action, or QR decoding. A token SHALL mean the credential embedded in that URL. All three methods and existing installation deep links MUST follow the same validation and replacement rules. Leading and trailing whitespace SHALL be removed without changing the URL's path, query values, or encoding.

@@ -83,9 +83,12 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m29(label) => "${label}はURLである必要があります";
 
-  static String m30(value) => "${value} ミリ秒";
+  static String m30(completed, total) =>
+      "サーバーとルールの一覧を準備中… ${completed}/${total}";
 
-  static String m31(count) => "${count} 年前";
+  static String m31(value) => "${value} ミリ秒";
+
+  static String m32(count) => "${count} 年前";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -1018,20 +1021,35 @@ class MessageLookup extends MessageLookupByLibrary {
       "順番に最初の利用可能なサーバーを使用",
     ),
     "vpnHome": MessageLookupByLibrary.simpleMessage("ホーム"),
+    "vpnImportActivating": MessageLookupByLibrary.simpleMessage(
+      "設定を適用中…しばらくお待ちください。",
+    ),
+    "vpnImportCancelling": MessageLookupByLibrary.simpleMessage(
+      "キャンセル中…後処理が終わるまでお待ちください。",
+    ),
     "vpnImportDescription": MessageLookupByLibrary.simpleMessage(
       "VPN プロバイダーのサブスクリプション URL を読み込んでください。",
     ),
+    "vpnImportDownloading": MessageLookupByLibrary.simpleMessage("設定をダウンロード中…"),
     "vpnImportFailed": MessageLookupByLibrary.simpleMessage(
       "設定をインポートできませんでした。保存済みの設定は置き換えられていません。URL と接続を確認して再試行してください。",
     ),
+    "vpnImportFinalizing": MessageLookupByLibrary.simpleMessage("設定の更新を完了中…"),
+    "vpnImportGeodata": MessageLookupByLibrary.simpleMessage("地理データベースを準備中…"),
+    "vpnImportProviders": m30,
+    "vpnImportSaving": MessageLookupByLibrary.simpleMessage("設定を検証して保存中…"),
+    "vpnImportTimedOut": MessageLookupByLibrary.simpleMessage(
+      "設定のダウンロードがタイムアウトしました。保存済みの設定は変更されていません。接続を確認して再試行してください。",
+    ),
     "vpnImportTitle": MessageLookupByLibrary.simpleMessage("VPN を設定"),
+    "vpnImportValidating": MessageLookupByLibrary.simpleMessage("設定を確認中…"),
     "vpnImporting": MessageLookupByLibrary.simpleMessage("設定を読み込み中…"),
     "vpnInvalidUrl": MessageLookupByLibrary.simpleMessage(
       "有効な HTTP または HTTPS のサブスクリプション URL を入力してください。",
     ),
     "vpnLatencyFailed": MessageLookupByLibrary.simpleMessage("テスト失敗"),
     "vpnLatencyFastest": MessageLookupByLibrary.simpleMessage("最速"),
-    "vpnLatencyMs": m30,
+    "vpnLatencyMs": m31,
     "vpnLatencyTesting": MessageLookupByLibrary.simpleMessage("テスト中…"),
     "vpnLatencyTimeout": MessageLookupByLibrary.simpleMessage("タイムアウト"),
     "vpnLatencyUnreachable": MessageLookupByLibrary.simpleMessage("到達できません"),
@@ -1065,6 +1083,9 @@ class MessageLookup extends MessageLookupByLibrary {
       "保存済みの設定は保持されていますが、VPN を復旧できませんでした。設定画面から復旧を再試行してください。",
     ),
     "vpnReplace": MessageLookupByLibrary.simpleMessage("設定を置き換える"),
+    "vpnReplaceSafety": MessageLookupByLibrary.simpleMessage(
+      "置き換えに失敗した場合、保存済みの設定は維持されます。新しい設定の適用時に、VPN 通信が一時的に中断することがあります。",
+    ),
     "vpnRetry": MessageLookupByLibrary.simpleMessage("再試行"),
     "vpnRoutingNodes": MessageLookupByLibrary.simpleMessage(
       "ノードはルーティングルールによって決まります",
@@ -1092,7 +1113,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnTip": MessageLookupByLibrary.simpleMessage("変更はVPNの再起動後に有効になります"),
     "webDAVConfiguration": MessageLookupByLibrary.simpleMessage("WebDAV設定"),
     "whitelistMode": MessageLookupByLibrary.simpleMessage("ホワイトリストモード"),
-    "yearsAgo": m31,
+    "yearsAgo": m32,
     "zhCN": MessageLookupByLibrary.simpleMessage("簡体字中国語"),
   };
 }

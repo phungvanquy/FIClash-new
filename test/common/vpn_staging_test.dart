@@ -14,6 +14,7 @@ void main() {
   late ProfileGenerationStore store;
   late List<PrepareConfigParams> calls;
   late List<PreparedConfigRef> discarded;
+  late DateTime now;
   const profile = Profile(
     id: 7,
     url: 'https://example.test/sub?token=a%2Bb',
@@ -33,6 +34,7 @@ void main() {
     store = ProfileGenerationStore(home);
     calls = [];
     discarded = [];
+    now = DateTime.utc(2026, 9, 22);
   });
   tearDown(() async => home.delete(recursive: true));
 
@@ -64,6 +66,7 @@ void main() {
         fetch ??
         (_, _, _) async => throw StateError('Unexpected network request'),
     prepare: load ?? prepare,
+    clock: () => now,
     discard: (handle) async {
       discarded.add(handle);
       return true;
@@ -74,14 +77,22 @@ void main() {
     VpnCandidateStager value, {
     String text = source,
     void Function()? check,
+    Profile? previous,
+    bool localOnly = false,
+    Map<String, List<int>> resources = const {},
+    VpnProgressCallback? onProgress,
   }) => value.stage(
     profile: profile,
     source: utf8.encode(text),
-    revision: 1,
+    revision: (previous?.snapshot.revision ?? 0) + 1,
     testUrl: 'https://example.test/check',
     cancel: CancelToken(),
     checkCurrent: check ?? () {},
     overrides: (raw) async => raw,
+    committed: previous,
+    localOnly: localOnly,
+    resources: resources,
+    onProgress: onProgress,
   );
 
   test(
@@ -394,6 +405,218 @@ proxy-providers:
     expect(await store.generations.list().toList(), isEmpty);
   });
 
+  group('geodata snapshot cache', () {
+    const text =
+        '$source\ngeox-url: {geosite: "https://example.test/geo?token=secret"}';
+    late List<String> fetched;
+    late VpnCandidateStager value;
+
+    setUp(() {
+      fetched = [];
+      value = stager(
+        fetch: (url, _, _) async {
+          fetched.add(url);
+          return VpnDownload(utf8.encode('database-${fetched.length}'));
+        },
+        load: (params) async {
+          if (!await store
+              .resource(params.generation, 'geo/GeoSite.dat')
+              .exists()) {
+            throw const CoreMethodException(
+              code: 'resource_required',
+              message: 'required',
+              details: {'resource': 'GeoSite.dat'},
+            );
+          }
+          return prepare(params);
+        },
+      );
+    });
+
+    Future<String> database(VpnPreparedCandidate candidate) => store
+        .resource(candidate.profile.snapshot.generation!, 'geo/GeoSite.dat')
+        .readAsString();
+
+    test(
+      'reuses fresh verified bytes without extending their freshness',
+      () async {
+        final first = await stage(value, text: text);
+        now = now.add(const Duration(hours: 23));
+        final second = await stage(value, text: text, previous: first.profile);
+        expect(fetched, hasLength(1));
+        expect(await database(second), 'database-1');
+        expect(
+          await store.load(second.profile.snapshot.generation!),
+          second.profile,
+        );
+        final metadata = await store
+            .resource(second.profile.snapshot.generation!, 'geo-cache.json')
+            .readAsString();
+        expect(metadata, isNot(contains('secret')));
+        now = now.add(const Duration(hours: 2));
+        final third = await stage(value, text: text, previous: second.profile);
+        expect(fetched, hasLength(2));
+        expect(await database(third), 'database-2');
+        expect(await database(first), 'database-1');
+      },
+    );
+
+    test(
+      'changed resource source cannot reuse an unrelated database',
+      () async {
+        final first = await stage(value, text: text);
+        final second = await stage(
+          value,
+          text: text.replaceAll('secret', 'other'),
+          previous: first.profile,
+        );
+        expect(fetched, hasLength(2));
+        expect(await database(second), 'database-2');
+      },
+    );
+
+    test(
+      'corrupt cached resource is fetched again without editing the old snapshot',
+      () async {
+        final first = await stage(value, text: text);
+        final old = store.resource(
+          first.profile.snapshot.generation!,
+          'geo/GeoSite.dat',
+        );
+        await old.writeAsString('corrupt');
+        final second = await stage(value, text: text, previous: first.profile);
+        expect(fetched, hasLength(2));
+        expect(await database(second), 'database-2');
+        expect(await old.readAsString(), 'corrupt');
+      },
+    );
+
+    test(
+      'offline edits may reuse expired data but never a changed source',
+      () async {
+        final first = await stage(value, text: text);
+        now = now.add(const Duration(days: 30));
+        final second = await stage(
+          value,
+          text: text,
+          previous: first.profile,
+          localOnly: true,
+        );
+        expect(await database(second), 'database-1');
+        expect(fetched, hasLength(1));
+        await expectLater(
+          stage(
+            value,
+            text: text.replaceAll('secret', 'other'),
+            previous: first.profile,
+            localOnly: true,
+          ),
+          throwsA(isA<VpnLocalResourceUnavailable>()),
+        );
+        expect(fetched, hasLength(1));
+      },
+    );
+
+    test(
+      'restored resources are available in the parser geo directory offline',
+      () async {
+        final first = await stage(
+          value,
+          text: text,
+          localOnly: true,
+          resources: {'GeoSite.dat': utf8.encode('restored')},
+        );
+        expect(fetched, isEmpty);
+        expect(await database(first), 'restored');
+        final second = await stage(value, text: text, previous: first.profile);
+        expect(fetched, hasLength(1));
+        expect(await database(second), 'database-1');
+      },
+    );
+
+    test('respects a shorter configured refresh interval', () async {
+      final first = await stage(value, text: text);
+      now = now.add(const Duration(hours: 2));
+      await stage(
+        value,
+        text: '$text\ngeo-update-interval: 1',
+        previous: first.profile,
+      );
+      expect(fetched, hasLength(2));
+    });
+
+    test(
+      'older unstamped generations remain usable for offline edits',
+      () async {
+        final generation = await store.allocate();
+        final previous = profile.copyWith.snapshot(
+          generation: generation,
+          revision: 1,
+        );
+        await store.write(generation, 'source.yaml', utf8.encode(text));
+        await store.write(generation, 'effective.yaml', utf8.encode(text));
+        await store.write(
+          generation,
+          'geo/GeoSite.dat',
+          utf8.encode('older database'),
+        );
+        await store.seal(previous);
+        final edited = await stage(
+          value,
+          text: text,
+          previous: previous,
+          localOnly: true,
+        );
+        expect(await database(edited), 'older database');
+        expect(fetched, isEmpty);
+        await stage(value, text: text, previous: edited.profile);
+        expect(fetched, hasLength(1));
+      },
+    );
+
+    test(
+      'corrupt offline cache cannot silently fall back to unrelated global data',
+      () async {
+        final first = await stage(value, text: text);
+        await store
+            .resource(first.profile.snapshot.generation!, 'geo/GeoSite.dat')
+            .writeAsString('corrupt');
+        await File('${home.path}/GeoSite.dat').writeAsString('unrelated');
+        await expectLater(
+          stage(value, text: text, previous: first.profile, localOnly: true),
+          throwsA(isA<VpnLocalResourceUnavailable>()),
+        );
+        expect(fetched, hasLength(1));
+      },
+    );
+  });
+
+  test(
+    'reports completed provider resources and both validation stages',
+    () async {
+      final progress = <VpnImportProgress>[];
+      await stage(
+        stager(
+          fetch: (_, _, _) async => VpnDownload(utf8.encode('proxies: []')),
+        ),
+        text:
+            '$source\nproxy-providers: {a: {type: http, url: https://example.test/a}, b: {type: http, url: https://example.test/b}}',
+        onProgress: progress.add,
+      );
+      expect(
+        progress
+            .where((item) => item.step == VpnImportStep.providers)
+            .map((item) => (item.completed, item.total)),
+        [(0, 2), (1, 2), (2, 2)],
+      );
+      expect(
+        progress.where((item) => item.step == VpnImportStep.validation),
+        hasLength(2),
+      );
+      expect(progress.last.step, VpnImportStep.saving);
+    },
+  );
+
   test('waits for concurrent downloads before failure cleanup', () async {
     final pending = Completer<VpnDownload>();
     final started = Completer<void>();
@@ -416,4 +639,34 @@ proxy-providers:
     await failure;
     expect(await store.generations.list().toList(), isEmpty);
   });
+
+  test(
+    'provider failure stops queued transfers but awaits the four active workers',
+    () async {
+      final started = Completer<void>();
+      final transfers = <Completer<VpnDownload>>[];
+      final operation = stage(
+        stager(
+          fetch: (_, _, _) {
+            final transfer = Completer<VpnDownload>();
+            transfers.add(transfer);
+            if (transfers.length == 4) started.complete();
+            return transfer.future;
+          },
+        ),
+        text:
+            '$source\nproxy-providers:\n${List.generate(6, (index) => '  p$index: {type: http, url: https://example.test/$index}').join('\n')}',
+      );
+      final failed = expectLater(operation, throwsA(isA<HttpException>()));
+      await started.future;
+      transfers.first.completeError(const HttpException('offline'));
+      await Future<void>.delayed(Duration.zero);
+      for (final transfer in transfers.skip(1)) {
+        transfer.complete(VpnDownload(utf8.encode('proxies: []')));
+      }
+      await failed;
+      expect(transfers, hasLength(4));
+      expect(await store.generations.list().toList(), isEmpty);
+    },
+  );
 }

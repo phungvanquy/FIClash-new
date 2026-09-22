@@ -94,9 +94,12 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m29(label) => "Значение «${label}» должно быть URL";
 
-  static String m30(value) => "${value} мс";
+  static String m30(completed, total) =>
+      "Подготовка списков серверов и правил… ${completed}/${total}";
 
-  static String m31(count) =>
+  static String m31(value) => "${value} мс";
+
+  static String m32(count) =>
       "${Intl.plural(count, one: '${count} год назад', few: '${count} года назад', many: '${count} лет назад', other: '${count} года назад')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
@@ -1279,13 +1282,38 @@ class MessageLookup extends MessageLookupByLibrary {
       "Использовать первый доступный сервер по порядку",
     ),
     "vpnHome": MessageLookupByLibrary.simpleMessage("Главная"),
+    "vpnImportActivating": MessageLookupByLibrary.simpleMessage(
+      "Применение конфигурации… Подождите.",
+    ),
+    "vpnImportCancelling": MessageLookupByLibrary.simpleMessage(
+      "Отмена… Дождитесь завершения очистки.",
+    ),
     "vpnImportDescription": MessageLookupByLibrary.simpleMessage(
       "Импортируйте ссылку на подписку от вашего VPN-провайдера.",
+    ),
+    "vpnImportDownloading": MessageLookupByLibrary.simpleMessage(
+      "Загрузка конфигурации…",
     ),
     "vpnImportFailed": MessageLookupByLibrary.simpleMessage(
       "Не удалось импортировать конфигурацию. Сохранённая конфигурация не заменена. Проверьте URL и подключение и повторите попытку.",
     ),
+    "vpnImportFinalizing": MessageLookupByLibrary.simpleMessage(
+      "Завершение обновления конфигурации…",
+    ),
+    "vpnImportGeodata": MessageLookupByLibrary.simpleMessage(
+      "Подготовка географических баз данных…",
+    ),
+    "vpnImportProviders": m30,
+    "vpnImportSaving": MessageLookupByLibrary.simpleMessage(
+      "Проверка и сохранение конфигурации…",
+    ),
+    "vpnImportTimedOut": MessageLookupByLibrary.simpleMessage(
+      "Превышено время ожидания загрузки конфигурации. Сохранённая конфигурация не изменена. Проверьте соединение и повторите попытку.",
+    ),
     "vpnImportTitle": MessageLookupByLibrary.simpleMessage("Настройка VPN"),
+    "vpnImportValidating": MessageLookupByLibrary.simpleMessage(
+      "Проверка конфигурации…",
+    ),
     "vpnImporting": MessageLookupByLibrary.simpleMessage(
       "Импорт конфигурации…",
     ),
@@ -1294,7 +1322,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "vpnLatencyFailed": MessageLookupByLibrary.simpleMessage("Ошибка проверки"),
     "vpnLatencyFastest": MessageLookupByLibrary.simpleMessage("Самый быстрый"),
-    "vpnLatencyMs": m30,
+    "vpnLatencyMs": m31,
     "vpnLatencyTesting": MessageLookupByLibrary.simpleMessage("Проверка…"),
     "vpnLatencyTimeout": MessageLookupByLibrary.simpleMessage("Время истекло"),
     "vpnLatencyUnreachable": MessageLookupByLibrary.simpleMessage("Недоступен"),
@@ -1336,6 +1364,9 @@ class MessageLookup extends MessageLookupByLibrary {
       "Сохранённая конфигурация не повреждена, но восстановить VPN не удалось. Повторите восстановление в настройках.",
     ),
     "vpnReplace": MessageLookupByLibrary.simpleMessage("Заменить конфигурацию"),
+    "vpnReplaceSafety": MessageLookupByLibrary.simpleMessage(
+      "При неудачной замене сохранённая конфигурация останется прежней. Применение новой конфигурации может ненадолго прервать VPN-трафик.",
+    ),
     "vpnRetry": MessageLookupByLibrary.simpleMessage("Повторить"),
     "vpnRoutingNodes": MessageLookupByLibrary.simpleMessage(
       "Узлы определяются правилами маршрутизации",
@@ -1373,7 +1404,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "whitelistMode": MessageLookupByLibrary.simpleMessage(
       "Режим белого списка",
     ),
-    "yearsAgo": m31,
+    "yearsAgo": m32,
     "zhCN": MessageLookupByLibrary.simpleMessage("Упрощённый китайский"),
   };
 }

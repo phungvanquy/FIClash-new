@@ -1,5 +1,11 @@
 # Tasks
 
+## 10. Import, refresh, and replacement performance
+
+- [x] 10.1 Reuse source-matched, integrity-checked geographic data with bounded freshness across immutable generations; correct restored resource paths and stream snapshot integrity checks without weakening validation or rollback.
+- [x] 10.2 Bound resource downloads, propagate cancellation to HTTP, and add request-scoped stage/provisioning progress for import/replacement and manual update. Keep cancellation busy until cleanup finishes and protect final commit interactions.
+- [x] 10.3 Add cache, timeout, replacement/cancellation, and progress regressions; regenerate affected output, verify Flutter checks, and synchronize specifications and device acceptance guidance.
+
 ## 9. Post-build usability and reliability review
 
 - [x] 9.6 Stabilize Android run-state serialization in minified builds, bound initial status checks, and provide safe retry/disconnect recovery without assuming a disconnected tunnel.

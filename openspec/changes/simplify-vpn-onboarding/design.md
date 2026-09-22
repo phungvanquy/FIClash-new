@@ -176,6 +176,14 @@ Alternative considered: delete advanced features. Rejected because the user aske
 
 ## Verification Approach
 
+### Import and replacement performance follow-up
+
+Retain both detached Core preparation passes and all journal/rollback integrity checks: they verify different effective configurations and are not interchangeable with latency probes. Stream file checksums to reduce whole-file allocations. Reuse geographic resources from the previous committed generation using sealed `geo-cache.json` entries with a SHA-256 source-URL identity and original fetch timestamp. Check the resource checksum independently before copying into the new generation. Online freshness uses a positive `geo-update-interval` in hours or 24 hours; offline edits can retain old source-matched verified data. Copies never renew timestamps. Unstamped restored/legacy data remains eligible only offline, with fresh download required on a later online refresh. Restore reads both `geo/<name>` and the legacy root name, but writes only `geo/<name>`.
+
+Bound each HTTP resource transfer to 90 seconds with a child cancellation token linked to the operation, while keeping 15-second connect and 30-second send/receive limits. This is a per-transfer limit, not an overall transaction deadline; final Core activation/rollback is still awaited. Keep four provider workers, stop dequeuing after failure, and await already-started workers before cleanup. Do not silently fall back to stale provider/subscription data after a failed fetch.
+
+Add observational request callbacks for stage progress; no second provider or widget owns the transaction. Provider counts are not an overall percentage. Supersession/cancellation fences callbacks, and callback exceptions cannot affect transaction success. Import-panel cancellation holds controls until cleanup completes; final commit disables cancellation/back dismissal. Settings manual refresh uses the same callback. Record stage durations, including repeated validation periods, in one diagnostic summary with no credential-bearing values. Real-device timings are still needed to quantify speedups.
+
 ### Post-build reliability review
 
 Use semantic green/gray feedback plus distinct transition and failure treatments, keeping text and icons available for accessibility. Disable repeated UI transitions while retaining explicit startup cancellation. Keep failed teardown visible without pretending the tunnel is gone.

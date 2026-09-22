@@ -153,6 +153,68 @@ void main() {
   });
 
   test(
+    'download timeout is a retryable failure and preserves the active profile',
+    () async {
+      fetch = (_, _, _) async => throw TimeoutException('download');
+      final result = await coordinator.submit(
+        const VpnImportRequest(profile: incoming),
+      );
+      expect(result.outcome, VpnImportOutcome.failed);
+      expect(result.phase, VpnImportPhase.download);
+      await expectPreserved();
+    },
+  );
+
+  test(
+    'stage progress follows transaction boundaries and observer errors are isolated',
+    () async {
+      final progress = <VpnImportStep>[];
+      final result = await coordinator.submit(
+        VpnImportRequest(
+          profile: incoming,
+          onProgress: (value) {
+            progress.add(value.step);
+            if (value.step == VpnImportStep.validation) {
+              throw StateError('view disposed');
+            }
+          },
+        ),
+      );
+      expect(result.outcome, VpnImportOutcome.success);
+      expect(progress, [
+        VpnImportStep.download,
+        VpnImportStep.validation,
+        VpnImportStep.validation,
+        VpnImportStep.validation,
+        VpnImportStep.saving,
+        VpnImportStep.activating,
+        VpnImportStep.finalizing,
+      ]);
+      expect(await db.singleProfile.current(), result.profile);
+    },
+  );
+
+  test(
+    'cancellation during saving cleans the candidate without announcing activation',
+    () async {
+      final progress = <VpnImportStep>[];
+      final result = await coordinator.submit(
+        VpnImportRequest(
+          profile: incoming,
+          onProgress: (value) {
+            progress.add(value.step);
+            if (value.step == VpnImportStep.saving) coordinator.cancel();
+          },
+        ),
+      );
+      expect(result.outcome, VpnImportOutcome.cancelled);
+      expect(progress.last, VpnImportStep.saving);
+      expect(await store.generations.list().length, 1);
+      await expectPreserved();
+    },
+  );
+
+  test(
     'invalid configuration leaves the committed snapshot unchanged',
     () async {
       final result = await coordinator.submit(

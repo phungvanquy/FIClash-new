@@ -16,6 +16,18 @@ class _Action extends VpnAction {
   int calls = 0;
   int cancellations = 0;
   late final gate = Completer<VpnImportResult>();
+  VpnProgressCallback? progress;
+
+  @override
+  Future<VpnImportResult> refresh(
+    Profile profile, {
+    void Function()? checkCurrent,
+    VpnProgressCallback? onProgress,
+  }) {
+    calls++;
+    progress = onProgress;
+    return gate.future;
+  }
 
   @override
   Future<VpnImportResult> edit(
@@ -36,6 +48,7 @@ void main() {
   const profile = Profile(
     id: 1,
     label: 'VPN',
+    url: 'https://example.test/subscription',
     autoUpdateDuration: Duration(hours: 1),
     snapshot: ProfileSnapshot(
       revision: 1,
@@ -96,4 +109,45 @@ void main() {
     await tester.pump();
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'manual update shows progress, prevents repeats and explains timeouts',
+    (tester) async {
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const TestApp(
+            child: Scaffold(
+              body: SingleChildScrollView(child: VpnConfigurationSection()),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(currentAppLocalizations.update));
+      await tester.pump();
+      action.progress?.call(const VpnImportProgress(VpnImportStep.geodata));
+      await tester.pump();
+      expect(
+        find.text(currentAppLocalizations.vpnImportGeodata),
+        findsOneWidget,
+      );
+      await tester.tap(find.text(currentAppLocalizations.update));
+      expect(action.calls, 1);
+      action.gate.complete(
+        VpnImportResult(
+          VpnImportOutcome.failed,
+          error: TimeoutException('private-url'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.text(currentAppLocalizations.vpnImportTimedOut),
+        findsOneWidget,
+      );
+      expect(find.textContaining('private-url'), findsNothing);
+      expect(container.read(currentProfileProvider), profile);
+      expect(find.byType(LinearProgressIndicator), findsNothing);
+    },
+  );
 }

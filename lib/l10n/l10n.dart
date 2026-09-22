@@ -5530,6 +5530,106 @@ class AppLocalizations {
     );
   }
 
+  /// `Downloading configuration…`
+  String get vpnImportDownloading {
+    return Intl.message(
+      'Downloading configuration…',
+      name: 'vpnImportDownloading',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `A configuration download took too long. Your saved configuration has not been replaced. Check your connection and try again.`
+  String get vpnImportTimedOut {
+    return Intl.message(
+      'A configuration download took too long. Your saved configuration has not been replaced. Check your connection and try again.',
+      name: 'vpnImportTimedOut',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Preparing server and rule lists… {completed}/{total}`
+  String vpnImportProviders(Object completed, Object total) {
+    return Intl.message(
+      'Preparing server and rule lists… $completed/$total',
+      name: 'vpnImportProviders',
+      desc: '',
+      args: [completed, total],
+    );
+  }
+
+  /// `Preparing geographic databases…`
+  String get vpnImportGeodata {
+    return Intl.message(
+      'Preparing geographic databases…',
+      name: 'vpnImportGeodata',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Checking configuration…`
+  String get vpnImportValidating {
+    return Intl.message(
+      'Checking configuration…',
+      name: 'vpnImportValidating',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Verifying and saving configuration…`
+  String get vpnImportSaving {
+    return Intl.message(
+      'Verifying and saving configuration…',
+      name: 'vpnImportSaving',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Applying configuration… Please wait.`
+  String get vpnImportActivating {
+    return Intl.message(
+      'Applying configuration… Please wait.',
+      name: 'vpnImportActivating',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Finishing configuration update…`
+  String get vpnImportFinalizing {
+    return Intl.message(
+      'Finishing configuration update…',
+      name: 'vpnImportFinalizing',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Cancelling… Please wait for cleanup.`
+  String get vpnImportCancelling {
+    return Intl.message(
+      'Cancelling… Please wait for cleanup.',
+      name: 'vpnImportCancelling',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Your saved configuration is kept if the replacement fails. Applying a successful replacement may briefly interrupt VPN traffic.`
+  String get vpnReplaceSafety {
+    return Intl.message(
+      'Your saved configuration is kept if the replacement fails. Applying a successful replacement may briefly interrupt VPN traffic.',
+      name: 'vpnReplaceSafety',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Enter a valid HTTP or HTTPS subscription URL.`
   String get vpnInvalidUrl {
     return Intl.message(

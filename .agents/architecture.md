@@ -245,6 +245,15 @@ rules/groups only after activation, under `SetupAction.serializeProfileCommit`. 
 database revision before startup/refresh. Preference and shared-state copies are repairable mirrors, not commit owners.
 Never mutate a sealed generation or use legacy optimistic profile writers to replace it.
 
+Staging reuses only source-matched, checksum-verified geographic resources from the committed snapshot. Sealed
+`geo-cache.json` retains hashed URL identity and original fetch time; online freshness is `geo-update-interval` hours
+(24 by default), while offline edits may reuse older verified bytes. Restored data without a fetch timestamp stays
+unstamped, and restore reads both legacy root and current `geo/` paths. Snapshot checksum passes stream file contents.
+Each HTTP transfer has a 90-second overall deadline with actual transfer cancellation; it cannot time out an active
+commit. Provider workers stop dequeuing after a failure and finish started work before staging cleanup. Request-scoped
+progress is observational, cancellation stays busy through cleanup, and commit disables import-panel cancellation/back.
+`VpnAction` logs sanitized stage durations, never URLs, tokens, or resource names.
+
 `ProfileDraft` holds profile-specific override edits independently of the active profile. Its rule/group providers
 project draft data while the editor is open; explicit Save supplies owned data to preparation and the final transaction.
 Leaving the editor discards the draft, and a stale profile/metadata revision prevents saving over newer work. Shared
