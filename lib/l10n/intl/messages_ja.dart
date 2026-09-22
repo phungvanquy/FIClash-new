@@ -998,6 +998,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnConfiguration": MessageLookupByLibrary.simpleMessage("VPN 設定"),
     "vpnConnect": MessageLookupByLibrary.simpleMessage("接続"),
     "vpnConnectionFailed": MessageLookupByLibrary.simpleMessage("接続を確認してください"),
+    "vpnCurrentNode": MessageLookupByLibrary.simpleMessage("現在のノード"),
     "vpnCustomRouting": MessageLookupByLibrary.simpleMessage("カスタムルーティング"),
     "vpnCustomRoutingDescription": MessageLookupByLibrary.simpleMessage(
       "設定のルーティングルールを使用します。ホームでサーバーを選択するとシンプルなルーティングに戻ります。",
@@ -1038,6 +1039,10 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnLocalProxy": MessageLookupByLibrary.simpleMessage(
       "ローカルプロキシのみ · VPN は無効",
     ),
+    "vpnNodeResolving": MessageLookupByLibrary.simpleMessage("現在のノードを確認中…"),
+    "vpnNodeUnavailable": MessageLookupByLibrary.simpleMessage(
+      "現在のノードを取得できません",
+    ),
     "vpnPasteClipboard": MessageLookupByLibrary.simpleMessage("クリップボードから貼り付け"),
     "vpnPermissionDenied": MessageLookupByLibrary.simpleMessage(
       "権限が許可されていません。再接続するか、システム設定を確認してください。",
@@ -1061,6 +1066,9 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "vpnReplace": MessageLookupByLibrary.simpleMessage("設定を置き換える"),
     "vpnRetry": MessageLookupByLibrary.simpleMessage("再試行"),
+    "vpnRoutingNodes": MessageLookupByLibrary.simpleMessage(
+      "ノードはルーティングルールによって決まります",
+    ),
     "vpnScanQr": MessageLookupByLibrary.simpleMessage("QR コードをスキャン"),
     "vpnSelectFailed": MessageLookupByLibrary.simpleMessage(
       "サーバーを切り替えられませんでした。以前の選択は変更されていません。",
@@ -1071,6 +1079,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnServers": MessageLookupByLibrary.simpleMessage("サーバー"),
     "vpnSettingsActionFailed": MessageLookupByLibrary.simpleMessage(
       "操作を完了できませんでした。もう一度お試しください。",
+    ),
+    "vpnStateUnavailable": MessageLookupByLibrary.simpleMessage(
+      "VPN の状態を確認できませんでした。再確認するか、安全に切断してください。",
     ),
     "vpnStopFailed": MessageLookupByLibrary.simpleMessage(
       "切断を確認できませんでした。「切断」で再試行してください。",

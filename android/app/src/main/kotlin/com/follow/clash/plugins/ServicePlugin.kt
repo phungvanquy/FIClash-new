@@ -26,7 +26,7 @@ class ServicePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         scope.launch {
             ServiceState.observation.collect { observation ->
                 scope.launch(Dispatchers.Main) {
-                    channel.invokeMethod("runState", gson.toJson(observation))
+                    channel.invokeMethod("runState", observation.toWireJson())
                 }
             }
         }
@@ -48,7 +48,7 @@ class ServicePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
             "shutdown" -> shutdown(result)
             "invokeMethod" -> invokeMethod(call, result)
             "getRunTime" -> getRunTime(result)
-            "getRunState" -> result.success(gson.toJson(ServiceState.snapshot()))
+            "getRunState" -> result.success(ServiceState.snapshot().toWireJson())
             "syncState" -> syncState(call, result)
             "start" -> start(result)
             "stop" -> stop(result)

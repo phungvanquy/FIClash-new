@@ -21,6 +21,14 @@ import '../helpers/test_profiles.dart';
 class _Setup extends SetupAction {
   final requests = <bool>[];
   Completer<bool>? gate;
+  int statusChecks = 0;
+  Completer<void>? statusGate;
+
+  @override
+  Future<void> syncRunState() async {
+    statusChecks++;
+    await statusGate?.future;
+  }
 
   @override
   void build() {}
@@ -101,6 +109,13 @@ class _Latency extends VpnLatency {
   }
 }
 
+class _ActiveNode extends VpnActiveNode {
+  @override
+  AsyncValue<VpnServer?> build() => const AsyncData(null);
+
+  void publish(VpnServer? server) => state = AsyncData(server);
+}
+
 Profile configured({int count = 3, bool custom = false}) => Profile(
   id: 1,
   autoUpdateDuration: const Duration(hours: 12),
@@ -133,6 +148,7 @@ void main() {
   late _Proxies proxies;
   late _Vpn vpn;
   late _Latency latency;
+  late _ActiveNode activeNode;
 
   setUpAll(() async => AppLocalizations.load(const Locale('en')));
 
@@ -141,6 +157,7 @@ void main() {
     proxies = _Proxies();
     vpn = _Vpn();
     latency = _Latency();
+    activeNode = _ActiveNode();
     container = ProviderContainer(
       overrides: [
         profilesProvider.overrideWith(TestProfiles.new),
@@ -148,6 +165,7 @@ void main() {
         proxiesActionProvider.overrideWith(() => proxies),
         vpnActionProvider.overrideWith(() => vpn),
         vpnLatencyProvider.overrideWith(() => latency),
+        vpnActiveNodeProvider.overrideWith(() => activeNode),
       ],
     );
     globalState.container = container;
@@ -312,8 +330,15 @@ void main() {
           ),
         );
     await tester.pump();
-    expect(buttonColor(), Colors.green.shade800);
-    expect(statusColor(), Colors.green.shade800);
+    expect(buttonColor(), const Color(0xFF00C853));
+    expect(statusColor(), Colors.black);
+    final badge = tester.widget<Container>(
+      find.byKey(const Key('vpn-status-indicator')),
+    );
+    expect(
+      (badge.decoration! as ShapeDecoration).color,
+      const Color(0xFF00C853),
+    );
     expect(find.byIcon(Icons.shield), findsOneWidget);
   });
 
@@ -339,6 +364,90 @@ void main() {
       'Disconnecting…',
     );
     expect(find.byKey(const Key('vpn-cancel-connect')), findsNothing);
+  });
+
+  homeTest(
+    'unavailable status offers guarded retry and safe Disconnect, never Connect',
+    (tester) async {
+      setProfile(configured());
+      container.read(vpnFailureProvider.notifier).value = 'state_unavailable';
+      setup.statusGate = Completer<void>();
+      await pump(tester);
+      expect(find.text('Connect'), findsNothing);
+      expect(find.text('Disconnect'), findsOneWidget);
+      final retry = find.byKey(const Key('vpn-retry-status'));
+      await tester.tap(retry);
+      await tester.pump();
+      expect(tester.widget<TextButton>(retry).onPressed, isNull);
+      await tester.tap(retry);
+      expect(setup.statusChecks, 1);
+      setup.statusGate!.complete();
+      await tester.pump();
+      expect(tester.widget<TextButton>(retry).onPressed, isNotNull);
+      await tester.tap(find.byKey(const Key('vpn-connect')));
+      expect(setup.requests, [false]);
+    },
+  );
+
+  homeTest(
+    'connected Home shows observed node and Auto mode, clears on disconnect',
+    (tester) async {
+      setProfile(configured());
+      const connected = CoreRunObservation(
+        session: 'current-node',
+        revision: 1,
+        active: true,
+        tun: true,
+      );
+      container.read(coreRunStateProvider.notifier).observe(connected);
+      await pump(tester);
+      expect(find.text('Current node unavailable'), findsOneWidget);
+      activeNode.publish(configured().snapshot.servers[1]);
+      await tester.pump();
+      final card = find.byKey(const Key('vpn-active-node'));
+      expect(
+        find.descendant(of: card, matching: find.text('Server 1')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: card, matching: find.text('Auto')),
+        findsOneWidget,
+      );
+      activeNode.publish(configured().snapshot.servers[2]);
+      await tester.pump();
+      expect(
+        find.descendant(of: card, matching: find.text('Server 2')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: card, matching: find.text('Server 1')),
+        findsNothing,
+      );
+      container
+          .read(coreRunStateProvider.notifier)
+          .observe(connected.copyWith(revision: 2, active: false));
+      await tester.pump();
+      expect(card, findsNothing);
+    },
+  );
+
+  homeTest('custom routing does not claim all traffic uses one node', (
+    tester,
+  ) async {
+    setProfile(configured(custom: true));
+    container
+        .read(coreRunStateProvider.notifier)
+        .observe(
+          const CoreRunObservation(
+            session: 'custom-current',
+            revision: 1,
+            active: true,
+            tun: true,
+          ),
+        );
+    await pump(tester, size: const Size(320, 640), scale: 1.8);
+    expect(find.text('Nodes depend on routing rules'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   homeTest('failed disconnect is red and offers retry rather than Connect', (
@@ -405,7 +514,7 @@ void main() {
     final style = tester
         .widget<FilledButton>(find.byKey(const Key('vpn-connect')))
         .style!;
-    expect(style.backgroundColor!.resolve({}), Colors.green.shade300);
+    expect(style.backgroundColor!.resolve({}), const Color(0xFF00C853));
     expect(style.foregroundColor!.resolve({}), Colors.black);
   });
 
@@ -437,6 +546,9 @@ void main() {
       );
       await tester.pump();
       expect(find.text('18 ms'), findsOneWidget);
+      final valueStyle = tester.widget<Text>(find.text('18 ms')).style!;
+      expect(valueStyle.fontWeight, FontWeight.bold);
+      expect(valueStyle.fontSize, greaterThanOrEqualTo(16));
       expect(find.text('Fastest'), findsOneWidget);
       expect(find.text('Timed out'), findsOneWidget);
       expect(find.text('Unreachable'), findsOneWidget);

@@ -11,6 +11,10 @@ import 'package:flutter_test/flutter_test.dart';
 class _RecordingListener with ServiceListener {
   final events = <CoreEvent>[];
   final runStates = <AndroidRunObservation>[];
+  int unavailable = 0;
+
+  @override
+  void onRunStateUnavailable() => unavailable++;
 
   @override
   void onRunState(AndroidRunObservation state) => runStates.add(state);
@@ -169,6 +173,40 @@ void main() {
   });
 
   group('observed run state', () {
+    test(
+      'explicit native default snapshot unlocks initial STOPPED state',
+      () async {
+        mockChannel(
+          (_) async =>
+              '{"session":"wire-default","revision":0,"state":"STOPPED","startedAt":0,"vpn":false,"failure":null,"requested":false}',
+        );
+        final state = await Service().getRunState();
+        expect(state!.state, VpnRunState.stopped);
+        expect(state.requested, isFalse);
+      },
+    );
+
+    test(
+      'obfuscated snapshot fails explicitly and malformed event requests recovery',
+      () async {
+        mockChannel((_) async => '{"a":"session","b":0,"c":"STOPPED"}');
+        await expectLater(Service().getRunState(), throwsA(anything));
+        final listener = _RecordingListener();
+        Service().addListener(listener);
+        addTearDown(() => Service().removeListener(listener));
+        await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .handlePlatformMessage(
+              channelName,
+              codec.encodeMethodCall(
+                const MethodCall('runState', '{"a":"bad"}'),
+              ),
+              null,
+            );
+        expect(listener.unavailable, 1);
+        expect(listener.runStates, isEmpty);
+      },
+    );
+
     const session = 'native-test-1';
     const starting = AndroidRunObservation(
       session: session,

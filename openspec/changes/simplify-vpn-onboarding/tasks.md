@@ -2,6 +2,10 @@
 
 ## 9. Post-build usability and reliability review
 
+- [x] 9.6 Stabilize Android run-state serialization in minified builds, bound initial status checks, and provide safe retry/disconnect recovery without assuming a disconnected tunnel.
+- [x] 9.7 Make measured latency prominent and connected feedback bright green; display the Core-observed current node, including Auto/Fallback changes, with lifecycle and stale-result protection.
+- [x] 9.8 Add release-wire, status-recovery, current-node, and accessible UI regression coverage; regenerate output and synchronize specifications and the device checklist.
+
 - [x] 9.1 Review Home/import/Settings feedback; add semantic connection colors, distinct transition/error presentation, transition action guards, and responsive accessibility tests.
 - [x] 9.2 Add snapshot-scoped, single-flight node latency tests with bounded concurrency, measured milliseconds, timeout/unreachable/test-failure outcomes, stale-result rejection, and fastest-node highlighting without changing selection or connection intent.
 - [x] 9.3 Harden Android teardown and notification cleanup, preserve native lifecycle ownership, retain truthful failed-stop observations, and test repeated stop, revoke, service loss, and reattachment.

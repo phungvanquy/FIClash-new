@@ -21,9 +21,12 @@ class AndroidManager extends ConsumerStatefulWidget {
 
 class _AndroidContainerState extends ConsumerState<AndroidManager>
     with ServiceListener {
+  Service? _service;
+
   @override
   void initState() {
     super.initState();
+    _service = ref.read(androidServiceProvider);
     ref.listenManual(appSettingProvider.select((state) => state.hidden), (
       prev,
       next,
@@ -41,11 +44,11 @@ class _AndroidContainerState extends ConsumerState<AndroidManager>
           await preferences.saveShareState(next);
         }, duration: const Duration(seconds: 1));
         if (prev?.needSyncSharedState != next.needSyncSharedState) {
-          service?.syncState(next.needSyncSharedState);
+          _service?.syncState(next.needSyncSharedState);
         }
       }
     });
-    service?.addListener(this);
+    _service?.addListener(this);
     unawaited(ref.read(setupActionProvider.notifier).syncRunState());
     app?.onPackagesChanged = _reloadPackages;
   }
@@ -62,7 +65,7 @@ class _AndroidContainerState extends ConsumerState<AndroidManager>
     if (app?.onPackagesChanged == _reloadPackages) {
       app?.onPackagesChanged = null;
     }
-    service?.removeListener(this);
+    _service?.removeListener(this);
     super.dispose();
   }
 
@@ -75,6 +78,11 @@ class _AndroidContainerState extends ConsumerState<AndroidManager>
   @override
   void onRunState(AndroidRunObservation observation) {
     ref.read(setupActionProvider.notifier).observeAndroid(observation);
+  }
+
+  @override
+  void onRunStateUnavailable() {
+    unawaited(ref.read(setupActionProvider.notifier).syncRunState());
   }
 
   @override

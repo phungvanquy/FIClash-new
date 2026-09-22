@@ -665,5 +665,10 @@
   "vpnReplace": "替换配置",
   "vpnRetry": "重试",
   "vpnCameraUnavailable": "相机不可用。请在系统设置中允许访问相机后重试，或选择二维码图片。",
-  "vpnQrImageTooLarge": "请选择较小的二维码图片（不超过 16 MB 和 1600 万像素）。"
+  "vpnQrImageTooLarge": "请选择较小的二维码图片（不超过 16 MB 和 1600 万像素）。",
+  "vpnStateUnavailable": "无法确认 VPN 状态。请重试检查，或安全断开连接。",
+  "vpnCurrentNode": "当前节点",
+  "vpnNodeResolving": "正在检查当前节点…",
+  "vpnNodeUnavailable": "无法获取当前节点",
+  "vpnRoutingNodes": "节点由路由规则决定"
 }

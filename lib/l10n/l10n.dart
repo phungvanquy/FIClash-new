@@ -5574,6 +5574,56 @@ class AppLocalizations {
       args: [],
     );
   }
+
+  /// `Could not check VPN status. Try again to check, or disconnect safely.`
+  String get vpnStateUnavailable {
+    return Intl.message(
+      'Could not check VPN status. Try again to check, or disconnect safely.',
+      name: 'vpnStateUnavailable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Current node`
+  String get vpnCurrentNode {
+    return Intl.message(
+      'Current node',
+      name: 'vpnCurrentNode',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Checking current node…`
+  String get vpnNodeResolving {
+    return Intl.message(
+      'Checking current node…',
+      name: 'vpnNodeResolving',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Current node unavailable`
+  String get vpnNodeUnavailable {
+    return Intl.message(
+      'Current node unavailable',
+      name: 'vpnNodeUnavailable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Nodes depend on routing rules`
+  String get vpnRoutingNodes {
+    return Intl.message(
+      'Nodes depend on routing rules',
+      name: 'vpnRoutingNodes',
+      desc: '',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -1201,6 +1201,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnConnectionFailed": MessageLookupByLibrary.simpleMessage(
       "Connection needs attention",
     ),
+    "vpnCurrentNode": MessageLookupByLibrary.simpleMessage("Current node"),
     "vpnCustomRouting": MessageLookupByLibrary.simpleMessage("Custom routing"),
     "vpnCustomRoutingDescription": MessageLookupByLibrary.simpleMessage(
       "Use the configuration’s routing rules. Selecting a server on Home returns to simple routing.",
@@ -1245,6 +1246,12 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnLocalProxy": MessageLookupByLibrary.simpleMessage(
       "Local proxy only · VPN is not active",
     ),
+    "vpnNodeResolving": MessageLookupByLibrary.simpleMessage(
+      "Checking current node…",
+    ),
+    "vpnNodeUnavailable": MessageLookupByLibrary.simpleMessage(
+      "Current node unavailable",
+    ),
     "vpnPasteClipboard": MessageLookupByLibrary.simpleMessage(
       "Paste from clipboard",
     ),
@@ -1272,6 +1279,9 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "vpnReplace": MessageLookupByLibrary.simpleMessage("Replace configuration"),
     "vpnRetry": MessageLookupByLibrary.simpleMessage("Try again"),
+    "vpnRoutingNodes": MessageLookupByLibrary.simpleMessage(
+      "Nodes depend on routing rules",
+    ),
     "vpnScanQr": MessageLookupByLibrary.simpleMessage("Scan QR code"),
     "vpnSelectFailed": MessageLookupByLibrary.simpleMessage(
       "Could not switch servers. Your previous selection is unchanged.",
@@ -1282,6 +1292,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnServers": MessageLookupByLibrary.simpleMessage("Servers"),
     "vpnSettingsActionFailed": MessageLookupByLibrary.simpleMessage(
       "The operation could not be completed. Please try again.",
+    ),
+    "vpnStateUnavailable": MessageLookupByLibrary.simpleMessage(
+      "Could not check VPN status. Try again to check, or disconnect safely.",
     ),
     "vpnStopFailed": MessageLookupByLibrary.simpleMessage(
       "Could not confirm disconnection. Tap Disconnect to retry.",

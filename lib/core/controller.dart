@@ -151,6 +151,44 @@ class CoreController {
     );
   }
 
+  Future<VpnServer?> getActiveVpnServer(ProfileSnapshot snapshot) async {
+    final managed = snapshot.managedGroups;
+    if (managed == null || snapshot.routing != VpnRoutingMode.simple) {
+      return null;
+    }
+    final before = await getRunState();
+    if (!before.active || before.generation != snapshot.generation) return null;
+    final data = await _interface.getProxies();
+    final after = await getRunState();
+    if (!after.active ||
+        after.session != before.session ||
+        after.generation != before.generation ||
+        after.configRevision != before.configRevision) {
+      return null;
+    }
+    String? selected(String name) {
+      final proxy = data.proxies[name];
+      return proxy is Map && proxy['now'] is String
+          ? proxy['now'] as String
+          : null;
+    }
+
+    if (selected('GLOBAL') != managed.selector) return null;
+    var target = selected(managed.selector);
+    if (target !=
+        vpnSelectionTarget(snapshot.selection, managed, snapshot.servers)) {
+      return null;
+    }
+    final visited = <String>{};
+    while (target != null && visited.add(target)) {
+      for (final server in snapshot.servers) {
+        if (server.target == target) return server;
+      }
+      target = selected(target);
+    }
+    return null;
+  }
+
   FutureOr<String> changeProxy(ChangeProxyParams changeProxyParams) async {
     return await _interface.changeProxy(changeProxyParams);
   }

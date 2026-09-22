@@ -119,6 +119,29 @@ The application SHALL display Connected, Connecting, and Disconnected, with Disc
 - **WHEN** Android Home has not yet received its native run-state snapshot
 - **THEN** it displays Checking connection with repeated actions disabled rather than assuming the VPN is disconnected
 
+#### Scenario: Initial Android status in a minified release
+
+- **WHEN** a subscription is imported or the app attaches to Android's service in a release build
+- **THEN** snapshot and event messages use explicit, stable JSON keys and state names independent of code obfuscation
+- **AND** an observed STOPPED state enables Connect without starting the tunnel or requesting VPN permission
+
+#### Scenario: Status check fails or never answers
+
+- **WHEN** Android returns missing or malformed status, the channel fails, or a snapshot takes longer than five seconds
+- **THEN** Home leaves Checking connection and shows an actionable status error with Try again and safe Disconnect
+- **AND** the app does not assume Disconnected or offer Connect based on an unknown state
+- **AND** concurrent status checks coalesce, a valid snapshot/event clears the status error, and late failure cannot replace a newer native observation or unrelated cleanup failure
+
+### Requirement: Prominent successful connection and latency feedback
+
+Confirmed VPN connection SHALL use a bright green circular control and status badge with contrasting text/icons in light and dark themes. Measured node latency SHALL use a larger bold milliseconds label on a contrasting badge. Timeout, unreachable, failure, and untested labels SHALL remain explicit and localized; fastest highlighting MUST NOT change selection. Layouts MUST remain usable with large text on narrow screens.
+
+#### Scenario: Read connected feedback and measured latency
+
+- **WHEN** native observations confirm a VPN connection and latency testing returns a measurement
+- **THEN** the connect control and status badge are bright green, the measured milliseconds are prominent, and the fastest result remains separately identified
+- **AND** disconnecting removes the connected presentation only according to actual state transitions
+
 #### Scenario: Desktop falls back to proxy-only operation
 
 - **WHEN** full-device TUN cannot be established but the existing platform flow establishes system-proxy operation

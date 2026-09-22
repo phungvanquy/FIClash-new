@@ -1257,6 +1257,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnConnectionFailed": MessageLookupByLibrary.simpleMessage(
       "Требуется проверка подключения",
     ),
+    "vpnCurrentNode": MessageLookupByLibrary.simpleMessage("Текущий узел"),
     "vpnCustomRouting": MessageLookupByLibrary.simpleMessage(
       "Пользовательская маршрутизация",
     ),
@@ -1301,6 +1302,12 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnLocalProxy": MessageLookupByLibrary.simpleMessage(
       "Только локальный прокси · VPN не активен",
     ),
+    "vpnNodeResolving": MessageLookupByLibrary.simpleMessage(
+      "Проверка текущего узла…",
+    ),
+    "vpnNodeUnavailable": MessageLookupByLibrary.simpleMessage(
+      "Текущий узел недоступен",
+    ),
     "vpnPasteClipboard": MessageLookupByLibrary.simpleMessage(
       "Вставить из буфера обмена",
     ),
@@ -1330,6 +1337,9 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "vpnReplace": MessageLookupByLibrary.simpleMessage("Заменить конфигурацию"),
     "vpnRetry": MessageLookupByLibrary.simpleMessage("Повторить"),
+    "vpnRoutingNodes": MessageLookupByLibrary.simpleMessage(
+      "Узлы определяются правилами маршрутизации",
+    ),
     "vpnScanQr": MessageLookupByLibrary.simpleMessage("Сканировать QR-код"),
     "vpnSelectFailed": MessageLookupByLibrary.simpleMessage(
       "Не удалось сменить сервер. Предыдущий выбор сохранён.",
@@ -1340,6 +1350,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnServers": MessageLookupByLibrary.simpleMessage("Серверы"),
     "vpnSettingsActionFailed": MessageLookupByLibrary.simpleMessage(
       "Не удалось выполнить действие. Попробуйте ещё раз.",
+    ),
+    "vpnStateUnavailable": MessageLookupByLibrary.simpleMessage(
+      "Не удалось проверить состояние VPN. Повторите проверку или безопасно отключитесь.",
     ),
     "vpnStopFailed": MessageLookupByLibrary.simpleMessage(
       "Не удалось подтвердить отключение. Нажмите «Отключить» ещё раз.",

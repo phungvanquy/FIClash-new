@@ -5,6 +5,7 @@ import com.follow.clash.models.SharedState
 import com.follow.clash.service.models.NotificationParams
 import com.follow.clash.service.models.VpnOptions
 import com.google.gson.Gson
+import com.google.gson.JsonObject
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,7 +32,22 @@ data class RunObservation(
     val vpn: Boolean = false,
     val failure: String? = null,
     val requested: Boolean = false,
-)
+) {
+    fun toWireJson(): String = JsonObject().apply {
+        addProperty("session", session)
+        addProperty("revision", revision)
+        addProperty("state", when (state) {
+            RunState.STARTED -> "STARTED"
+            RunState.STARTING -> "STARTING"
+            RunState.STOPPING -> "STOPPING"
+            RunState.STOPPED -> "STOPPED"
+        })
+        addProperty("startedAt", startedAt)
+        addProperty("vpn", vpn)
+        addProperty("failure", failure)
+        addProperty("requested", requested)
+    }.toString()
+}
 
 internal typealias RunRequest = RunIntentArbiter.Token
 

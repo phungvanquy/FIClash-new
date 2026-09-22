@@ -157,6 +157,15 @@ Quick Settings, notification, revoke, and Always-on VPN paths converge on the sa
   while requested is false; Flutter must not turn that observation back into a reconnect intent. Runtime is only a
   legacy startup fallback until an authoritative observation has arrived. Android Always-on remains independent OS
   policy; `START_NOT_STICKY` avoids accidental sticky restarts but does not disable Always-on.
+- `RunObservation.toWireJson()` defines literal snapshot/event keys and state values; do not replace it with reflective
+  Gson serialization, because this DTO is outside the protected model packages in minified Android builds. Flutter
+  coalesces status reads with a five-second deadline and offers status retry/safe stop on unknown state, never inferred
+  STOPPED. Valid observations clear status-check errors without hiding unresolved teardown failures.
+- `VpnActiveNode` is disposable presentation observation, not lifecycle or selection ownership. While foreground Home
+  is connected, it reads Core's actual GLOBAL/managed target chain every five seconds after completion, fenced by Core
+  session/generation/configuration revision. It rejects stale/cyclic/unknown targets and times out visibly without
+  overlapping a slow read. Background, routing/profile changes and disposal invalidate observations; custom routing
+  makes no single-node claim. These reads never probe, select, restart, or close traffic connections.
 - `ServiceBroadcastReceiver` uses `goAsync()` and an atomic one-shot completion. Normal completion or a nine-second
   watchdog calls `PendingResult.finish()` exactly once; the watchdog releases Android's broadcast lease and does not
   cancel or redefine the underlying lifecycle intent.

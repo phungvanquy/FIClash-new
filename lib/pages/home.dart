@@ -149,7 +149,18 @@ class _ConnectionControl extends ConsumerStatefulWidget {
 
 class _ConnectionControlState extends ConsumerState<_ConnectionControl> {
   bool? _submittedIntent;
+  bool _checking = false;
   int _operation = 0;
+
+  Future<void> _retryStatus() async {
+    if (_checking) return;
+    setState(() => _checking = true);
+    try {
+      await ref.read(setupActionProvider.notifier).syncRunState();
+    } finally {
+      if (mounted) setState(() => _checking = false);
+    }
+  }
 
   Future<void> _toggle(bool running) async {
     if (_submittedIntent == running) return;
@@ -203,6 +214,7 @@ class _ConnectionControlState extends ConsumerState<_ConnectionControl> {
         observed.phase == VpnConnectionPhase.connecting ||
         observed.phase == VpnConnectionPhase.disconnecting;
     final dark = Theme.of(context).brightness == Brightness.dark;
+    final connected = observed.phase == VpnConnectionPhase.connected;
     final tone = switch (observed.phase) {
       VpnConnectionPhase.connected => Colors.green,
       VpnConnectionPhase.disconnected => Colors.grey,
@@ -211,7 +223,12 @@ class _ConnectionControlState extends ConsumerState<_ConnectionControl> {
       VpnConnectionPhase.failed => Colors.red,
       _ => Colors.blueGrey,
     };
-    final color = dark ? tone.shade300 : tone.shade800;
+    final color = connected
+        ? const Color(0xFF00C853)
+        : dark
+        ? tone.shade300
+        : tone.shade800;
+    final foreground = connected || dark ? Colors.black : Colors.white;
     final icon = switch (observed.phase) {
       VpnConnectionPhase.checking => Icons.refresh,
       VpnConnectionPhase.connected => Icons.shield,
@@ -230,6 +247,7 @@ class _ConnectionControlState extends ConsumerState<_ConnectionControl> {
       'system_proxy_failed' => text.vpnProxyFailure,
       'recovery_required' => text.vpnRecoveryRequired,
       'stop_failed' => text.vpnStopFailed,
+      'state_unavailable' => text.vpnStateUnavailable,
       _ => text.vpnConnectionFailed,
     };
     return LayoutBuilder(
@@ -253,21 +271,33 @@ class _ConnectionControlState extends ConsumerState<_ConnectionControl> {
               ],
               Semantics(
                 liveRegion: true,
-                child: Wrap(
-                  alignment: WrapAlignment.center,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 8,
-                  children: [
-                    Icon(icon, color: color),
-                    Text(
-                      status,
-                      key: const Key('vpn-status'),
-                      textAlign: TextAlign.center,
-                      style: context.textTheme.titleLarge?.copyWith(
-                        color: color,
+                child: Container(
+                  key: const Key('vpn-status-indicator'),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: ShapeDecoration(
+                    color: connected ? color : Colors.transparent,
+                    shape: AppShape.sm,
+                  ),
+                  child: Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    children: [
+                      Icon(icon, color: connected ? foreground : color),
+                      Text(
+                        status,
+                        key: const Key('vpn-status'),
+                        textAlign: TextAlign.center,
+                        style: context.textTheme.titleLarge?.copyWith(
+                          color: connected ? foreground : color,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
@@ -287,11 +317,9 @@ class _ConnectionControlState extends ConsumerState<_ConnectionControl> {
                           style: FilledButton.styleFrom(
                             shape: AppShape.circle,
                             backgroundColor: color,
-                            foregroundColor: dark ? Colors.black : Colors.white,
+                            foregroundColor: foreground,
                             disabledBackgroundColor: color,
-                            disabledForegroundColor: dark
-                                ? Colors.black
-                                : Colors.white,
+                            disabledForegroundColor: foreground,
                           ),
                           onPressed:
                               !working &&
@@ -314,6 +342,7 @@ class _ConnectionControlState extends ConsumerState<_ConnectionControl> {
               ),
               const SizedBox(height: 12),
               Text(action, textAlign: TextAlign.center),
+              if (connected) const _ActiveNode(),
               if (observed.phase == VpnConnectionPhase.connecting)
                 TextButton(
                   key: const Key('vpn-cancel-connect'),
@@ -333,6 +362,18 @@ class _ConnectionControlState extends ConsumerState<_ConnectionControl> {
                   ),
                 ),
               ],
+              if (observed.failure == 'state_unavailable')
+                TextButton.icon(
+                  key: const Key('vpn-retry-status'),
+                  onPressed: _checking ? null : _retryStatus,
+                  icon: _checking
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.refresh),
+                  label: Text(_checking ? text.vpnChecking : text.vpnRetry),
+                ),
               if (profile.snapshot.routing == VpnRoutingMode.custom) ...[
                 const SizedBox(height: 12),
                 Text(text.vpnCustomRouting, textAlign: TextAlign.center),
@@ -345,6 +386,57 @@ class _ConnectionControlState extends ConsumerState<_ConnectionControl> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActiveNode extends ConsumerWidget {
+  const _ActiveNode();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final text = context.appLocalizations;
+    final snapshot = ref.watch(currentProfileProvider)!.snapshot;
+    final current = ref.watch(vpnActiveNodeProvider);
+    final server = current.asData?.value;
+    final custom = snapshot.routing == VpnRoutingMode.custom;
+    final label = custom
+        ? text.vpnRoutingNodes
+        : server?.name ??
+              (current.isLoading
+                  ? text.vpnNodeResolving
+                  : text.vpnNodeUnavailable);
+    final mode = switch (snapshot.selection) {
+      VpnAutoSelection() => text.auto,
+      VpnFallbackSelection() => text.fallback,
+      _ => null,
+    };
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Semantics(
+        liveRegion: true,
+        child: Column(
+          key: const Key('vpn-active-node'),
+          children: [
+            Text(text.vpnCurrentNode, style: context.textTheme.labelLarge),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: context.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            if (!custom &&
+                server != null &&
+                (mode != null || server.provider != null))
+              Text(
+                [?mode, ?server.provider].join(' · '),
+                textAlign: TextAlign.center,
+              ),
+          ],
         ),
       ),
     );
@@ -544,13 +636,39 @@ class _NodeLatency extends StatelessWidget {
       VpnLatencyStatus.unreachable => text.vpnLatencyUnreachable,
       VpnLatencyStatus.failed => text.vpnLatencyFailed,
     };
+    final measured = result?.status == VpnLatencyStatus.measured;
+    final failed =
+        result != null &&
+        !measured &&
+        result?.status != VpnLatencyStatus.testing;
+    final scheme = context.colorScheme;
+    final background = failed
+        ? scheme.errorContainer
+        : measured
+        ? scheme.primaryContainer
+        : scheme.surfaceContainerHighest;
+    final foreground = failed
+        ? scheme.onErrorContainer
+        : measured
+        ? scheme.onPrimaryContainer
+        : scheme.onSurfaceVariant;
     return Padding(
-      padding: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.only(top: 8, bottom: 4),
       child: Wrap(
         spacing: 8,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Text(label, style: context.textTheme.labelMedium),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: ShapeDecoration(color: background, shape: AppShape.sm),
+            child: Text(
+              label,
+              style: context.textTheme.titleMedium?.copyWith(
+                color: foreground,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
           if (fastest)
             Text(
               text.vpnLatencyFastest,

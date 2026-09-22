@@ -20,13 +20,15 @@ The circular button connects or disconnects. While connecting, use the separate 
 
 Fresh installations request VPN/TUN defaults when you explicitly connect. Existing platform preferences are preserved during migration. OS permission prompts and platform-specific TUN requirements still apply.
 
-When reopening on Android, Checking connection means the app is waiting for its native state snapshot; it does not assume that a previously running VPN is off.
+When reopening on Android, Checking connection means the app is waiting for its native state snapshot; it does not assume that a previously running VPN is off. If the check fails or takes more than five seconds, choose **Try again** to recheck or **Disconnect** to request a safe stop. An unknown status never becomes permission to start a second connection.
+
+Once connected, the button and status badge turn bright green. **Current node** shows the server reported by Core, including the node chosen by Auto or Fallback and its provider where applicable. Home refreshes this display while in the foreground without switching nodes or interrupting traffic. It describes the outbound used for new traffic; existing sessions can remain on an earlier node. If the node cannot be confirmed, Home says so. With custom routing, different connections may use different nodes according to the rules.
 
 Closing the Flutter app pauses subscription and provider-content refresh. If the native VPN remains running, it uses the last committed configuration; health checks, Auto, and Fallback continue. Due content refresh resumes when Flutter returns. Choosing Exit/Disconnect or having the operating system stop the native service is different from merely closing Flutter.
 
 ## Test server latency
 
-Choose **Test latency** above the server list. Each individual server shows its measured round-trip probe time in milliseconds; lower is better for this test, not a guarantee of download speed. The fastest successful node is marked without moving the list or selecting it. Auto and Fallback remain automatic modes, not individual measurements.
+Choose **Test latency** above the server list. Each individual server shows its measured round-trip probe time in a bold milliseconds badge; lower is better for this test, not a guarantee of download speed. The fastest successful node is marked without moving the list or selecting it. Auto and Fallback remain automatic modes, not individual measurements.
 
 The button shows Testing while the batch runs and cannot launch another batch. Not tested means there is no measurement for this configuration and test URL. Timed out means the probe exceeded its deadline; Unreachable means the probe could not connect or complete; Test failed means the test infrastructure did not return a usable result. Retry after checking your internet access and, if needed, the test URL in Settings. Testing does not connect a disconnected VPN, change the selected node/mode, or close your active traffic sessions. Auto/Fallback's normal health-based choices can still change as designed. Results are session-only and cleared when the configuration generation or test URL changes.
 

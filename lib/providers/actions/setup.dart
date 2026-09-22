@@ -14,6 +14,7 @@ class SetupAction extends _$SetupAction {
   CoreController get _core => ref.read(coreHandlerProvider);
 
   Timer? _runtimeTimer;
+  Future<void>? _runStateSync;
   final _setupScheduler = SerialTaskScheduler();
   final _listenerScheduler = SerialTaskScheduler();
   _RunRequest? _latestRunRequest;
@@ -114,7 +115,15 @@ class SetupAction extends _$SetupAction {
   }
 
   void observeAndroid(AndroidRunObservation observation) {
-    if (!ref.read(androidRunStateProvider.notifier).observe(observation)) {
+    final accepted = ref
+        .read(androidRunStateProvider.notifier)
+        .observe(observation);
+    if (accepted || ref.read(androidRunStateProvider) == observation) {
+      if (ref.read(vpnFailureProvider) == 'state_unavailable') {
+        ref.read(vpnFailureProvider.notifier).value = null;
+      }
+    }
+    if (!accepted) {
       return;
     }
     _hasRunObservation = true;
@@ -155,16 +164,32 @@ class SetupAction extends _$SetupAction {
     ref.read(vpnFailureProvider.notifier).value = 'core_unavailable';
   }
 
-  Future<void> syncRunState() async {
+  Future<void> syncRunState() =>
+      _runStateSync ??= _syncRunState().whenComplete(() {
+        _runStateSync = null;
+      });
+
+  Future<void> _syncRunState() async {
+    final androidService = ref.read(androidServiceProvider);
+    final previous = ref.read(androidRunStateProvider);
     try {
-      if (system.isAndroid) {
-        final observation = await service?.getRunState();
-        if (ref.mounted && observation != null) observeAndroid(observation);
+      if (androidService != null) {
+        final observation = await androidService.getRunState().timeout(
+          const Duration(seconds: 5),
+        );
+        if (observation == null) throw StateError('Missing run-state snapshot');
+        if (ref.mounted) observeAndroid(observation);
       } else if (ref.read(coreStatusProvider) == CoreStatus.connected) {
         final observation = await _core.getRunState();
         if (ref.mounted) observeCore(observation);
       }
     } catch (_) {
+      if (ref.mounted &&
+          androidService != null &&
+          ref.read(androidRunStateProvider) == previous &&
+          ref.read(vpnFailureProvider) == null) {
+        ref.read(vpnFailureProvider.notifier).value = 'state_unavailable';
+      }
       commonPrint.log(
         'Run-state snapshot unavailable',
         logLevel: LogLevel.warning,

@@ -1,5 +1,23 @@
 # Implementation checkpoint
 
+## 2026-09-22 Android status and current-node display follow-up
+
+Progress: 45/47 tasks complete. Follow-up tasks 9.6–9.8 are complete; native gates 8.3/8.4 remain open.
+
+The reported permanent Checking connection was not reproduced on hardware here. Inspection found that Android release minification can rename the reflectively serialized run-state DTO outside the protected model packages; Flutter requires its original field/state names. Both event and snapshot paths now use an explicit wire encoder. Initial status checks coalesce and fail visibly after five seconds, with guarded retry and safe Disconnect; valid observations recover without inventing STOPPED or overwriting unrelated failures.
+
+Connected Home uses a bright-green button/status badge with black foreground. Latency measurements use bold title-sized, contrasting badges. Current node comes from a read-only Core target-chain observation, not the persisted choice; Auto/Fallback show their observed leaf and provider. Queries fence Core identity/configuration, reject cycles/mismatches, and cannot write selection or interrupt traffic. Disposable polling pauses outside foreground Home, clears unavailable observations, and rejects stale profile/connection results. Custom routing explains that nodes depend on rules.
+
+Verification for this follow-up:
+
+- Focused Home/status/current-node/setup/bridge/manager/connection/controller regression run: 148 passed. The final current-node suite passed all 12 tests, including Settings pause/return.
+- Portable Kotlin/JVM: 112 passed, including explicit field/state/default-snapshot contracts. This does not compile Android framework/plugin code or run R8.
+- `flutter pub get`, provider generation, all four locale generation, formatting, strict OpenSpec validation, comment-density and whitespace checks passed.
+- Analysis has no errors or warnings; only the existing const-constructor info in `test/widgets/scrollbar_inset_test.dart:18` remains.
+- Full Flutter suite: 2,097 passed, 3 existing skips, 1 failure in the unchanged `NetworkDetection provider ignores a canceled stale check after a newer check succeeds` test (`test/providers/app_test.dart:509`). The test uses fixed-delay waits; this failure is consistent with timing sensitivity under full-suite load. An immediate isolated rerun of the entire `app_test.dart` suite passed all 47 tests, including that case. No network-detection code/test changes were made; the full run is not reported as green.
+
+Native gates 8.3/8.4 remain open. The next minified Android artifact must verify import→Connect/Disconnect, reattachment and actual status recovery; Android/Windows device testing must confirm current-node failover and readability. No native-device result is inferred from these automated tests. No commit or push was requested for this follow-up; Core/submodule pins and unrelated tooling files are unchanged.
+
 ## 2026-09-22 Android disconnect follow-up
 
 Progress: 42/44 tasks complete. Task 9.5 resolves the two additional state-machine bugs reproduced during the read-only review. Native compilation/device gates 8.3/8.4 remain open.

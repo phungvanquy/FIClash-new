@@ -91,7 +91,7 @@ final class SetupActionProvider extends $NotifierProvider<SetupAction, void> {
   }
 }
 
-String _$setupActionHash() => r'6ed5854ea3a329314377bcfd93595290c7205a69';
+String _$setupActionHash() => r'70863d135c5e0712adc1f7b14b6cbadeafbd8c68';
 
 abstract class _$SetupAction extends $Notifier<void> {
   void build();
@@ -806,6 +806,59 @@ abstract class _$VpnLatency extends $Notifier<VpnLatencyState> {
             as $ClassProviderElement<
               AnyNotifier<VpnLatencyState, VpnLatencyState>,
               VpnLatencyState,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+@ProviderFor(VpnActiveNode)
+final vpnActiveNodeProvider = VpnActiveNodeProvider._();
+
+final class VpnActiveNodeProvider
+    extends $NotifierProvider<VpnActiveNode, AsyncValue<VpnServer?>> {
+  VpnActiveNodeProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'vpnActiveNodeProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$vpnActiveNodeHash();
+
+  @$internal
+  @override
+  VpnActiveNode create() => VpnActiveNode();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(AsyncValue<VpnServer?> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<AsyncValue<VpnServer?>>(value),
+    );
+  }
+}
+
+String _$vpnActiveNodeHash() => r'936539edea1eeec3972eb9518b7fc92272be59f7';
+
+abstract class _$VpnActiveNode extends $Notifier<AsyncValue<VpnServer?>> {
+  AsyncValue<VpnServer?> build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref =
+        this.ref as $Ref<AsyncValue<VpnServer?>, AsyncValue<VpnServer?>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<VpnServer?>, AsyncValue<VpnServer?>>,
+              AsyncValue<VpnServer?>,
               Object?,
               Object?
             >;

@@ -7,6 +7,7 @@ import com.follow.clash.service.models.AccessControlProps
 import com.follow.clash.service.models.NotificationParams
 import com.follow.clash.service.models.VpnOptions
 import com.google.gson.Gson
+import com.google.gson.JsonParser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
@@ -168,6 +169,45 @@ private class FakeHost(override val scope: CoroutineScope) : ServiceStateHost {
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ServiceStateMachineTest {
+    @Test
+    fun runObservationWireContractUsesExplicitKeysAndStateNames() {
+        for ((state, wire) in listOf(
+            RunState.STOPPED to "STOPPED",
+            RunState.STARTING to "STARTING",
+            RunState.STARTED to "STARTED",
+            RunState.STOPPING to "STOPPING",
+        )) {
+            val data = JsonParser.parseString(RunObservation(
+                session = "session",
+                revision = 12,
+                state = state,
+                startedAt = 1234,
+                vpn = true,
+                failure = "stop_failed",
+                requested = true,
+            ).toWireJson()).asJsonObject
+            assertEquals(setOf("session", "revision", "state", "startedAt", "vpn", "failure", "requested"), data.keySet())
+            assertEquals("session", data["session"].asString)
+            assertEquals(12L, data["revision"].asLong)
+            assertEquals(wire, data["state"].asString)
+            assertEquals(1234L, data["startedAt"].asLong)
+            assertTrue(data["vpn"].asBoolean)
+            assertTrue(data["requested"].asBoolean)
+            assertEquals("stop_failed", data["failure"].asString)
+        }
+    }
+
+    @Test
+    fun initialStoppedSnapshotHasNoFailureAndDoesNotRequestConnection() {
+        val data = JsonParser.parseString(RunObservation("initial").toWireJson()).asJsonObject
+        assertEquals("STOPPED", data["state"].asString)
+        assertEquals(0L, data["revision"].asLong)
+        assertEquals(0L, data["startedAt"].asLong)
+        assertFalse(data["vpn"].asBoolean)
+        assertFalse(data["requested"].asBoolean)
+        assertTrue(data["failure"].isJsonNull)
+    }
+
 
     @Test
     fun `partial stop blocks starts until disconnect retry succeeds`() = runTest {

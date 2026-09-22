@@ -665,5 +665,10 @@
   "vpnReplace": "Replace configuration",
   "vpnRetry": "Try again",
   "vpnCameraUnavailable": "Camera unavailable. Allow camera access in system settings, try again, or choose a QR image.",
-  "vpnQrImageTooLarge": "Choose a smaller QR image (up to 16 MB and 16 megapixels)."
+  "vpnQrImageTooLarge": "Choose a smaller QR image (up to 16 MB and 16 megapixels).",
+  "vpnStateUnavailable": "Could not check VPN status. Try again to check, or disconnect safely.",
+  "vpnCurrentNode": "Current node",
+  "vpnNodeResolving": "Checking current node…",
+  "vpnNodeUnavailable": "Current node unavailable",
+  "vpnRoutingNodes": "Nodes depend on routing rules"
 }

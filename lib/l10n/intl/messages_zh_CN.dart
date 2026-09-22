@@ -866,6 +866,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnConfiguration": MessageLookupByLibrary.simpleMessage("VPN 配置"),
     "vpnConnect": MessageLookupByLibrary.simpleMessage("连接"),
     "vpnConnectionFailed": MessageLookupByLibrary.simpleMessage("连接需要处理"),
+    "vpnCurrentNode": MessageLookupByLibrary.simpleMessage("当前节点"),
     "vpnCustomRouting": MessageLookupByLibrary.simpleMessage("自定义路由"),
     "vpnCustomRoutingDescription": MessageLookupByLibrary.simpleMessage(
       "使用配置中的路由规则。在主页选择服务器将恢复简单路由。",
@@ -904,6 +905,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnLatencyUnreachable": MessageLookupByLibrary.simpleMessage("无法连接"),
     "vpnLatencyUntested": MessageLookupByLibrary.simpleMessage("未测试"),
     "vpnLocalProxy": MessageLookupByLibrary.simpleMessage("仅本地代理 · VPN 未启用"),
+    "vpnNodeResolving": MessageLookupByLibrary.simpleMessage("正在检查当前节点…"),
+    "vpnNodeUnavailable": MessageLookupByLibrary.simpleMessage("无法获取当前节点"),
     "vpnPasteClipboard": MessageLookupByLibrary.simpleMessage("从剪贴板粘贴"),
     "vpnPermissionDenied": MessageLookupByLibrary.simpleMessage(
       "未获得权限。请重新连接或检查系统设置。",
@@ -925,6 +928,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "vpnReplace": MessageLookupByLibrary.simpleMessage("替换配置"),
     "vpnRetry": MessageLookupByLibrary.simpleMessage("重试"),
+    "vpnRoutingNodes": MessageLookupByLibrary.simpleMessage("节点由路由规则决定"),
     "vpnScanQr": MessageLookupByLibrary.simpleMessage("扫描二维码"),
     "vpnSelectFailed": MessageLookupByLibrary.simpleMessage(
       "无法切换服务器。已保留之前的选择。",
@@ -935,6 +939,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnServers": MessageLookupByLibrary.simpleMessage("服务器"),
     "vpnSettingsActionFailed": MessageLookupByLibrary.simpleMessage(
       "无法完成操作，请重试。",
+    ),
+    "vpnStateUnavailable": MessageLookupByLibrary.simpleMessage(
+      "无法确认 VPN 状态。请重试检查，或安全断开连接。",
     ),
     "vpnStopFailed": MessageLookupByLibrary.simpleMessage(
       "无法确认连接已断开。请点击断开连接重试。",

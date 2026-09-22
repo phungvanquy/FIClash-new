@@ -79,6 +79,26 @@ The application SHALL provide functional Auto and Fallback choices even when the
 - **WHEN** none of the eligible servers currently passes a health check
 - **THEN** the list remains available, the app does not claim internet reachability from that result, and neither automatic mode switches to direct routing
 
+### Requirement: Connected Home identifies the current node
+
+While the VPN is confirmed connected in simple routing, Home SHALL display the Core-observed node and its automatic mode/provider when applicable. It MUST resolve GLOBAL through the managed selector and automatic/nested targets, distinguish duplicate display names through catalog identity, and never substitute the saved selection for an unavailable observation. This describes the current outbound for new traffic, not a claim that every pre-existing connection has migrated.
+
+#### Scenario: Auto or Fallback changes its node
+
+- **WHEN** the active automatic group changes its underlying node
+- **THEN** foreground Home refreshes its read-only observation every five seconds after the previous query completes and updates Current node without changing the selected mode, probing nodes, resetting connections, or changing VPN intent
+
+#### Scenario: Observation is unavailable or stale
+
+- **WHEN** a current-node query fails, remains pending for five seconds, refers to a different Core session/generation/configuration revision, has an unresolved or cyclic target, or completes after disconnect/profile replacement
+- **THEN** Home shows an unavailable/checking label instead of claiming a saved or stale node is active
+- **AND** slow queries do not overlap within an observation scope, timers/listeners are disposed, and polling pauses outside foreground Home and resumes with a fresh observation
+
+#### Scenario: Custom routing uses different nodes
+
+- **WHEN** the VPN is connected with custom routing enabled
+- **THEN** Home explains that nodes depend on routing rules instead of presenting a single server as governing all traffic
+
 ### Requirement: Default routing follows the home selection
 
 Newly imported profiles SHALL default to Auto and simple routing. In simple routing, all proxy traffic captured by the configured VPN/TUN/system-proxy mechanism SHALL use the selected server, Auto, or Fallback, regardless of the subscription's custom policy groups. Transport endpoints, DNS bootstrap, and operating-system exclusions required to establish the VPN SHALL continue to use their necessary underlying routes. The original configuration routing data MUST remain available in Settings.

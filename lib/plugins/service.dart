@@ -8,11 +8,16 @@ import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+final androidServiceProvider = Provider<Service?>((ref) => service);
 
 abstract mixin class ServiceListener {
   void onServiceEvent(CoreEvent event) {}
 
   void onRunState(AndroidRunObservation state) {}
+
+  void onRunStateUnavailable() {}
 }
 
 class Service {
@@ -34,12 +39,28 @@ class Service {
     methodChannel.setMethodCallHandler((call) async {
       switch (call.method) {
         case 'runState':
-          final state = AndroidRunObservation.fromJson(
-            Map<String, Object?>.from(
-              jsonDecode(call.arguments as String) as Map,
-            ),
-          );
-          _publishRunState(state);
+          try {
+            final state = AndroidRunObservation.fromJson(
+              Map<String, Object?>.from(
+                jsonDecode(call.arguments as String) as Map,
+              ),
+            );
+            if (state.session.isEmpty || state.revision < 0) {
+              throw const FormatException('Invalid Android run-state event');
+            }
+            _publishRunState(state);
+          } catch (_) {
+            for (final listener in List.of(_listeners)) {
+              try {
+                listener.onRunStateUnavailable();
+              } catch (_) {
+                commonPrint.log(
+                  'Unable to request Android run-state recovery',
+                  logLevel: LogLevel.warning,
+                );
+              }
+            }
+          }
           break;
         case 'event':
           final data = call.arguments as String? ?? '';
@@ -113,11 +134,13 @@ class Service {
   Future<AndroidRunObservation?> getRunState() async {
     final data = await methodChannel.invokeMethod<String>('getRunState');
     if (data == null) return null;
-    _publishRunState(
-      AndroidRunObservation.fromJson(
-        Map<String, Object?>.from(jsonDecode(data) as Map),
-      ),
+    final observation = AndroidRunObservation.fromJson(
+      Map<String, Object?>.from(jsonDecode(data) as Map),
     );
+    if (observation.session.isEmpty || observation.revision < 0) {
+      throw const FormatException('Invalid Android run-state snapshot');
+    }
+    _publishRunState(observation);
     return _runState;
   }
 
