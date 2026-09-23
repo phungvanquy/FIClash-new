@@ -8,6 +8,7 @@ Branding is independent of compatibility identity: keep `com.follow.clash`, the 
 
 - Release CI pins Flutter 3.47.1. Local SDK may diverge, so trust the CI
   version as the source of truth for release builds.
+- Core modules require Go 1.25 or newer; release CI pins Go 1.26.4.
 - Dart SDK constraint: `>=3.8.0 <4.0.0`. The lower bound is load-bearing and
   must not be raised to the Dart version the SDK actually ships; see
   Dependency Ceilings.

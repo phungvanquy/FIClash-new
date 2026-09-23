@@ -126,7 +126,31 @@ void main() {
           'path': '/api?token=a%2Bb',
           'headers': {'Host': 'example.test'},
         };
-        proxy['reality-opts'] = {'public-key': 'opaque', 'short-id': '00'};
+        proxy['reality-opts'] = {
+          'public-key': 'opaque',
+          'short-id': '00',
+          'support-x25519mlkem768': false,
+          'mldsa65-verify': 'verification-key',
+        };
+        proxy['flow'] = 'xtls-rprx-vision';
+        proxy['encryption'] = 'opaque-encryption-settings';
+        proxy['packet-encoding'] = 'xudp';
+        proxy['xhttp-opts'] = {
+          'path': '/upload',
+          'mode': 'packet-up',
+          'headers': {'X-Interop': 'preserved'},
+          'download-settings': {
+            'server': 'download.example.test',
+            'servername': 'download-sni.example.test',
+            'client-fingerprint': 'safari',
+            'reality-opts': {
+              'public-key': 'download-public-key',
+              'short-id': 'aabb',
+              'support-x25519mlkem768': true,
+              'mldsa65-verify': 'download-verification-key',
+            },
+          },
+        };
         final originalGlobal = {
           'name': 'GLOBAL',
           'type': 'select',

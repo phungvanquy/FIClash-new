@@ -196,3 +196,30 @@ func TestCandidateRequestsMissingGeodataWithoutLoadingGlobalFiles(t *testing.T) 
 		})
 	}
 }
+
+func TestMalformedRealityProviderPreservesActiveRuntime(t *testing.T) {
+	for _, suffix := range []string{"&support-x25519mlkem768=invalid", "&pqv=YQ"} {
+		t.Run(suffix, func(t *testing.T) {
+			directory, params := stagedTestCandidate(t, candidateProxy)
+			providerPath := filepath.Join(directory, "provider.txt")
+			const valid = "vless://6a9ecf20-44b2-4fc2-a3a0-4dcda7b2c3eb@127.0.0.1:443?security=reality&pbk=ppQ9FwLrLIa0AOrp1WvcyiaQ37vg2WSy_CD4bIdiTUw#valid"
+			invalid := strings.Replace(valid, "#valid", suffix+"#invalid", 1)
+			if err := os.WriteFile(providerPath, []byte(valid+"\n"+invalid), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			yaml := candidateProxy + "proxy-providers: {Remote: {type: file, path: '" + filepath.ToSlash(providerPath) + "'}}"
+			if err := os.WriteFile(filepath.Join(directory, "effective.yaml"), []byte(yaml), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			tunnel.SetMode(tunnel.Rule)
+			config.SetProxyNameList([]string{"Existing"})
+			previous := currentConfig
+			if result, err := handlePrepareConfig(params); err == nil || result != nil {
+				t.Fatalf("accepted malformed provider: %v, %v", result, err)
+			}
+			if currentConfig != previous || tunnel.Mode() != tunnel.Rule || !reflect.DeepEqual(config.GetProxyNameList(), []string{"Existing"}) || len(preparations.entries) != 0 {
+				t.Fatal("failed provider replaced active runtime or leaked preparation")
+			}
+		})
+	}
+}

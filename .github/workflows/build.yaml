@@ -141,6 +141,43 @@ jobs:
           export CGO_ENABLED=1 GOOS=android GOARCH=arm64 CC
           go vet "-tags=$tags" . ./tun ./platform
 
+  xray-interop:
+    name: Xray interoperability
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: core/go.sum
+
+      - name: Check fork compatibility
+        working-directory: core/Clash.Meta
+        env:
+          CGO_ENABLED: 0
+        run: go test -count=1 ./component/tls ./adapter/outbound ./common/convert ./config ./adapter/provider ./rules/provider ./listener ./transport/vless ./transport/vmess
+
+      - name: Test pinned Xray releases
+        env:
+          FLCLASH_INTEROP_CORE: ${{ github.workspace }}/.dart_tool/FlClashCore
+        run: |
+          mkdir -p .dart_tool
+          CGO_ENABLED=0 go build -C core -tags=with_gvisor -o ../.dart_tool/FlClashCore .
+          python3 tool/xray_interop.py | tee xray-interop.log
+
+      - name: Save interoperability results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xray-interop-results
+          path: xray-interop.log
+
   android:
     name: Android unit tests
     runs-on: ubuntu-latest
@@ -235,7 +272,7 @@ jobs:
 
   build:
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')))
-    needs: [ dart, plugins, go, android, rust, windows-helper-test ]
+    needs: [ dart, plugins, go, xray-interop, android, rust, windows-helper-test ]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

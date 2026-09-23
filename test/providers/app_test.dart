@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:fl_clash/common/constant.dart';
 import 'package:fl_clash/common/fixed.dart';
 import 'package:fl_clash/common/request.dart';
 import 'package:fl_clash/enum/enum.dart';
@@ -488,7 +487,8 @@ void main() {
     test(
       'ignores a canceled stale check after a newer check succeeds',
       () async {
-        request.dio.httpClientAdapter = _DelayedCancelIpAdapter();
+        final adapter = _DelayedCancelIpAdapter();
+        request.dio.httpClientAdapter = adapter;
         final container = ProviderContainer(
           overrides: [
             initProvider.overrideWithBuild((_, _) => true),
@@ -496,20 +496,27 @@ void main() {
           ],
         );
         addTearDown(container.dispose);
+        final completed = Completer<void>();
+        container.listen(networkDetectionProvider, (_, state) {
+          if (!state.isLoading &&
+              state.ipInfo != null &&
+              !completed.isCompleted) {
+            completed.complete();
+          }
+        });
 
         final notifier = container.read(networkDetectionProvider.notifier);
         notifier.startCheck();
-        await Future.delayed(commonDuration + const Duration(milliseconds: 50));
+        await adapter.started.future.timeout(const Duration(seconds: 5));
 
         notifier.startCheck();
-        await Future.delayed(
-          commonDuration + const Duration(milliseconds: 120),
-        );
+        await completed.future.timeout(const Duration(seconds: 5));
 
         expect(container.read(networkDetectionProvider).ipInfo?.ip, '2.2.2.2');
         expect(container.read(networkDetectionProvider).isLoading, false);
 
-        await Future.delayed(const Duration(milliseconds: 620));
+        await adapter.cancelled.future.timeout(const Duration(seconds: 5));
+        await pumpEventQueue();
 
         expect(container.read(networkDetectionProvider).ipInfo?.ip, '2.2.2.2');
         expect(container.read(networkDetectionProvider).isLoading, false);
@@ -522,6 +529,9 @@ class _DelayedCancelIpAdapter implements HttpClientAdapter {
   static const _sourceCount = 7;
 
   int _requestCount = 0;
+  int _cancelledCount = 0;
+  final started = Completer<void>();
+  final cancelled = Completer<void>();
 
   @override
   Future<ResponseBody> fetch(
@@ -532,6 +542,7 @@ class _DelayedCancelIpAdapter implements HttpClientAdapter {
     _requestCount++;
     final batch = ((_requestCount - 1) ~/ _sourceCount) + 1;
     if (batch == 1) {
+      if (_requestCount == _sourceCount) started.complete();
       final completer = Completer<ResponseBody>();
       cancelFuture?.then((_) {
         Timer(const Duration(milliseconds: 500), () {
@@ -543,6 +554,7 @@ class _DelayedCancelIpAdapter implements HttpClientAdapter {
               error: 'cancelled',
             ),
           );
+          if (++_cancelledCount == _sourceCount) cancelled.complete();
         });
       });
       return completer.future;

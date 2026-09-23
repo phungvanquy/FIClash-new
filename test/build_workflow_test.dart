@@ -59,6 +59,7 @@ void main() {
       'dart',
       'plugins',
       'go',
+      'xray-interop',
       'android',
       'rust',
       'windows-helper-test',
