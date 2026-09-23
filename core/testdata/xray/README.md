@@ -31,7 +31,7 @@ Both module graphs select:
 
 REALITY advertises the **26.3.27 compatibility baseline** in its authenticated session. This is a tested wire-compatibility value, separate from the mihomo or app version. A server requiring a later `minClientVer`, or a `maxClientVer` below this value, deliberately rejects it.
 
-Omitting `support-x25519mlkem768`, or setting it to `true`, now sends the modern hybrid key share. Modern REALITY defaults to Chrome; `random` chooses only the tested Chrome, Firefox, and Safari presets. Explicit fingerprints without the required hybrid share return an actionable error. Ordinary TLS fingerprint selection retains its previous behavior, with browser presets supplied by the updated uTLS dependency. Authentication failures never trigger an automatic legacy retry.
+Omitting `support-x25519mlkem768`, or setting it to `true`, now sends the modern hybrid key share. Modern REALITY supports `chrome`, `firefox`, `safari`, `ios`, `android`, `edge`, `360`, and `qq`. It defaults to Chrome; `random` chooses among these eight tested presets. The iOS, Android, Edge, 360, and QQ aliases retain their browser-family extensions with REALITY-specific TLS 1.3/hybrid-key-share adaptations; these are not exact historical browser fingerprints. Versioned legacy presets such as `chrome120` remain unchanged and return an actionable error in modern mode when they lack the required hybrid share. Ordinary TLS fingerprint selection retains its previous behavior, with browser presets supplied by the updated uTLS dependency. Authentication failures never trigger an automatic legacy retry.
 
 For an older server, explicitly use:
 
@@ -65,7 +65,7 @@ REALITY over QUIC/HTTP3, arbitrary Xray-only options, and unsupported legacy fin
 
 Relevant upstream sources: [mihomo v1.19.31](https://github.com/MetaCubeX/mihomo/releases/tag/v1.19.31), [uTLS candidate](https://github.com/MetaCubeX/utls/commit/2aa631698733a602acb2d998b9e7df2e6a446dd2), [Xray REALITY client](https://github.com/XTLS/Xray-core/blob/v26.3.27/transport/internet/reality/reality.go), [REALITY server](https://github.com/XTLS/REALITY/blob/8cdf7bf9c7f0/handshake_server_tls13.go), and [Freedom policy](https://github.com/XTLS/Xray-core/blob/v26.9.9/proxy/freedom/freedom.go).
 
-The final fork commit is `b2facd1ef0c3c319f1d5c5c43eaa124b6b2fb85c` on `update-core-xray-compatibility` (stable merge: `ae8a361c`). The parent pins this commit and matching module sums. The wrapper also carries upstream's protobuf replacement `github.com/metacubex/protobuf-go@v0.0.0-20260306035419-7ceee0674686`, because Go does not inherit replacements from dependency modules.
+The final fork commit is `7672fceac1ffd16209fe84243a398caa966f4211` on `update-core-xray-compatibility` (stable merge: `ae8a361c`). The parent pins this commit and matching module sums. The wrapper also carries upstream's protobuf replacement `github.com/metacubex/protobuf-go@v0.0.0-20260306035419-7ceee0674686`, because Go does not inherit replacements from dependency modules.
 
 `spx`/Xray's configurable spider paths are not implemented here; the existing Core fallback behavior remains. Generic Xray JSON is not an app profile format. Server options such as `minClientVer`, `maxClientVer`, and `mldsa65Seed` belong on the Xray server, while the documented public verification fields belong on the client.
 

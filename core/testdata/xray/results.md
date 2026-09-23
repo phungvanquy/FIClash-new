@@ -223,3 +223,17 @@ The native Core cases launch the built Linux executable through IPC, activate a 
 | Fixture | Result |
 | --- | --- |
 | `TestXrayReality/legacy` | PASS |
+
+## Browser compatibility follow-up — 2026-09-24
+
+Fork `7672fceac1ffd16209fe84243a398caa966f4211`, Linux arm64, Go 1.26.4. The expanded fingerprint matrix passes all 105 selected subcases (21 per modern server). Each server tests default, Chrome, Firefox, Safari, iOS, Android, Edge, 360, QQ, and random over both TCP/Vision and XHTTP, plus rejection of an explicitly versioned incompatible preset. All positive cases transfer the random payload.
+
+| Xray server | TCP/Vision: default + eight presets + random | XHTTP: default + eight presets + random | Old fingerprint rejected |
+| --- | --- | --- | --- |
+| 26.3.27 | PASS (10) | PASS (10) | PASS |
+| 26.7.11 | PASS (10) | PASS (10) | PASS |
+| 26.7.28 | PASS (10) | PASS (10) | PASS |
+| 26.9.8 | PASS (10) | PASS (10) | PASS |
+| 26.9.9 | PASS (10) | PASS (10) | PASS |
+
+The endpoint-version run preceded widening random selection from three to eight presets; its four random cases were rerun successfully with the final pool. The three intervening versions used the final pool throughout. Every named preset was tested explicitly. Four native Core IPC/profile smoke cases also pass with the rebuilt executable. The iOS, Android, Edge, 360 and QQ cases use the documented REALITY-specific TLS adaptations. Fork unit tests verify their hybrid/classical authentication keys match and adaptation does not mutate ordinary TLS presets. The expanded full harness contains 259 subcases; the historical 179-case run above remains a separate record.

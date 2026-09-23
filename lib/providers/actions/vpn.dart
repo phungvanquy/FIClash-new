@@ -197,6 +197,13 @@ class VpnAction extends _$VpnAction {
           },
         ),
       );
+      if (result.outcome == VpnImportOutcome.failed) {
+        commonPrint.log(
+          'VPN import failed: step=${step?.name ?? 'unknown'}, '
+          '${result.diagnostic}',
+          logLevel: LogLevel.warning,
+        );
+      }
       if (!_disposed) {
         if (result.outcome == VpnImportOutcome.recoveryRequired) {
           ref.read(vpnFailureProvider.notifier).value = 'recovery_required';
@@ -227,7 +234,12 @@ class VpnAction extends _$VpnAction {
     } on VpnImportCancelled {
       return const VpnImportResult(VpnImportOutcome.cancelled);
     } catch (error) {
-      return VpnImportResult(VpnImportOutcome.failed, error: error);
+      final result = VpnImportResult(VpnImportOutcome.failed, error: error);
+      commonPrint.log(
+        'VPN import failed: ${result.diagnostic}',
+        logLevel: LogLevel.warning,
+      );
+      return result;
     } finally {
       recordTiming();
       stopwatch.stop();

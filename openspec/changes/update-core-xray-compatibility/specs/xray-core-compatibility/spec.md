@@ -46,11 +46,11 @@ An omitted or true `reality-opts.support-x25519mlkem768` SHALL enable modern REA
 
 ### Requirement: Compatible REALITY fingerprint selection
 
-Modern REALITY SHALL support the tested `chrome`, `firefox`, and `safari` fingerprints. Omitted fingerprint selection SHALL resolve to a compatible default. A configured `random` selection SHALL choose only compatible modern REALITY fingerprints, including across process restarts. An explicitly selected incompatible fingerprint SHALL produce a clear configuration or connection error identifying the fingerprint constraint; it MUST NOT be silently replaced with another browser identity.
+Modern REALITY SHALL support the tested `chrome`, `firefox`, `safari`, `ios`, `android`, `edge`, `360`, and `qq` fingerprints. The five older canonical presets MAY receive documented REALITY-only TLS 1.3/hybrid-share adaptations without being represented as exact historical browser fingerprints. Ordinary TLS and explicitly versioned legacy presets SHALL remain unchanged. Omitted fingerprint selection SHALL resolve to a compatible default. A configured `random` selection SHALL choose only compatible modern REALITY fingerprints, including across process restarts. An explicitly selected incompatible fingerprint SHALL produce a clear configuration or connection error identifying the fingerprint constraint; it MUST NOT be silently replaced with another browser identity.
 
 #### Scenario: Modern browser fingerprints
 
-- **WHEN** a profile independently selects chrome, firefox, or safari in modern REALITY mode
+- **WHEN** a profile independently selects chrome, firefox, safari, ios, android, edge, 360, or qq in modern REALITY mode
 - **THEN** each produces the required key-share format and authenticates against a tested modern server
 
 #### Scenario: Random selection remains compatible

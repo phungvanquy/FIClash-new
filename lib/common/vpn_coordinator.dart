@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:fl_clash/database/database.dart';
+import 'package:fl_clash/core/method.dart';
 import 'package:fl_clash/models/models.dart';
 
 import 'profile_store.dart';
@@ -20,6 +22,18 @@ class VpnImportResult {
   final Profile? profile;
   final VpnImportPhase? phase;
   final Object? error;
+
+  String get diagnostic {
+    final cause = switch (error) {
+      DioException(:final type, :final response) =>
+        'http=${type.name}, status=${response?.statusCode ?? 'none'}',
+      CoreMethodException(:final code) => 'core=$code',
+      FileSystemException(:final osError) =>
+        'filesystem=${osError?.errorCode ?? 'unknown'}',
+      _ => 'error=${error.runtimeType}',
+    };
+    return 'phase=${phase?.name ?? 'unknown'}, $cause';
+  }
 
   bool get timedOut => switch (error) {
     TimeoutException() => true,

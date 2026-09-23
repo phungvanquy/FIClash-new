@@ -6,10 +6,12 @@ import 'package:dio/dio.dart';
 import 'package:fl_clash/core/method.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:yaml/yaml.dart';
 
 import 'profile_store.dart';
+import 'constant.dart';
 import 'vpn_configuration.dart';
 import 'vpn_intake.dart';
 import 'vpn_import_progress.dart';
@@ -41,6 +43,18 @@ class VpnLocalResourceUnavailable implements Exception {
   const VpnLocalResourceUnavailable();
 }
 
+Future<List<int>> _bundledGeodata(String name) async {
+  final asset = switch (name) {
+    'GeoSite.dat' => GEOSITE,
+    'GeoIP.dat' => GEOIP,
+    'Country.mmdb' => MMDB,
+    'ASN.mmdb' => ASN,
+    _ => throw const FormatException('Unknown geodata resource'),
+  };
+  final data = await rootBundle.load('assets/data/$asset');
+  return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+}
+
 class VpnPreparedCandidate {
   const VpnPreparedCandidate({
     required this.profile,
@@ -62,6 +76,7 @@ class VpnCandidateStager {
     required this.prepare,
     required this.discard,
     this.clock = DateTime.now,
+    this.bundledGeodata = _bundledGeodata,
   });
 
   final ProfileGenerationStore store;
@@ -69,6 +84,7 @@ class VpnCandidateStager {
   final Future<PreparedConfigResult> Function(PrepareConfigParams) prepare;
   final Future<bool> Function(PreparedConfigRef) discard;
   final DateTime Function() clock;
+  final Future<List<int>> Function(String name) bundledGeodata;
 
   static const geoResources = {
     'GeoSite.dat': (GeoResource.GEOSITE, 'geosite'),
@@ -198,6 +214,11 @@ class VpnCandidateStager {
             final DateTime fetchedAt;
             if (cachedResource != null) {
               (bytes, fetchedAt) = cachedResource;
+            } else if (!localOnly &&
+                committed == null &&
+                url == defaultGeoXUrl[resource.$1]) {
+              bytes = await bundledGeodata(name);
+              fetchedAt = DateTime.fromMillisecondsSinceEpoch(0);
             } else if (localOnly &&
                 committed?.snapshot.generation == null &&
                 await FileSystemEntity.type(cached.path, followLinks: false) ==

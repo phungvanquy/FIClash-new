@@ -253,11 +253,13 @@ jobs:
           cargo test --manifest-path plugins/rust_api/rust/Cargo.toml
 
   windows-helper-test:
-    name: Windows helper test
+    name: Windows helper and import tests
     runs-on: windows-2022
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Setup Rust cache
         uses: Swatinem/rust-cache@v2
@@ -269,6 +271,34 @@ jobs:
 
       - name: Run Windows service tests
         run: cargo test --manifest-path services/helper/Cargo.toml --features windows-service
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: core/go.sum
+
+      - name: Validate fresh Windows Core preparation
+        working-directory: core
+        env:
+          CGO_ENABLED: 0
+        run: go test -count=1 -run 'TestFreshCandidateUsesBundledGeodata|TestPrepareAndDiscardAreRevisionScoped' .
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Validate Windows profile import and storage
+        shell: bash
+        run: |
+          flutter pub get
+          cp pubspec.yaml "$RUNNER_TEMP/import-test-pubspec.yaml"
+          trap 'cp "$RUNNER_TEMP/import-test-pubspec.yaml" pubspec.yaml' EXIT
+          python -c "from pathlib import Path; p = Path('pubspec.yaml'); p.write_text(p.read_text().replace('build_assets: true', 'build_assets: false'))"
+          flutter test --reporter expanded test/common/vpn_staging_test.dart test/common/vpn_coordinator_test.dart test/common/profile_store_test.dart test/providers/vpn_action_test.dart
 
   build:
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')))

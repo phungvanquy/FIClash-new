@@ -18,7 +18,7 @@ Validated on 2026-09-23 on Linux arm64 with Flutter 3.47.1 / Dart 3.13.1 and Go 
 - The rebuilt Linux Core passes four native IPC/profile smoke cases against Xray 26.3.27 and 26.9.9: activation, REALITY TCP/Vision and XHTTP payloads, failed replacement preserving traffic, stop/start, and shutdown.
 - OpenSpec strict validation, formatting, and staged whitespace/comment-density checks pass.
 
-## Host validation still required
+## Original host validation gaps
 
 - Android CGO/NDK builds for armv7, arm64, and amd64: this Linux arm64 environment has no Android SDK/NDK. The existing CI Android/NDK jobs remain required; host-only Go tests do not compile Android's CGO/JNI files.
 - Actual Android application/VPN traffic, lifecycle transitions, and replacement failure handling on a device or emulator.
@@ -26,3 +26,16 @@ Validated on 2026-09-23 on Linux arm64 with Flutter 3.47.1 / Dart 3.13.1 and Go 
 - Desktop GUI/TUN smoke checks, including macOS, beyond the verified Linux Core IPC path.
 
 Tasks 6.3 and 6.4 remain open until these host checks are completed. This update does not claim that the user's original server configuration or incident has been reproduced.
+
+## Fresh-import and browser follow-up — 2026-09-24
+
+The user reports HTTPS import failing at “Checking configuration → Preparing…” on a fresh Windows installation. No exact profile or log is available, so this incident remains unconfirmed. The stager previously fetched default geographic databases again during first import even though the app already ships them. First imports now stage the bundled GeoSite, GeoIP, country, and ASN databases when using default sources. Custom sources and subsequent refreshes retain their network semantics; bundled data receives an epoch timestamp instead of being represented as freshly downloaded. Failure diagnostics record stage, error class, and HTTP/Core/OS codes without URLs, bodies, paths, or credentials.
+
+- Fork `7672fceac1ffd16209fe84243a398caa966f4211` is published and available anonymously through the declared submodule URL. TLS/outbound/converter/VMess package tests pass. All eight canonical fingerprints pass both transports across the five modern releases; see the follow-up matrix in [results.md](results.md).
+- Wrapper tests and vet pass, including actual bundled-database preparation from a fresh data directory in both geodata modes. An initial run hit the existing 200-ms delay-queue test's timing limit during concurrent builds and blocked in its failure cleanup; a bounded full rerun passed in 3.4 seconds. No production timing behavior was changed.
+- The Linux native bundle rebuilt successfully, then reused its cache. Core, manifest, and Helper agree on SHA-256 `3e3c973a43d6d01c2bc13bb7c4a723376c4012da4ffcfb43f9b9f3190beae47a`. Four native IPC/profile smoke cases pass on Xray 26.3.27 and 26.9.9.
+- `flutter pub get`, repository-wide formatting, and the full Flutter suite pass: 2,143 passed, 3 skipped. The temporary native-hook test setting was restored.
+- Riverpod generation was run after the import-diagnostic change. Only the generated VpnAction hash changed. Analysis passes with the same pre-existing lint info.
+- The Windows AMD64 Go test binary cross-compiles successfully. CI now runs Core preparation and Flutter import/storage regressions on Windows before packaging. This Linux host cannot reproduce Windows GUI import or Helper service behavior.
+
+The previous parent update's [CI run 35883781855](https://github.com/phungvanquy/FIClash-new/actions/runs/35883781855) passed all validation jobs and produced Android and Windows AMD64 test artifacts. That run closes the earlier build availability gap for that revision; it does not constitute device/GUI smoke testing of this follow-up.

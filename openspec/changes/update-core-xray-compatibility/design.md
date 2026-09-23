@@ -61,7 +61,7 @@ Change the existing ML-KEM option to distinguish omission from explicit false an
 
 Pin uTLS to the immutable candidate `2aa631698733a602acb2d998b9e7df2e6a446dd2` using its resolved Go pseudo-version, subject to compilation and wire-format tests. It supplies Firefox 148 and Safari 26.3 while keeping Chrome 133. Preserve the existing TLS-fork APIs, including JLS and Vision's connection handling. The candidate declares Go 1.20; there is no evidence requiring an application toolchain bump just to obtain these fingerprints.
 
-Resolve modern REALITY's omitted fingerprint to Chrome and its random pool to tested Chrome/Firefox/Safari. Scope that pool to REALITY; retain generic TLS selection semantics. Validate explicit fingerprint key shares and return a useful error for unsupported modern choices. Do not inject ML-KEM into an arbitrary legacy browser identity or silently replace a requested fingerprint.
+Resolve modern REALITY's omitted fingerprint to Chrome and its random pool to tested Chrome, Firefox, Safari, iOS, Android, Edge, 360, and QQ. Scope that pool to REALITY; retain generic TLS selection semantics. To fulfill the follow-up request for all eight browser families, adapt fresh copies of the five older canonical presets with TLS 1.3 cipher/signature support and hybrid/classical shares using the same authentication key. Preserve their remaining family extensions and document that they are not exact historical browser fingerprints. Versioned legacy identities remain unchanged. Validate explicit fingerprint key shares and return a useful error for unsupported modern choices; never substitute another browser family or retry authentication in legacy mode.
 
 A version-byte-only patch would still fail the September key-share rule. A config-only `support-x25519mlkem768: true` patch would still fail restrictive version policies, lose omission/false semantics, and leave most current browser aliases incompatible. Neither is sufficient.
 
@@ -98,7 +98,7 @@ Required matrix:
 | --- | --- | --- |
 | Reported release | 26.3.27 | Minimum omitted and explicitly 26.3.27; TCP/Vision and XHTTP; payload success |
 | Version-policy regression | 26.7.11 and 26.7.28 | Default policy succeeds; known lower advertisement is rejected in a controlled negative fixture |
-| Modern REALITY | 26.9.8 and 26.9.9 | Omitted/true ML-KEM; Chrome/Firefox/Safari; all random choices; correct share order; legacy shares rejected |
+| Modern REALITY | 26.9.8 and 26.9.9 | Omitted/true ML-KEM; All eight canonical browser families; all random choices; correct share order; legacy shares rejected |
 | Explicit legacy mode | Pinned older REALITY server fixture | False with a legacy fingerprint succeeds; record exact selected version/checksum before running |
 | Additional verification | 26.3.27 and 26.9.9 | Valid, wrong, malformed and missing ML-DSA verification material |
 | XHTTP and conversion | 26.3.27 and 26.9.9 | Supported modes, extra headers, IPv6 authority, independent download credentials/SNI/fingerprint |

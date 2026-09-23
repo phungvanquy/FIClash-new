@@ -354,8 +354,8 @@ func TestXrayReality(t *testing.T) {
 				xrayCase{name: "explicit-modern", modern: true},
 				xrayCase{name: "old-fingerprint", fingerprint: "chrome120", wantFailure: true},
 			)
-			for _, fp := range []string{"default", "firefox", "safari", "random"} {
-				cases = append(cases, xrayCase{name: "fingerprint-" + fp, fingerprint: fp})
+			for _, fp := range []string{"default", "chrome", "firefox", "safari", "ios", "android", "edge", "360", "qq", "random"} {
+				cases = append(cases, xrayCase{name: "fingerprint-" + fp, fingerprint: fp}, xrayCase{name: "xhttp-fingerprint-" + fp, fingerprint: fp, network: "xhttp"})
 			}
 			if version == "26.3.27" || version == "26.9.9" {
 				for _, mode := range []string{"packet-up", "stream-up", "stream-one"} {

@@ -60,6 +60,7 @@ void main() {
   VpnCandidateStager stager({
     VpnResourceFetch? fetch,
     Future<PreparedConfigResult> Function(PrepareConfigParams)? load,
+    Future<List<int>> Function(String)? bundledGeodata,
   }) => VpnCandidateStager(
     store: store,
     fetch:
@@ -67,6 +68,9 @@ void main() {
         (_, _, _) async => throw StateError('Unexpected network request'),
     prepare: load ?? prepare,
     clock: () => now,
+    bundledGeodata:
+        bundledGeodata ??
+        (_) async => throw StateError('Unexpected bundled resource'),
     discard: (handle) async {
       discarded.add(handle);
       return true;
@@ -391,6 +395,79 @@ proxy-providers:
       'private geodata',
     );
     expect(await File('${home.path}/GeoSite.dat').exists(), isFalse);
+  });
+
+  test(
+    'first import stages default geodata without a second download',
+    () async {
+      final loaded = <String>[];
+      final requested = VpnCandidateStager.geoResources.keys.toList();
+      final value = stager(
+        bundledGeodata: (name) async {
+          loaded.add(name);
+          return utf8.encode('bundled $name');
+        },
+        load: (params) async {
+          for (final name in requested) {
+            if (!await store
+                .resource(params.generation, 'geo/$name')
+                .exists()) {
+              throw CoreMethodException(
+                code: 'resource_required',
+                message: 'required',
+                details: {'resource': name},
+              );
+            }
+          }
+          return prepare(params);
+        },
+      );
+      final candidate = await stage(value);
+      final generation = candidate.profile.snapshot.generation!;
+      expect(loaded, requested);
+      for (final name in requested) {
+        expect(
+          await store.resource(generation, 'geo/$name').readAsString(),
+          'bundled $name',
+        );
+      }
+      final metadata =
+          jsonDecode(
+                await store
+                    .resource(generation, 'geo-cache.json')
+                    .readAsString(),
+              )
+              as Map;
+      expect(
+        metadata.values.map((entry) => entry['fetchedAt']),
+        everyElement(
+          DateTime.fromMillisecondsSinceEpoch(0).toUtc().toIso8601String(),
+        ),
+      );
+      await store.load(generation);
+    },
+  );
+
+  test('bundled geodata is never substituted for a custom source', () async {
+    final value = stager(
+      fetch: (_, _, _) async =>
+          throw StateError('Custom source is unavailable'),
+      bundledGeodata: (_) async => fail('Custom source must be respected'),
+      load: (_) async => throw const CoreMethodException(
+        code: 'resource_required',
+        message: 'required',
+        details: {'resource': 'GeoSite.dat'},
+      ),
+    );
+    await expectLater(
+      stage(
+        value,
+        text: '$source\ngeox-url: {geosite: "https://example.test/custom"}',
+      ),
+      throwsStateError,
+    );
+    expect(await store.generations.list().toList(), isEmpty);
+    expect(await File('${home.path}/config.yaml').exists(), isFalse);
   });
 
   test('does not read arbitrary source-provided local paths', () async {

@@ -94,6 +94,29 @@ func TestPrepareAndDiscardAreRevisionScoped(t *testing.T) {
 	}
 }
 
+func TestFreshCandidateUsesBundledGeodata(t *testing.T) {
+	for _, mode := range []string{"false", "true"} {
+		t.Run(mode, func(t *testing.T) {
+			directory, params := stagedTestCandidate(t, candidateProxy+"geodata-mode: "+mode+"\nrules: [\"GEOSITE,cn,DIRECT\", \"GEOIP,cn,DIRECT\", \"IP-ASN,13335,DIRECT\", \"MATCH,DIRECT\"]\n")
+			if err := os.Mkdir(filepath.Join(directory, "geo"), 0o700); err != nil {
+				t.Fatal(err)
+			}
+			for name, asset := range map[string]string{"GeoSite.dat": "GEOSITE.dat", "GeoIP.dat": "GEOIP.dat", "Country.mmdb": "GEOIP.metadb", "ASN.mmdb": "ASN.mmdb"} {
+				data, err := os.ReadFile(filepath.Join("..", "assets", "data", asset))
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(filepath.Join(directory, "geo", name), data, 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if _, err := handlePrepareConfig(params); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
 func TestReinitializationInvalidatesPreparedHandles(t *testing.T) {
 	_, params := stagedTestCandidate(t, candidateProxy)
 	prepared, err := handlePrepareConfig(params)

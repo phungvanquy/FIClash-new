@@ -5,11 +5,44 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:drift/native.dart';
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/core/method.dart';
 import 'package:fl_clash/database/database.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('import diagnostics identify failures without private data', () {
+    const secret = 'https://example.test/sub?token=private';
+    final cases = <Object, String>{
+      DioException(
+        requestOptions: RequestOptions(path: secret),
+        type: DioExceptionType.badResponse,
+        response: Response(
+          requestOptions: RequestOptions(path: secret),
+          statusCode: 403,
+        ),
+        message: secret,
+      ): 'http=badResponse, status=403',
+      const CoreMethodException(
+        code: 'prepare_failed',
+        message: secret,
+        details: {'resource': secret},
+      ): 'core=prepare_failed',
+      const FileSystemException(secret, secret, OSError(secret, 5)):
+          'filesystem=5',
+      const FormatException(secret): 'error=FormatException',
+    };
+    for (final entry in cases.entries) {
+      final result = VpnImportResult(
+        VpnImportOutcome.failed,
+        phase: VpnImportPhase.preparation,
+        error: entry.key,
+      );
+      expect(result.diagnostic, 'phase=preparation, ${entry.value}');
+      expect(result.diagnostic, isNot(contains(secret)));
+    }
+  });
+
   late Directory home;
   late Database db;
   late ProfileGenerationStore store;
