@@ -913,7 +913,6 @@ class MessageLookup extends MessageLookupByLibrary {
       "请输入有效的 HTTP 或 HTTPS 订阅链接。",
     ),
     "vpnLatencyFailed": MessageLookupByLibrary.simpleMessage("测试失败"),
-    "vpnLatencyFastest": MessageLookupByLibrary.simpleMessage("最快"),
     "vpnLatencyMs": m31,
     "vpnLatencyTesting": MessageLookupByLibrary.simpleMessage("测试中…"),
     "vpnLatencyTimeout": MessageLookupByLibrary.simpleMessage("超时"),

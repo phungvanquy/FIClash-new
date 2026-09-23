@@ -275,8 +275,8 @@ const _$ProxyCardTypeEnumMap = {
 };
 
 _TextScale _$TextScaleFromJson(Map<String, dynamic> json) => _TextScale(
-  enable: json['enable'] as bool? ?? false,
-  scale: (json['scale'] as num?)?.toDouble() ?? 1.0,
+  enable: json['enable'] as bool? ?? true,
+  scale: (json['scale'] as num?)?.toDouble() ?? 0.8,
 );
 
 Map<String, dynamic> _$TextScaleToJson(_TextScale instance) =>
@@ -297,7 +297,7 @@ _ThemeProps _$ThemePropsFromJson(Map<String, dynamic> json) => _ThemeProps(
         _$DynamicSchemeVariantEnumMap,
         json['schemeVariant'],
       ) ??
-      DynamicSchemeVariant.content,
+      defaultSchemeVariant,
   pureBlack: json['pureBlack'] as bool? ?? false,
   textScale: json['textScale'] == null
       ? const TextScale()

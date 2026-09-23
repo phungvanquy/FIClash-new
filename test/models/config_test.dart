@@ -315,14 +315,38 @@ void main() {
       expect(props.primaryColor, null);
       expect(props.primaryColors, defaultPrimaryColors);
       expect(props.themeMode, ThemeMode.dark);
+      expect(props.schemeVariant, DynamicSchemeVariant.tonalSpot);
       expect(props.pureBlack, false);
-      expect(props.textScale.scale, 1.0);
+      expect(props.textScale.enable, true);
+      expect(props.textScale.scale, 0.8);
     });
 
     test('safeFromJson returns default on null', () {
       final result = ThemeProps.safeFromJson(null);
       expect(result.themeMode, ThemeMode.dark);
+      expect(result.primaryColor, 0xFF4F9D92);
+      expect(result.schemeVariant, DynamicSchemeVariant.tonalSpot);
+      expect(result.textScale, const TextScale(enable: true, scale: 0.8));
     });
+
+    test(
+      'missing settings use compact defaults without replacing saved choices',
+      () {
+        final defaults = ThemeProps.fromJson({});
+        expect(defaults.schemeVariant, DynamicSchemeVariant.tonalSpot);
+        expect(defaults.textScale, const TextScale(enable: true, scale: 0.8));
+        final saved = ThemeProps.fromJson({
+          'primaryColor': 0xFFD8C0C3,
+          'schemeVariant': 'content',
+          'themeMode': 'light',
+          'textScale': {'enable': false, 'scale': 1.0},
+        });
+        expect(saved.primaryColor, 0xFFD8C0C3);
+        expect(saved.schemeVariant, DynamicSchemeVariant.content);
+        expect(saved.themeMode, ThemeMode.light);
+        expect(saved.textScale, const TextScale(enable: false, scale: 1.0));
+      },
+    );
 
     test('round-trip with custom values', () {
       const props = ThemeProps(

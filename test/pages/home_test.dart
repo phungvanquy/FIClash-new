@@ -549,9 +549,17 @@ void main() {
       await tester.pump();
       expect(find.text('18 ms'), findsOneWidget);
       final valueStyle = tester.widget<Text>(find.text('18 ms')).style!;
-      expect(valueStyle.fontWeight, FontWeight.bold);
-      expect(valueStyle.fontSize, greaterThanOrEqualTo(16));
-      expect(find.text('Fastest'), findsOneWidget);
+      expect(valueStyle.fontWeight, FontWeight.w600);
+      expect(valueStyle.fontSize, 14);
+      expect(find.text('Fastest'), findsNothing);
+      final badge = tester.widget<Container>(
+        find
+            .ancestor(of: find.text('18 ms'), matching: find.byType(Container))
+            .first,
+      );
+      final shape =
+          (badge.decoration! as ShapeDecoration).shape as OutlinedBorder;
+      expect(shape.side.color, isNot(Colors.transparent));
       expect(find.text('Timed out'), findsOneWidget);
       expect(find.text('Unreachable'), findsOneWidget);
       await tester.drag(
@@ -568,6 +576,40 @@ void main() {
       );
     },
   );
+
+  for (final dark in [false, true]) {
+    homeTest('compact latency badges at 80 percent scale in dark=$dark', (
+      tester,
+    ) async {
+      setProfile(configured(count: 2));
+      await pump(tester, size: const Size(360, 800), scale: 0.8, dark: dark);
+      latency.publish(
+        const VpnLatencyState(
+          results: {
+            'server-0': VpnNodeLatency(VpnLatencyStatus.measured, 18),
+            'server-1': VpnNodeLatency(VpnLatencyStatus.measured, 1234),
+          },
+        ),
+      );
+      await tester.pump();
+      for (final label in ['18 ms', '1234 ms']) {
+        final value = find.text(label);
+        expect(value, findsOneWidget);
+        expect(tester.widget<Text>(value).style!.fontSize, 14);
+        expect(tester.getSize(value).height, lessThan(20));
+        final badge = tester.widget<Container>(
+          find.ancestor(of: value, matching: find.byType(Container)).first,
+        );
+        final shape =
+            (badge.decoration! as ShapeDecoration).shape as OutlinedBorder;
+        expect(shape.side.color == Colors.transparent, label != '18 ms');
+      }
+      expect(find.text('Fastest'), findsNothing);
+      expect(tester.takeException(), isNull);
+      expect(setup.requests, isEmpty);
+      expect(proxies.selections, isEmpty);
+    });
+  }
 
   homeTest('Home selection returns custom routing to simple mode', (
     tester,

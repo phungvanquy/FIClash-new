@@ -7,7 +7,6 @@
   "vpnLatencyTimeout": "タイムアウト",
   "vpnLatencyUnreachable": "到達できません",
   "vpnLatencyFailed": "テスト失敗",
-  "vpnLatencyFastest": "最速",
   "vpnStopFailed": "切断を確認できませんでした。「切断」で再試行してください。",
   "vpnAndroidHelpTitle": "Android での切断",
   "vpnAndroidHelp": "「切断」を押し、未接続になるまでお待ちください。アプリを閉じても VPN は切断されません。Android が再接続する場合は、Android の設定 → VPN → FlClash で常時接続 VPN をオフにしてください。「VPN 以外の接続をブロック」が有効だと、切断後にインターネットに接続できない場合があります。Android の常時接続の警告と本アプリの接続通知は別のものです。",

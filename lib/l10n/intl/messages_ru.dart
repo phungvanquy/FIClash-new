@@ -1321,7 +1321,6 @@ class MessageLookup extends MessageLookupByLibrary {
       "Введите корректную ссылку на подписку HTTP или HTTPS.",
     ),
     "vpnLatencyFailed": MessageLookupByLibrary.simpleMessage("Ошибка проверки"),
-    "vpnLatencyFastest": MessageLookupByLibrary.simpleMessage("Самый быстрый"),
     "vpnLatencyMs": m31,
     "vpnLatencyTesting": MessageLookupByLibrary.simpleMessage("Проверка…"),
     "vpnLatencyTimeout": MessageLookupByLibrary.simpleMessage("Время истекло"),

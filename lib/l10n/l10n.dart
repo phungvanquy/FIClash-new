@@ -135,16 +135,6 @@ class AppLocalizations {
     );
   }
 
-  /// `Fastest`
-  String get vpnLatencyFastest {
-    return Intl.message(
-      'Fastest',
-      name: 'vpnLatencyFastest',
-      desc: '',
-      args: [],
-    );
-  }
-
   /// `Could not confirm disconnection. Tap Disconnect to retry.`
   String get vpnStopFailed {
     return Intl.message(

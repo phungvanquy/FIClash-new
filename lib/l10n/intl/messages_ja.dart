@@ -1048,7 +1048,6 @@ class MessageLookup extends MessageLookupByLibrary {
       "有効な HTTP または HTTPS のサブスクリプション URL を入力してください。",
     ),
     "vpnLatencyFailed": MessageLookupByLibrary.simpleMessage("テスト失敗"),
-    "vpnLatencyFastest": MessageLookupByLibrary.simpleMessage("最速"),
     "vpnLatencyMs": m31,
     "vpnLatencyTesting": MessageLookupByLibrary.simpleMessage("テスト中…"),
     "vpnLatencyTimeout": MessageLookupByLibrary.simpleMessage("タイムアウト"),

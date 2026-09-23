@@ -7,7 +7,6 @@
   "vpnLatencyTimeout": "Timed out",
   "vpnLatencyUnreachable": "Unreachable",
   "vpnLatencyFailed": "Test failed",
-  "vpnLatencyFastest": "Fastest",
   "vpnStopFailed": "Could not confirm disconnection. Tap Disconnect to retry.",
   "vpnAndroidHelpTitle": "Disconnecting on Android",
   "vpnAndroidHelp": "Tap Disconnect and wait for Disconnected. Closing the app does not disconnect the VPN. If Android keeps restarting it, turn off Always-on VPN in Android Settings → VPN → FlClash. “Block connections without VPN” can block internet access after disconnecting. Android’s Always-on warning is separate from this app’s connection notification.",

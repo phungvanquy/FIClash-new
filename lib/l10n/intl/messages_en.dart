@@ -1263,7 +1263,6 @@ class MessageLookup extends MessageLookupByLibrary {
       "Enter a valid HTTP or HTTPS subscription URL.",
     ),
     "vpnLatencyFailed": MessageLookupByLibrary.simpleMessage("Test failed"),
-    "vpnLatencyFastest": MessageLookupByLibrary.simpleMessage("Fastest"),
     "vpnLatencyMs": m31,
     "vpnLatencyTesting": MessageLookupByLibrary.simpleMessage("Testing…"),
     "vpnLatencyTimeout": MessageLookupByLibrary.simpleMessage("Timed out"),

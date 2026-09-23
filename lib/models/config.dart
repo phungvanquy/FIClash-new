@@ -220,8 +220,8 @@ abstract class ProxiesStyleProps with _$ProxiesStyleProps {
 @freezed
 abstract class TextScale with _$TextScale {
   const factory TextScale({
-    @Default(false) bool enable,
-    @Default(1.0) double scale,
+    @Default(true) bool enable,
+    @Default(0.8) double scale,
   }) = _TextScale;
 
   factory TextScale.fromJson(Map<String, Object?> json) =>
@@ -234,7 +234,7 @@ abstract class ThemeProps with _$ThemeProps {
     int? primaryColor,
     @Default(defaultPrimaryColors) List<int> primaryColors,
     @Default(ThemeMode.dark) ThemeMode themeMode,
-    @Default(DynamicSchemeVariant.content) DynamicSchemeVariant schemeVariant,
+    @Default(defaultSchemeVariant) DynamicSchemeVariant schemeVariant,
     @Default(false) bool pureBlack,
     @Default(TextScale()) TextScale textScale,
   }) = _ThemeProps;

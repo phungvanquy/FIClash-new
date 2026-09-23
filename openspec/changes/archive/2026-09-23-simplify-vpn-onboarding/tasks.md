@@ -81,10 +81,10 @@
 
 ## 8. Integration validation and handoff
 
-On 2026-09-21 the user approved deferring native compilation and device/platform testing to CI-built artifacts and later manual testing outside this development VPS. Tasks 8.3 and 8.4 remain unchecked until results are available; they do not require provisioning native test environments on this host. See `validation.md` for the artifact handoff and remaining checks.
+On 2026-09-21 the user approved deferring native compilation and device/platform testing to CI-built artifacts and later manual testing outside this development VPS. On 2026-09-23, successful CI run 35728945241 closed task 8.3. The user reported successful testing and approved archiving with specification synchronization while retaining the unverified platform matrix in task 8.4 as deferred. See `validation.md` for the evidence and remaining checks; no additional native provisioning is required on this host.
 
 - [x] 8.1 Run an integrated import-select-connect flow plus connected replacement and all failure/recovery boundaries using fake HTTP/storage/Core dependencies; verify each specification scenario is covered by an automated test or a named platform smoke check.
 - [x] 8.2 Regenerate affected model/provider/Drift output, run `flutter pub get`, repository formatting checks, `flutter analyze --no-fatal-infos`, and `flutter test --reporter expanded`; record results and resolve failures introduced by the change without manually editing generated files.
-- [ ] 8.3 Run Go wrapper checks, Android JVM tests and compilation for touched modules, and relevant changed-plugin checks; verify cross-language compatibility and record any unavailable native build prerequisites.
+- [x] 8.3 Run Go wrapper checks, Android JVM tests and compilation for touched modules, and relevant changed-plugin checks; verify cross-language compatibility and record any unavailable native build prerequisites.
 - [ ] 8.4 Smoke-test Android camera/permission/revoke/Quick Settings/reattachment and Windows/macOS/Linux QR image import, TUN authorization or proxy-only fallback, connected replacement, and window resizing; record results per available platform and explicitly identify untested host/device paths.
 - [x] 8.5 Update repository architecture guidance and user-facing usage/migration documentation to describe Home/Settings, URL token meaning, single-profile replacement, routing modes, and recovery backup behavior; verify documentation matches implemented flows and preserves the earlier disclaimer removal.

@@ -28,7 +28,7 @@ Closing the Flutter app pauses subscription and provider-content refresh. If the
 
 ## Test server latency
 
-Choose **Test latency** above the server list. Each individual server shows its measured round-trip probe time in a bold milliseconds badge; lower is better for this test, not a guarantee of download speed. The fastest successful node is marked without moving the list or selecting it. Auto and Fallback remain automatic modes, not individual measurements.
+Choose **Test latency** above the server list. Each individual server shows its measured round-trip probe time in a compact milliseconds badge; lower is better for this test, not a guarantee of download speed. The fastest successful result has a subtle accent border, without an extra Fastest label, moving the list, or selecting it. Auto and Fallback remain automatic modes, not individual measurements.
 
 The button shows Testing while the batch runs and cannot launch another batch. Not tested means there is no measurement for this configuration and test URL. Timed out means the probe exceeded its deadline; Unreachable means the probe could not connect or complete; Test failed means the test infrastructure did not return a usable result. Retry after checking your internet access and, if needed, the test URL in Settings. Testing does not connect a disconnected VPN, change the selected node/mode, or close your active traffic sessions. Auto/Fallback's normal health-based choices can still change as designed. Results are session-only and cleared when the configuration generation or test URL changes.
 
@@ -55,6 +55,8 @@ The first import may download large geographic databases. Later updates reuse ve
 ## Settings and routing
 
 The gear opens Settings. Network/DNS options, rules, scripts, diagnostics, appearance, application preferences, backup, and configuration recovery live there.
+
+Fresh appearance settings use dark mode with a muted teal accent, the Tonal Spot palette, and 80% text size. Existing saved choices are preserved on upgrade. In Settings → Theme, you can change the palette or mode, increase text size, or disable the text-size override to follow system scaling (within the supported 80–140% range). Resetting the color palette selects the new teal/Tonal Spot default but does not change text size or theme mode. Connection success remains bright green regardless of the chosen palette.
 
 By default, the selected server, Auto, or Fallback handles traffic captured by the VPN. Custom routing is opt-in under Settings and can use the imported rules, groups, and advanced routing mode. Home indicates when custom routing is active. Choosing a Home node switches back to simple routing without discarding saved custom rules or group selections.
 

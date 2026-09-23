@@ -2,6 +2,12 @@
 
 This matrix names coverage for every delta-spec scenario. Automated tests use temporary files/SQLite and fake HTTP/Core/platform boundaries unless explicitly identified as Go or JVM tests. They do not replace native GUI/device smoke tests.
 
+## 2026-09-23 archive acceptance
+
+[CI run 35728945241](https://github.com/phungvanquy/FIClash-new/actions/runs/35728945241) for commit `6a0ceff692481851a0fe654363964a9002883045` completed successfully. Dart, Go core, Plugins, Android unit tests, Rust, Windows helper tests, and Android/Windows artifact builds all passed. Release publication was intentionally skipped. This supplies the compilation and automated checks required by task 8.3; earlier statements about unavailable local toolchains remain historical host limitations, not missing CI results.
+
+The user reported successful testing on 2026-09-23 and approved synchronization and archive with the unverified smoke-test matrix deferred. The report did not enumerate devices, OS versions, or individual scenarios, so no blanket Android/Windows/macOS/Linux scenario pass is inferred. Task 8.4 remains unchecked as the explicit follow-up record, including native screen-reader, revoke/Always-on, failover, backup interruption, and platform-specific scenarios without recorded results. The matrices below retain their per-host evidence and pending procedures.
+
 ## Compact Home and sticky current node
 
 `test/pages/home_test.dart` covers compact header/row proportions, named 48-pixel touch targets, retained keyboard actions, sticky-node/list bounds before and after scrolling, observed-node changes without selection commands, immediate card removal outside Connected, light/dark connected glow, error interruption, reduced motion, and long names at 250% text scaling in narrow/short/wide windows. Existing current-node and latency provider suites cover stale observation rejection and non-mutating single-flight probes. Settings navigation and committed selection remain covered. Local light/dark Flutter-rendered previews were visually inspected with fonts and shadows enabled; these are not native-device screenshots.

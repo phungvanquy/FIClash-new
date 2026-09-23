@@ -171,7 +171,7 @@ class _PrimaryColorItemState extends ConsumerState<_PrimaryColorItem> {
       return state.copyWith(
         primaryColors: defaultPrimaryColors,
         primaryColor: defaultPrimaryColor,
-        schemeVariant: DynamicSchemeVariant.content,
+        schemeVariant: defaultSchemeVariant,
       );
     });
   }
@@ -270,7 +270,7 @@ class _PrimaryColorItemState extends ConsumerState<_PrimaryColorItem> {
                 state.primaryColors,
                 defaultPrimaryColors,
               ) &&
-              state.schemeVariant == DynamicSchemeVariant.content,
+              state.schemeVariant == defaultSchemeVariant,
         ),
       ),
     );

@@ -7,7 +7,6 @@
   "vpnLatencyTimeout": "超时",
   "vpnLatencyUnreachable": "无法连接",
   "vpnLatencyFailed": "测试失败",
-  "vpnLatencyFastest": "最快",
   "vpnStopFailed": "无法确认连接已断开。请点击断开连接重试。",
   "vpnAndroidHelpTitle": "在 Android 上断开连接",
   "vpnAndroidHelp": "点击断开连接并等待显示已断开。关闭应用不会断开 VPN。如果 Android 不断重启 VPN，请在 Android 设置 → VPN → FlClash 中关闭始终开启 VPN。“阻止未使用 VPN 的连接”可能会在断开后阻止上网。Android 的始终开启警告与本应用的连接通知不同。",

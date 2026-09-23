@@ -2307,7 +2307,7 @@ return $default(_that.enable,_that.scale);case _:
 @JsonSerializable()
 
 class _TextScale implements TextScale {
-  const _TextScale({this.enable = false, this.scale = 1.0});
+  const _TextScale({this.enable = true, this.scale = 0.8});
   factory _TextScale.fromJson(Map<String, dynamic> json) => _$TextScaleFromJson(json);
 
 @override@JsonKey() final  bool enable;
@@ -2593,7 +2593,7 @@ return $default(_that.primaryColor,_that.primaryColors,_that.themeMode,_that.sch
 @JsonSerializable()
 
 class _ThemeProps implements ThemeProps {
-  const _ThemeProps({this.primaryColor,  List<int> primaryColors = defaultPrimaryColors, this.themeMode = ThemeMode.dark, this.schemeVariant = DynamicSchemeVariant.content, this.pureBlack = false, this.textScale = const TextScale()}): _primaryColors = primaryColors;
+  const _ThemeProps({this.primaryColor,  List<int> primaryColors = defaultPrimaryColors, this.themeMode = ThemeMode.dark, this.schemeVariant = defaultSchemeVariant, this.pureBlack = false, this.textScale = const TextScale()}): _primaryColors = primaryColors;
   factory _ThemeProps.fromJson(Map<String, dynamic> json) => _$ThemePropsFromJson(json);
 
 @override final  int? primaryColor;

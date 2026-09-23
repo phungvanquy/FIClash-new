@@ -912,34 +912,24 @@ class _NodeLatency extends StatelessWidget {
         : measured
         ? scheme.onPrimaryContainer
         : scheme.onSurfaceVariant;
-    return Wrap(
-      spacing: 6,
-      runSpacing: 2,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: ShapeDecoration(color: background, shape: AppShape.sm),
-          child: Text(
-            label,
-            style:
-                (measured
-                        ? context.textTheme.titleMedium
-                        : context.textTheme.labelMedium)
-                    ?.copyWith(color: foreground, fontWeight: FontWeight.bold),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: ShapeDecoration(
+        color: background,
+        shape: AppShape.sm.copyWith(
+          side: BorderSide(
+            color: fastest && measured ? scheme.primary : Colors.transparent,
           ),
         ),
-        if (fastest)
-          Text(
-            text.vpnLatencyFastest,
-            style: context.textTheme.labelMedium?.copyWith(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.green.shade300
-                  : Colors.green.shade800,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-      ],
+      ),
+      child: Text(
+        label,
+        style:
+            (measured
+                    ? context.textTheme.bodyMedium
+                    : context.textTheme.labelMedium)
+                ?.copyWith(color: foreground, fontWeight: FontWeight.w600),
+      ),
     );
   }
 }

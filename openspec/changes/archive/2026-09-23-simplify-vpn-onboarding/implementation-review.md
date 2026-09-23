@@ -1,5 +1,11 @@
 # Implementation checkpoint
 
+## 2026-09-23 archive acceptance
+
+The user reported that testing succeeded and approved archiving with main-spec synchronization while preserving unverified platform smoke checks as deferred. All planning artifacts are complete. Task 8.3 is now verified by [CI run 35728945241](https://github.com/phungvanquy/FIClash-new/actions/runs/35728945241): Dart, Go, plugins, Android JVM, Rust, Windows helper and Android/Windows artifact builds passed for `6a0ceff`.
+
+Final task status: **52/53 complete**. Task 8.4 remains unchecked because the user's general success report does not establish every scenario/platform in the full smoke-test matrix. This is an explicitly accepted archive warning, not an implementation failure or an assertion that those tests passed. The three capabilities are synchronized into main specs; the spec-driven change is archived under `2026-09-23-simplify-vpn-onboarding`. No application code changes, commit, or push are part of this archive operation. Earlier checkpoints below retain their historical validation status.
+
 ## 2026-09-22 Compact Home and sticky current-node refinement
 
 Progress: 51/53 tasks complete. Tasks 11.1–11.3 are complete; native gates 8.3/8.4 remain open under the agreed artifact handoff.
