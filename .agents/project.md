@@ -1,6 +1,8 @@
 # Project Context
 
-FlClash is a multi-platform proxy client based on ClashMeta (mihomo), built with Flutter. It supports Android, Windows, macOS, and Linux, using a Material You design with Surfboard-like UI.
+Tunnio is this fork's user-facing brand for the FlClash multi-platform proxy client based on ClashMeta (mihomo), built with Flutter. It supports Android, Windows, macOS, and Linux, using a Material You design with Surfboard-like UI.
+
+Branding is independent of compatibility identity: keep `com.follow.clash`, the Dart package, Windows product/storage metadata, Linux package/binary names, Core/Helper names, IPC namespaces, URI schemes, notification channel IDs, and installer AppId stable. `legacyAppName` also preserves the WebDAV `/FlClash` folder, desktop auto-start registration, and default TUN device. Platform display labels and `appName` use Tunnio. Native icon generation is documented in `commands.md`.
 
 ## Version Notes
 

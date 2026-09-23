@@ -90,7 +90,7 @@ internal class NotificationModule(
             GlobalState.NOTIFICATION_CHANNEL,
         ).apply {
             setSmallIcon(R.drawable.ic_service)
-            setContentTitle("FlClash")
+            setContentTitle(service.getString(com.follow.clash.common.R.string.app_name))
             setContentIntent(intent.toPendingIntent)
             setPriority(NotificationCompat.PRIORITY_LOW)
             setCategory(NotificationCompat.CATEGORY_SERVICE)

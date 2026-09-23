@@ -2,20 +2,13 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 
 String _androidAttribute(String source, String element, String attribute) {
   final elementTag = RegExp('<$element\\b[^>]*>').firstMatch(source)!.group(0)!;
   return RegExp(
     'android:$attribute="([^"]+)"',
   ).firstMatch(elementTag)!.group(1)!;
-}
-
-double _androidDoubleAttribute(
-  String source,
-  String element,
-  String attribute,
-) {
-  return double.parse(_androidAttribute(source, element, attribute));
 }
 
 void main() {
@@ -33,7 +26,7 @@ void main() {
     for (final MapEntry(key: density, value: size) in expectedSizes.entries) {
       final file = File(
         'android/app/src/main/res/'
-        'mipmap-television-$density/ic_launcher.webp',
+        'mipmap-television-$density/ic_launcher.png',
       );
       expect(file.existsSync(), isTrue, reason: 'missing ${file.path}');
 
@@ -63,40 +56,38 @@ void main() {
       '@color/ic_launcher_background',
     );
 
-    final vector = File(
+    final drawable = File(
       'android/app/src/main/res/drawable/'
       'ic_launcher_foreground_tv.xml',
     ).readAsStringSync();
-    final scaleX = _androidDoubleAttribute(vector, 'group', 'scaleX');
-    final scaleY = _androidDoubleAttribute(vector, 'group', 'scaleY');
-    final translateX = _androidDoubleAttribute(vector, 'group', 'translateX');
-    final translateY = _androidDoubleAttribute(vector, 'group', 'translateY');
-    final viewportWidth = _androidDoubleAttribute(
-      vector,
-      'vector',
-      'viewportWidth',
+    expect(
+      _androidAttribute(drawable, 'bitmap', 'src'),
+      '@drawable/tunnio_launcher',
     );
-    final viewportHeight = _androidDoubleAttribute(
-      vector,
-      'vector',
-      'viewportHeight',
-    );
-
-    // Conservative bounds of the current logo, including the curved caps.
-    const logoBounds = ui.Rect.fromLTRB(54, 33, 179, 206.5);
-    final transformedBounds = ui.Rect.fromLTRB(
-      (logoBounds.left * scaleX + translateX) / viewportWidth * 108,
-      (logoBounds.top * scaleY + translateY) / viewportHeight * 108,
-      (logoBounds.right * scaleX + translateX) / viewportWidth * 108,
-      (logoBounds.bottom * scaleY + translateY) / viewportHeight * 108,
-    );
-    const safeZone = ui.Rect.fromLTWH(18, 18, 72, 72);
-
-    expect(transformedBounds.left, greaterThanOrEqualTo(safeZone.left));
-    expect(transformedBounds.top, greaterThanOrEqualTo(safeZone.top));
-    expect(transformedBounds.right, lessThanOrEqualTo(safeZone.right));
-    expect(transformedBounds.bottom, lessThanOrEqualTo(safeZone.bottom));
-    expect(transformedBounds.center.dx, closeTo(safeZone.center.dx, 0.05));
-    expect(transformedBounds.center.dy, closeTo(safeZone.center.dy, 0.05));
+    expect(_androidAttribute(drawable, 'bitmap', 'gravity'), 'fill');
+    final image = img.decodePng(
+      File(
+        'android/app/src/main/res/drawable-nodpi/tunnio_launcher.png',
+      ).readAsBytesSync(),
+    )!;
+    expect([image.width, image.height], [432, 432]);
+    var left = image.width;
+    var top = image.height;
+    var right = 0;
+    var bottom = 0;
+    for (final pixel in image) {
+      if (pixel.a < 10) continue;
+      if (pixel.x < left) left = pixel.x;
+      if (pixel.x > right) right = pixel.x;
+      if (pixel.y < top) top = pixel.y;
+      if (pixel.y > bottom) bottom = pixel.y;
+      final x = pixel.x - 216;
+      final y = pixel.y - 216;
+      expect(x * x + y * y, lessThan(132 * 132));
+    }
+    expect(right, greaterThan(left));
+    expect(bottom, greaterThan(top));
+    expect((left + right) / 2, closeTo(216, 8));
+    expect((top + bottom) / 2, closeTo(216, 8));
   });
 }

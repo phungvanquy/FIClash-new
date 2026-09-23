@@ -3,7 +3,7 @@ app_id: 728B3532-C74B-4870-9068-BE70FE12A3E6
 app_name: FlClash
 publisher: chen08209
 publisher_url: https://github.com/chen08209/FlClash
-display_name: FlClash
+display_name: Tunnio
 executable_name: FlClash.exe
 output_base_file_name: FlClash.exe
 # Resolved against the project root: flutter_distributor turns this into an

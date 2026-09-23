@@ -4,7 +4,10 @@
 
 </div>
 
-## FlClash
+## Tunnio
+
+Tunnio is this repository's branded fork of FlClash, using the rabbit-and-carrot rocket logo.
+The upstream project links and credits below are retained for attribution. Test builds for this fork are available from [GitHub Actions](https://github.com/phungvanquy/FIClash-new/actions).
 
 [![Downloads](https://img.shields.io/github/downloads/chen08209/FlClash/total?style=flat-square&logo=github)](https://github.com/chen08209/FlClash/releases/)[![Last Version](https://img.shields.io/github/release/chen08209/FlClash/all.svg?style=flat-square)](https://github.com/chen08209/FlClash/releases/)[![License](https://img.shields.io/github/license/chen08209/FlClash?style=flat-square)](LICENSE)
 

@@ -1,8 +1,10 @@
-# VPN setup and recovery
+# Tunnio VPN setup and recovery
+
+Tunnio is the new display name of this FlClash-based app. The rabbit-and-carrot rocket artwork is used for its launcher, desktop, notification, and tray icons. Existing app IDs, desktop executable names, saved settings, auto-start identity, URI schemes, and the WebDAV `/FlClash` backup folder remain unchanged. Windows executables and download filenames can still contain `FlClash`; the app and shortcuts display Tunnio. Upgrade with the same signing identity to retain application data.
 
 ## Import, select, connect
 
-Open FlClash and import the HTTP(S) subscription/configuration URL supplied by your provider. You can enter it manually, explicitly paste it from the clipboard, or scan a QR code. Android supports camera scanning and QR images; desktop uses a QR image file. If camera permission is denied, use Paste, manual entry, or an image instead. QR images support PNG/JPEG up to 16 MB, 16 megapixels, and 8192 pixels per side.
+Open Tunnio and import the HTTP(S) subscription/configuration URL supplied by your provider. You can enter it manually, explicitly paste it from the clipboard, or scan a QR code. Android supports camera scanning and QR images; desktop uses a QR image file. If camera permission is denied, use Paste, manual entry, or an image instead. QR images support PNG/JPEG up to 16 MB, 16 megapixels, and 8192 pixels per side.
 
 “VPN token” means the complete subscription URL, including its embedded token. There is no provider-specific short-code decoder or new raw protocol-token importer. Treat the URL, exported YAML, and backups as credentials; do not publish them.
 
@@ -38,13 +40,13 @@ Tap **Disconnect** and wait for Disconnected. The app removes its foreground con
 
 If cleanup fails, retry **Disconnect** before connecting again. Native starts remain blocked until cleanup succeeds, even if an old connection timer remains. Successful delayed cleanup clears the resolved disconnect error; it does not automatically reconnect.
 
-Android's **Always-on VPN** is separate from FlClash's auto-connect preference: Android can start the service again. To leave it off, open Android Settings → Network & Internet (or Connections) → VPN → FlClash, then disable Always-on VPN. If **Block connections without VPN** is enabled, internet access can remain blocked after disconnecting. Android's Always-on warning notification is different from FlClash's foreground notification and can remain until Always-on is disabled or the VPN reconnects. Menu wording varies by device. See [Android's VPN lifecycle and Always-on guidance](https://developer.android.com/develop/connectivity/vpn).
+Android's **Always-on VPN** is separate from Tunnio's auto-connect preference: Android can start the service again. To leave it off, open Android Settings → Network & Internet (or Connections) → VPN → Tunnio, then disable Always-on VPN. If **Block connections without VPN** is enabled, internet access can remain blocked after disconnecting. Android's Always-on warning notification is different from Tunnio's foreground notification and can remain until Always-on is disabled or the VPN reconnects. Menu wording varies by device. See [Android's VPN lifecycle and Always-on guidance](https://developer.android.com/develop/connectivity/vpn).
 
-If the VPN key remains while FlClash says Disconnected with Always-on disabled, check whether another VPN is active in Android settings. If FlClash still appears connected, disconnect it there and report the Android version, app build, displayed state, and whether the key or app notification remained. Do not include subscription URLs or tokens in logs/screenshots. The key icon is managed by Android; this app cannot remove it independently of the tunnel.
+If the VPN key remains while Tunnio says Disconnected with Always-on disabled, check whether another VPN is active in Android settings. If Tunnio still appears connected, disconnect it there and report the Android version, app build, displayed state, and whether the key or app notification remained. Do not include subscription URLs or tokens in logs/screenshots. The key icon is managed by Android; this app cannot remove it independently of the tunnel.
 
 ## One profile, safe replacement
 
-Use Replace configuration on Home or in Settings to import a new URL. FlClash downloads and validates the candidate and its required resources before activating and committing it. A successful import replaces the sole profile immediately. Fetch, validation, preparation, or storage failure preserves the previous committed profile and selection. A failed activation restores the previous configuration; if restoration itself fails, use Settings' recovery action instead of assuming the VPN is connected.
+Use Replace configuration on Home or in Settings to import a new URL. Tunnio downloads and validates the candidate and its required resources before activating and committing it. A successful import replaces the sole profile immediately. Fetch, validation, preparation, or storage failure preserves the previous committed profile and selection. A failed activation restores the previous configuration; if restoration itself fails, use Settings' recovery action instead of assuming the VPN is connected.
 
 Connected replacement keeps the current connection intent, but existing sessions may reconnect when the new configuration activates. Disconnecting while an import is pending wins: finishing the import does not reconnect you. Cancelling or submitting a newer import prevents older work from replacing it.
 
@@ -66,7 +68,7 @@ File import and original-source export remain available in Settings. Source expo
 
 ## Upgrade, backup, restore
 
-Before consolidating an older multi-profile installation, FlClash creates and verifies an app-private recovery archive of its database, settings, profiles, provider resources, scripts, and cached geodata. Offline migration tries the selected usable profile first, then the first usable profile in saved order. If none is usable, Home returns to import while the archive preserves the old data. If the archive cannot be written, old records are not pruned.
+Before consolidating an older multi-profile installation, Tunnio creates and verifies an app-private recovery archive of its database, settings, profiles, provider resources, scripts, and cached geodata. Offline migration tries the selected usable profile first, then the first usable profile in saved order. If none is usable, Home returns to import while the archive preserves the old data. If the archive cannot be written, old records are not pruned.
 
 Settings can export the migration archive without deleting the retained copy. Routine cleanup does not delete migration archives. Keep an external copy before uninstalling or deleting app data.
 

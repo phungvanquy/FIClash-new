@@ -6,6 +6,22 @@ Make subscription import, server choice, and connection control directly accessi
 
 ## Requirements
 
+### Requirement: Tunnio application branding
+
+The application SHALL display Tunnio on Home, About, platform launcher labels, desktop windows and shortcuts, and default VPN notification/session labels. The supplied rabbit-and-carrot rocket PNG SHALL be the canonical app artwork, with reproducibly generated launcher, adaptive/themed, notification, TV, macOS, Windows and tray variants. Android adaptive artwork SHALL fit inside the mask-safe region; notification and template tray artwork SHALL retain transparent monochrome detail. Existing application/bundle IDs, Windows storage metadata, installer identity, Linux package and executable identities, Core/Helper/IPC names, URI schemes, auto-start registration identity, TUN device default and WebDAV backup folder MUST NOT change as a side effect of branding. User-supplied profile titles and upstream attribution SHALL remain intact.
+
+#### Scenario: Upgrade without losing existing configuration
+
+- **WHEN** an existing installation receives a same-signature Tunnio update
+- **THEN** the user-facing name and artwork change while the app continues using the same configuration storage, backup folder, platform permissions, and auto-start identity
+- **AND** legacy executable names and URI schemes continue to work
+
+#### Scenario: Display platform icons
+
+- **WHEN** the app appears in an Android launcher, VPN notification, desktop shell, or system tray
+- **THEN** the appropriate generated rabbit artwork is used without stretching or unsafe adaptive cropping
+- **AND** proxy and TUN tray states remain distinguishable and macOS template icons retain alpha detail
+
 ### Requirement: Unambiguous connection feedback
 
 The central button and status indicator SHALL be green when fully connected and neutral gray when disconnected. Connecting, disconnecting, suspended/proxy-only operation, and errors SHALL have distinct text, icons, and visual treatment in light and dark themes. Progress SHALL disable repeated connection actions while an explicit one-shot Cancel action permits stopping pending startup. A failed stop SHALL remain actionable and MUST NOT be presented as successful disconnection. Errors SHALL use actionable localized copy rather than raw platform exceptions.

@@ -248,7 +248,7 @@ abstract class SnifferConfig with _$SnifferConfig {
 abstract class Tun with _$Tun {
   const factory Tun({
     @Default(false) bool enable,
-    @Default(appName) String device,
+    @Default(legacyAppName) String device,
     @JsonKey(name: 'auto-route') @Default(false) bool autoRoute,
     @Default(TunStack.mixed) TunStack stack,
     @JsonKey(name: 'dns-hijack') @Default(['any:53']) List<String> dnsHijack,

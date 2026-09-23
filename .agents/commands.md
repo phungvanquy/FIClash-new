@@ -90,18 +90,18 @@ Generated output paths, configured in `build.yaml`:
 - `lib/providers/generated/*.g.dart`.
 - `lib/database/generated/*.g.dart`.
 
-Tray and Windows app icons are generated, not hand-edited. `assets_source/images/icon/*.svg` is
-the source of truth; the script needs `rsvg-convert` (librsvg) on `PATH`:
+App, launcher, notification, and tray icons are generated, not hand-edited. The square
+1024-pixel `assets/images/icon.png` is the source of truth; the generator uses the existing Dart `image` dependency:
 
 ```bash
 dart run tool/generate_status_icons.dart
 ```
 
-It writes the tray PNGs with Flutter `2.0x/`–`4.0x/` resolution variants to `assets/images/tray/unix/`,
-multi-size tray `.ico` files to `assets/images/tray/windows/`, and `windows/runner/resources/app_icon.ico`
-from `assets/images/icon.png`. `pubspec.yaml` declares the two tray directories with `platforms:` so each
-build only bundles the format its tray loads; a new status icon needs a source SVG and an entry in the
-script's `statusIconNames`, nothing in `pubspec.yaml`.
+It writes Android launcher densities, padded adaptive/themed layers, notification artwork and the TV banner;
+macOS AppIcon sizes; Windows app/installer ICOs; and tray PNGs (`2.0x/`–`4.0x/`) and ICOs.
+Obsolete Android launcher WebPs are removed to avoid duplicate resource names. Tray variants retain gray,
+blue (proxy), and green (TUN) states; monochrome assets preserve the rabbit's line detail and transparency.
+`pubspec.yaml` declares platform-specific tray directories so each build only bundles its own format.
 
 ## Testing
 

@@ -1,4 +1,4 @@
-display_name: FlClash
+display_name: Tunnio
 package_name: FlClash
 maintainer:
   name: chen08209
@@ -28,12 +28,13 @@ supported_mime_type:
   - x-scheme-handler/flclash
 
 keywords:
+  - Tunnio
   - FlClash
   - Clash
   - ClashMeta
   - Proxy
 
-generic_name: FlClash
+generic_name: Tunnio
 
 categories:
   - Network
