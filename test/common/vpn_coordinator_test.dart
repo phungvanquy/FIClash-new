@@ -186,6 +186,37 @@ void main() {
   });
 
   test(
+    'refresh retains missing usage metadata but a changed URL clears it',
+    () async {
+      const info = SubscriptionInfo(download: 10, total: 100);
+      fetch = (_, _, _) async =>
+          VpnDownload(utf8.encode(body), subscriptionInfo: info);
+      final imported = (await coordinator.submit(
+        const VpnImportRequest(profile: incoming),
+      )).profile!;
+      fetch = (_, _, _) async => VpnDownload(utf8.encode(body));
+      final refreshed = await coordinator.submit(
+        VpnImportRequest(
+          profile: imported,
+          refreshRevision: imported.snapshot.revision,
+        ),
+      );
+      expect(refreshed.outcome, VpnImportOutcome.success);
+      expect(refreshed.profile!.subscriptionInfo, info);
+      final changed = await coordinator.submit(
+        VpnImportRequest(
+          profile: refreshed.profile!.copyWith(
+            url: 'https://example.test/other',
+          ),
+          expectedProfile: refreshed.profile,
+        ),
+      );
+      expect(changed.outcome, VpnImportOutcome.success);
+      expect(changed.profile!.subscriptionInfo, isNull);
+    },
+  );
+
+  test(
     'download timeout is a retryable failure and preserves the active profile',
     () async {
       fetch = (_, _, _) async => throw TimeoutException('download');

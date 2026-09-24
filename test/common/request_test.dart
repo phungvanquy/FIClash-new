@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:fl_clash/common/request.dart';
@@ -7,9 +9,53 @@ import 'package:mocktail/mocktail.dart';
 
 class _SubscriptionClient extends Mock implements Dio {}
 
+class _NetworkOverrides extends HttpOverrides {}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() => registerFallbackValue(CancelToken()));
+
+  test(
+    'redirected compressed subscriptions preserve encoded credentials',
+    () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+      final paths = <String>[];
+      const source =
+          'proxies: [{name: A, type: socks5, server: localhost, port: 1080}]';
+      server.listen((request) async {
+        paths.add(request.uri.toString());
+        if (request.uri.path == '/subscription') {
+          request.response.statusCode = HttpStatus.temporaryRedirect;
+          request.response.headers.set(
+            HttpHeaders.locationHeader,
+            '/config?token=a%2Bb&extra=%252F',
+          );
+        } else {
+          request.response.headers.set(
+            HttpHeaders.contentEncodingHeader,
+            'gzip',
+          );
+          request.response.add(gzip.encode(utf8.encode(source)));
+        }
+        await request.response.close();
+      });
+      await HttpOverrides.runWithHttpOverrides(() async {
+        final client = Dio();
+        addTearDown(() => client.close(force: true));
+        final response = await Request(subscriptionClient: client).fetchVpnResource(
+          'http://127.0.0.1:${server.port}/subscription?token=a%2Bb&extra=%252F',
+          const {},
+          CancelToken(),
+        );
+        expect(utf8.decode(response.bytes), source);
+        expect(paths, [
+          '/subscription?token=a%2Bb&extra=%252F',
+          '/config?token=a%2Bb&extra=%252F',
+        ]);
+      }, _NetworkOverrides());
+    },
+  );
 
   test(
     'VPN resource downloads preserve tokens, headers, and cancellation',
@@ -94,6 +140,71 @@ void main() {
       );
     },
   );
+
+  for (final disposition in [
+    ['attachment; filename="unterminated'],
+    ["attachment; filename*=UTF-8''%ZZ"],
+    ['attachment; filename="first.yaml"', 'attachment; filename="second.yaml"'],
+  ]) {
+    test(
+      'optional filename metadata cannot fail a valid download: $disposition',
+      () async {
+        final client = _SubscriptionClient();
+        when(
+          () => client.get<List<int>>(
+            any(),
+            cancelToken: any(named: 'cancelToken'),
+            options: any(named: 'options'),
+          ),
+        ).thenAnswer(
+          (_) async => Response(
+            data: [1, 2, 3],
+            requestOptions: RequestOptions(path: '/subscription'),
+            headers: Headers.fromMap({'content-disposition': disposition}),
+          ),
+        );
+        final response = await Request(subscriptionClient: client)
+            .fetchVpnResource(
+              'https://example.test/subscription',
+              const {},
+              CancelToken(),
+            );
+        expect(response.bytes, [1, 2, 3]);
+        expect(response.subscriptionInfo, isNull);
+      },
+    );
+  }
+
+  test('repeated subscription metadata headers are combined', () async {
+    final client = _SubscriptionClient();
+    when(
+      () => client.get<List<int>>(
+        any(),
+        cancelToken: any(named: 'cancelToken'),
+        options: any(named: 'options'),
+      ),
+    ).thenAnswer(
+      (_) async => Response(
+        data: [1],
+        requestOptions: RequestOptions(path: '/subscription'),
+        headers: Headers.fromMap({
+          'subscription-userinfo': [
+            'upload=1; download=2',
+            'total=100; expire=200',
+          ],
+        }),
+      ),
+    );
+    final response = await Request(subscriptionClient: client).fetchVpnResource(
+      'https://example.test/subscription',
+      const {},
+      CancelToken(),
+    );
+    expect(response.subscriptionInfo!.upload, 1);
+    expect(response.subscriptionInfo!.download, 2);
+    expect(response.subscriptionInfo!.total, 100);
+    expect(response.subscriptionInfo!.expire, 200);
+  });
 
   test('parent cancellation reaches the in-flight HTTP transfer', () async {
     final client = _SubscriptionClient();

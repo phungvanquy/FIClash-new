@@ -240,7 +240,11 @@ class VpnImportCoordinator {
         label: profile.label.isEmpty
             ? download.filename ?? profile.id.toString()
             : profile.label,
-        subscriptionInfo: download.subscriptionInfo ?? profile.subscriptionInfo,
+        subscriptionInfo:
+            download.subscriptionInfo ??
+            (request.bytes != null || profile.url == previous?.url
+                ? profile.subscriptionInfo
+                : null),
         order: 0,
       );
       phase = VpnImportPhase.preparation;

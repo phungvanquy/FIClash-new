@@ -118,7 +118,10 @@ class VpnAction extends _$VpnAction {
   }
 
   Future<VpnImportCoordinator> get coordinator =>
-      _operation ??= _createCoordinator();
+      _operation ??= _createCoordinator().onError<Object>((error, stackTrace) {
+        _operation = null;
+        Error.throwWithStackTrace(error, stackTrace);
+      });
 
   void cancel() {
     _intent++;

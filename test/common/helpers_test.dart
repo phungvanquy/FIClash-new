@@ -323,5 +323,23 @@ void main() {
     test('returns null when no filename parameter is present', () {
       expect(getFileNameForDisposition('attachment'), isNull);
     });
+
+    test(
+      'supports a language tag and preserves a malformed encoding fallback',
+      () {
+        expect(
+          getFileNameForDisposition(
+            "attachment; filename*=UTF-8'en'VPN%20config.yaml",
+          ),
+          'VPN config.yaml',
+        );
+        expect(
+          getFileNameForDisposition(
+            "attachment; filename=fallback.yaml; filename*=UTF-8''%ZZ",
+          ),
+          'fallback.yaml',
+        );
+      },
+    );
   });
 }

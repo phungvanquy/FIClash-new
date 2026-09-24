@@ -819,6 +819,36 @@ void main() {
   });
 
   test(
+    'a failed coordinator initialization can be retried without restarting',
+    () async {
+      container.dispose();
+      var failStore = true;
+      container = ProviderContainer(
+        retry: (_, _) => null,
+        overrides: [
+          profileGenerationStoreProvider.overrideWith((_) async {
+            if (failStore) {
+              throw const FileSystemException('temporarily unavailable');
+            }
+            return store;
+          }),
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+          singleProfileRepositoryProvider.overrideWithValue(
+            database.singleProfile,
+          ),
+          vpnActionProvider.overrideWith(_VpnAction.new),
+        ],
+      );
+      action = container.read(vpnActionProvider.notifier);
+      expect((await submit()).outcome, VpnImportOutcome.failed);
+      failStore = false;
+      container.invalidate(profileGenerationStoreProvider);
+      expect((await submit()).outcome, VpnImportOutcome.success);
+      expect(await database.singleProfile.current(), isNotNull);
+    },
+  );
+
+  test(
     'a post-commit recovery check cannot report the durable import as failed',
     () async {
       store = ProfileGenerationStore(

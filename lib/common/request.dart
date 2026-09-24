@@ -101,19 +101,17 @@ class Request {
       finished = true;
     }
     String? filename;
-    try {
-      filename = getFileNameForDisposition(
-        response.headers.value('content-disposition'),
-      );
-    } on FormatException {
-      filename = null;
+    for (final value in response.headers['content-disposition'] ?? <String>[]) {
+      filename = getFileNameForDisposition(value);
+      if (filename != null && filename.isNotEmpty) break;
     }
+    final userinfo = response.headers['subscription-userinfo']?.join(';');
     return VpnDownload(
       response.data ?? const [],
       filename: filename,
-      subscriptionInfo: SubscriptionInfo.formHString(
-        response.headers.value('subscription-userinfo'),
-      ),
+      subscriptionInfo: userinfo == null
+          ? null
+          : SubscriptionInfo.formHString(userinfo),
     );
   }
 
@@ -213,22 +211,25 @@ final request = Request();
 
 String? getFileNameForDisposition(String? disposition) {
   if (disposition == null) return null;
-  final parseValue = HeaderValue.parse(disposition);
-  final parameters = parseValue.parameters;
-  final fileNamePointKey = parameters.keys.firstWhere(
-    (key) => key == 'filename*',
-    orElse: () => '',
-  );
-  if (fileNamePointKey.isNotEmpty) {
-    final res = parameters[fileNamePointKey]?.split("''") ?? [];
-    if (res.length >= 2) {
-      return Uri.decodeComponent(res[1]);
+  final Map<String, String?> parameters;
+  try {
+    parameters = HeaderValue.parse(disposition).parameters;
+  } on HttpException {
+    return null;
+  } on FormatException {
+    return null;
+  }
+  final extended = parameters['filename*']?.split("'");
+  if (extended != null &&
+      extended.length == 3 &&
+      extended.first.toLowerCase() == 'utf-8') {
+    try {
+      return Uri.decodeComponent(extended.last);
+    } on FormatException {
+      return parameters['filename'];
+    } on ArgumentError {
+      return parameters['filename'];
     }
   }
-  final fileNameKey = parameters.keys.firstWhere(
-    (key) => key == 'filename',
-    orElse: () => '',
-  );
-  if (fileNameKey.isEmpty) return null;
-  return parameters[fileNameKey];
+  return parameters['filename'];
 }
