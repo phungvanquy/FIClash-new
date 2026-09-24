@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -229,8 +230,14 @@ class VpnCandidateStager {
               if (localOnly) {
                 throw const VpnLocalResourceUnavailable();
               }
-              bytes = (await fetch(url, const {}, cancel)).bytes;
-              fetchedAt = clock();
+              (bytes, fetchedAt) = await _fetchGeodataOrReuseVerified(
+                committed: committed,
+                name: name,
+                url: url,
+                interval: raw['geo-update-interval'],
+                cancel: cancel,
+                checkCurrent: checkCurrent,
+              );
             }
             checkCurrent();
             await store.write(generation, 'geo/$name', bytes);
@@ -404,13 +411,47 @@ class VpnCandidateStager {
     'fetchedAt': fetchedAt.toUtc().toIso8601String(),
   };
 
+  Future<(List<int>, DateTime)> _fetchGeodataOrReuseVerified({
+    required Profile? committed,
+    required String name,
+    required String url,
+    required Object? interval,
+    required CancelToken cancel,
+    required void Function() checkCurrent,
+  }) async {
+    try {
+      final response = await fetch(url, const {}, cancel);
+      return (response.bytes, clock());
+    } catch (error) {
+      checkCurrent();
+      if (error is! DioException &&
+          error is! TimeoutException &&
+          error is! HttpException &&
+          error is! SocketException) {
+        rethrow;
+      }
+      final verified = await _cachedGeodata(
+        committed,
+        name,
+        url,
+        interval,
+        true,
+        allowLegacy: false,
+      );
+      checkCurrent();
+      if (verified == null) rethrow;
+      return verified;
+    }
+  }
+
   Future<(List<int>, DateTime)?> _cachedGeodata(
     Profile? committed,
     String name,
     String url,
     Object? interval,
-    bool localOnly,
-  ) async {
+    bool localOnly, {
+    bool allowLegacy = true,
+  }) async {
     final generation = committed?.snapshot.generation;
     if (generation == null) return null;
     try {
@@ -419,7 +460,7 @@ class VpnCandidateStager {
         'geo-cache.json',
       );
       if (metadata == null) {
-        if (!localOnly) return null;
+        if (!localOnly || !allowLegacy) return null;
         final effective = await store.readVerifiedResource(
           generation,
           'effective.yaml',

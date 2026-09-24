@@ -448,6 +448,63 @@ proxy-providers:
     },
   );
 
+  test(
+    'failed default geodata refresh reuses the verified bundled snapshot',
+    () async {
+      var bundledLoads = 0;
+      var fetches = 0;
+      final value = stager(
+        bundledGeodata: (name) async {
+          bundledLoads++;
+          return utf8.encode('bundled $name');
+        },
+        fetch: (url, _, _) async {
+          fetches++;
+          throw DioException(
+            requestOptions: RequestOptions(path: url),
+            type: DioExceptionType.unknown,
+          );
+        },
+        load: (params) async {
+          if (!await store
+              .resource(params.generation, 'geo/GeoSite.dat')
+              .exists()) {
+            throw const CoreMethodException(
+              code: 'resource_required',
+              message: 'required',
+              details: {'resource': 'GeoSite.dat'},
+            );
+          }
+          return prepare(params);
+        },
+      );
+      final first = await stage(value);
+      final second = await stage(value, previous: first.profile);
+      expect(bundledLoads, 1);
+      expect(fetches, 1);
+      expect(
+        await store
+            .resource(second.profile.snapshot.generation!, 'geo/GeoSite.dat')
+            .readAsString(),
+        'bundled GeoSite.dat',
+      );
+      final metadata =
+          jsonDecode(
+                await store
+                    .resource(
+                      second.profile.snapshot.generation!,
+                      'geo-cache.json',
+                    )
+                    .readAsString(),
+              )
+              as Map;
+      expect(
+        metadata['GeoSite.dat']['fetchedAt'],
+        DateTime.fromMillisecondsSinceEpoch(0).toUtc().toIso8601String(),
+      );
+    },
+  );
+
   test('bundled geodata is never substituted for a custom source', () async {
     final value = stager(
       fetch: (_, _, _) async =>
@@ -551,6 +608,36 @@ proxy-providers:
         expect(await database(second), 'database-2');
       },
     );
+
+    test('failed refresh cannot reuse data from a different source', () async {
+      final first = await stage(value, text: text);
+      final failing = stager(
+        fetch: (url, _, _) async => throw DioException(
+          requestOptions: RequestOptions(path: url),
+          type: DioExceptionType.unknown,
+        ),
+        load: (params) async {
+          if (!await store
+              .resource(params.generation, 'geo/GeoSite.dat')
+              .exists()) {
+            throw const CoreMethodException(
+              code: 'resource_required',
+              message: 'required',
+              details: {'resource': 'GeoSite.dat'},
+            );
+          }
+          return prepare(params);
+        },
+      );
+      await expectLater(
+        stage(
+          failing,
+          text: text.replaceAll('secret', 'other'),
+          previous: first.profile,
+        ),
+        throwsA(isA<DioException>()),
+      );
+    });
 
     test(
       'corrupt cached resource is fetched again without editing the old snapshot',
