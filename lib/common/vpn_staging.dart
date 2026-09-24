@@ -230,7 +230,7 @@ class VpnCandidateStager {
               if (localOnly) {
                 throw const VpnLocalResourceUnavailable();
               }
-              (bytes, fetchedAt) = await _fetchGeodataOrReuseVerified(
+              (bytes, fetchedAt) = await _fetchGeodataOrUseLocal(
                 committed: committed,
                 name: name,
                 url: url,
@@ -411,7 +411,7 @@ class VpnCandidateStager {
     'fetchedAt': fetchedAt.toUtc().toIso8601String(),
   };
 
-  Future<(List<int>, DateTime)> _fetchGeodataOrReuseVerified({
+  Future<(List<int>, DateTime)> _fetchGeodataOrUseLocal({
     required Profile? committed,
     required String name,
     required String url,
@@ -424,6 +424,7 @@ class VpnCandidateStager {
       return (response.bytes, clock());
     } catch (error) {
       checkCurrent();
+      if (error is DioException && CancelToken.isCancel(error)) rethrow;
       if (error is! DioException &&
           error is! TimeoutException &&
           error is! HttpException &&
@@ -439,8 +440,12 @@ class VpnCandidateStager {
         allowLegacy: false,
       );
       checkCurrent();
-      if (verified == null) rethrow;
-      return verified;
+      if (verified != null) return verified;
+      if (url != defaultGeoXUrl[geoResources[name]!.$1]) rethrow;
+      return (
+        await bundledGeodata(name),
+        DateTime.fromMillisecondsSinceEpoch(0),
+      );
     }
   }
 

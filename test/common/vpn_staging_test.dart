@@ -505,10 +505,139 @@ proxy-providers:
     },
   );
 
+  group('replacement geodata fallback', () {
+    Future<PreparedConfigResult> requireResource(
+      PrepareConfigParams params,
+      String name,
+    ) async {
+      if (!await store.resource(params.generation, 'geo/$name').exists()) {
+        throw CoreMethodException(
+          code: 'resource_required',
+          message: 'required',
+          details: {'resource': name},
+        );
+      }
+      return prepare(params);
+    }
+
+    for (final name in VpnCandidateStager.geoResources.keys) {
+      test(
+        'uses bundled $name when it is missing from the old snapshot',
+        () async {
+          final old = await stage(stager());
+          final loaded = <String>[];
+          var fetches = 0;
+          final replacement = await stage(
+            stager(
+              fetch: (url, _, _) async {
+                fetches++;
+                throw DioException(requestOptions: RequestOptions(path: url));
+              },
+              bundledGeodata: (resource) async {
+                loaded.add(resource);
+                return utf8.encode('bundled $resource');
+              },
+              load: (params) => requireResource(params, name),
+            ),
+            previous: old.profile,
+          );
+          expect(fetches, 1);
+          expect(loaded, [name]);
+          final generation = replacement.profile.snapshot.generation!;
+          expect(
+            await store.resource(generation, 'geo/$name').readAsString(),
+            'bundled $name',
+          );
+          final metadata =
+              jsonDecode(
+                    await store
+                        .resource(generation, 'geo-cache.json')
+                        .readAsString(),
+                  )
+                  as Map;
+          expect(
+            metadata[name]['fetchedAt'],
+            DateTime.fromMillisecondsSinceEpoch(0).toUtc().toIso8601String(),
+          );
+          expect(await store.load(generation), replacement.profile);
+          expect(
+            await store.load(old.profile.snapshot.generation!),
+            old.profile,
+          );
+        },
+      );
+    }
+
+    test('can replace a legacy profile without a snapshot cache', () async {
+      final candidate = await stage(
+        stager(
+          fetch: (_, _, _) async => throw const SocketException('offline'),
+          bundledGeodata: (_) async => utf8.encode('bundled database'),
+          load: (params) => requireResource(params, 'Country.mmdb'),
+        ),
+        previous: profile,
+      );
+      expect(
+        await store.load(candidate.profile.snapshot.generation!),
+        candidate.profile,
+      );
+    });
+
+    for (final failedFile in ['geo-cache.json', 'geo/GeoSite.dat']) {
+      test('uses the bundle instead of corrupt $failedFile', () async {
+        final value = stager(
+          fetch: (_, _, _) async => throw const HttpException('offline'),
+          bundledGeodata: (_) async => utf8.encode('bundled database'),
+          load: (params) => requireResource(params, 'GeoSite.dat'),
+        );
+        final old = await stage(value);
+        final corrupt = store.resource(
+          old.profile.snapshot.generation!,
+          failedFile,
+        );
+        await corrupt.writeAsString('corrupt');
+        final replacement = await stage(value, previous: old.profile);
+        expect(
+          await store
+              .resource(
+                replacement.profile.snapshot.generation!,
+                'geo/GeoSite.dat',
+              )
+              .readAsString(),
+          'bundled database',
+        );
+        expect(await corrupt.readAsString(), 'corrupt');
+      });
+    }
+
+    for (final error in <Exception>[
+      DioException(
+        requestOptions: RequestOptions(path: 'https://example.test/geodata'),
+        type: DioExceptionType.cancel,
+      ),
+      const FormatException('Unexpected failure'),
+    ]) {
+      test('does not substitute bundled data for $error', () async {
+        final old = await stage(stager());
+        await expectLater(
+          stage(
+            stager(
+              fetch: (_, _, _) async => throw error,
+              load: (params) => requireResource(params, 'GeoSite.dat'),
+            ),
+            previous: old.profile,
+          ),
+          throwsA(same(error)),
+        );
+        expect(await store.generations.list().toList(), hasLength(1));
+      });
+    }
+  });
+
   test('bundled geodata is never substituted for a custom source', () async {
     final value = stager(
       fetch: (_, _, _) async =>
-          throw StateError('Custom source is unavailable'),
+          throw const HttpException('Custom source is unavailable'),
       bundledGeodata: (_) async => fail('Custom source must be respected'),
       load: (_) async => throw const CoreMethodException(
         code: 'resource_required',
@@ -521,7 +650,7 @@ proxy-providers:
         value,
         text: '$source\ngeox-url: {geosite: "https://example.test/custom"}',
       ),
-      throwsStateError,
+      throwsA(isA<HttpException>()),
     );
     expect(await store.generations.list().toList(), isEmpty);
     expect(await File('${home.path}/config.yaml').exists(), isFalse);
