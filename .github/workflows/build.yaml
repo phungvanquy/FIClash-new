@@ -420,7 +420,15 @@ jobs:
       - name: Test Windows install, upgrade and data removal
         if: matrix.platform == 'windows'
         shell: pwsh
-        run: ./tool/windows_installer_test.ps1
+        timeout-minutes: 5
+        run: |
+          try {
+            ./tool/windows_installer_test.ps1
+          } catch {
+            $detail = ($_.Exception.Message + "`n" + $_.ScriptStackTrace).Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+            Write-Output "::error::$detail"
+            exit 1
+          }
 
       - name: Upload test installer
         if: ${{ !(github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) }}

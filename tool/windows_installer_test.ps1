@@ -14,6 +14,9 @@ $outside = Join-Path $scratch 'Exported backup'
 $profileId = 'S-1-5-21-111111111-222222222-333333333-9999'
 $profileKey = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$profileId"
 $userKey = "Registry::HKEY_USERS\$profileId"
+$fixtureName = 'Software\TunnioUninstallFixture-' + [guid]::NewGuid()
+$fixtureKey = "HKCU:\$fixtureName"
+$hiveLoaded = $false
 $runKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
 $approvedKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run'
 $protocolKeys = @('flclash', 'clashmeta', 'clash') | ForEach-Object { "HKCU:\Software\Classes\$_" }
@@ -57,14 +60,21 @@ try {
     New-Item -ItemType Junction -Path (Join-Path $dataDirectories[0] 'export-link') -Target $outside | Out-Null
     New-Item -Path $profileKey -Force | Out-Null
     New-ItemProperty -Path $profileKey -Name ProfileImagePath -Value $otherProfile | Out-Null
-    $folders = "$userKey\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders"
+    $folders = "$fixtureKey\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders"
     New-Item -Path $folders -Force | Out-Null
     New-ItemProperty -Path $folders -Name AppData -Value $redirected | Out-Null
+    $hiveFile = Join-Path $scratch 'fixture.dat'
+    & reg.exe save "HKCU\$fixtureName" $hiveFile /y
+    if ($LASTEXITCODE -ne 0) { throw 'Could not save the isolated test registry hive.' }
+    & reg.exe load "HKU\$profileId" $hiveFile
+    if ($LASTEXITCODE -ne 0) { throw 'Could not load the isolated test registry hive.' }
+    $hiveLoaded = $true
     foreach ($key in $protocolKeys) {
         New-Item -Path "$key\shell\open\command" -Force | Out-Null
         $owner = if ($key.EndsWith('\clash')) { 'C:\OtherApp\Other.exe' } else { $executable }
         Set-Item -Path "$key\shell\open\command" -Value "`"$owner`" `"%1`""
     }
+    if (-not (Test-Path -LiteralPath $runKey)) { New-Item -Path $runKey -Force | Out-Null }
     New-ItemProperty -Path $runKey -Name FlClash -Value $executable | Out-Null
     New-Item -Path $approvedKey -Force | Out-Null
     New-ItemProperty -Path $approvedKey -Name FlClash -PropertyType Binary -Value ([byte[]](2, 0, 0, 0)) | Out-Null
@@ -96,7 +106,11 @@ try {
     Write-Output 'Windows install, upgrade preservation, and uninstall cleanup passed.'
 }
 finally {
-    foreach ($key in @($profileKey, $userKey) + @($protocolKeys)) {
+    if ($hiveLoaded) {
+        & reg.exe unload "HKU\$profileId"
+        if ($LASTEXITCODE -ne 0) { Write-Warning 'Could not unload the isolated test registry hive.' }
+    }
+    foreach ($key in @($profileKey, $fixtureKey) + @($protocolKeys)) {
         if (Test-Path -LiteralPath $key) { Remove-Item -LiteralPath $key -Recurse -Force }
     }
 }
