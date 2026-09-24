@@ -95,7 +95,7 @@ begin
     (Pos(Lowercase('"' + Executable + '" '), Lowercase(Command)) = 1);
 end;
 
-procedure RemoveUserRegistration(Root: HKEY; Prefix: String);
+procedure RemoveUserRegistration(Root: Integer; Prefix: String);
 var
   Schemes: TArrayOfString;
   Key, Command: String;
