@@ -147,10 +147,18 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(
-        find.text(currentAppLocalizations.vpnImportFailed),
+        find.textContaining(currentAppLocalizations.vpnImportFailed),
         findsOneWidget,
       );
       expect(find.textContaining('secret-token-123'), findsNothing);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is SelectableText &&
+              widget.data!.contains('phase=unknown, error=StateError'),
+        ),
+        findsOneWidget,
+      );
       expect(
         tester.widget<TextField>(find.byType(TextField)).controller!.text,
         'https://example.test/config',
@@ -230,7 +238,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(
-      find.text(currentAppLocalizations.vpnImportTimedOut),
+      find.textContaining(currentAppLocalizations.vpnImportTimedOut),
       findsOneWidget,
     );
     expect(find.textContaining('private-token'), findsNothing);

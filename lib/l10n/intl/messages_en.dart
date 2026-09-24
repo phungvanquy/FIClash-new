@@ -94,12 +94,14 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m29(label) => "${label} must be a URL";
 
-  static String m30(completed, total) =>
+  static String m30(details) => "Diagnostic code (safe to share): ${details}";
+
+  static String m31(completed, total) =>
       "Preparing server and rule lists… ${completed}/${total}";
 
-  static String m31(value) => "${value} ms";
+  static String m32(value) => "${value} ms";
 
-  static String m32(count) =>
+  static String m33(count) =>
       "${Intl.plural(count, one: '1 year ago', other: '${count} years ago')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
@@ -1233,6 +1235,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnImportDescription": MessageLookupByLibrary.simpleMessage(
       "Import the subscription URL from your VPN provider.",
     ),
+    "vpnImportDiagnostic": m30,
     "vpnImportDownloading": MessageLookupByLibrary.simpleMessage(
       "Downloading configuration…",
     ),
@@ -1245,7 +1248,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnImportGeodata": MessageLookupByLibrary.simpleMessage(
       "Preparing geographic databases…",
     ),
-    "vpnImportProviders": m30,
+    "vpnImportProviders": m31,
     "vpnImportSaving": MessageLookupByLibrary.simpleMessage(
       "Verifying and saving configuration…",
     ),
@@ -1263,7 +1266,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Enter a valid HTTP or HTTPS subscription URL.",
     ),
     "vpnLatencyFailed": MessageLookupByLibrary.simpleMessage("Test failed"),
-    "vpnLatencyMs": m31,
+    "vpnLatencyMs": m32,
     "vpnLatencyTesting": MessageLookupByLibrary.simpleMessage("Testing…"),
     "vpnLatencyTimeout": MessageLookupByLibrary.simpleMessage("Timed out"),
     "vpnLatencyUnreachable": MessageLookupByLibrary.simpleMessage(
@@ -1341,7 +1344,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "WebDAV configuration",
     ),
     "whitelistMode": MessageLookupByLibrary.simpleMessage("Whitelist mode"),
-    "yearsAgo": m32,
+    "yearsAgo": m33,
     "zhCN": MessageLookupByLibrary.simpleMessage("Simplified Chinese"),
   };
 }

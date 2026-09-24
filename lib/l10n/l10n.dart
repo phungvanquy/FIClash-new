@@ -5425,6 +5425,16 @@ class AppLocalizations {
     );
   }
 
+  /// `Diagnostic code (safe to share): {details}`
+  String vpnImportDiagnostic(Object details) {
+    return Intl.message(
+      'Diagnostic code (safe to share): $details',
+      name: 'vpnImportDiagnostic',
+      desc: '',
+      args: [details],
+    );
+  }
+
   /// `Could not import the configuration. Your saved configuration has not been replaced. Check the URL and connection, then try again.`
   String get vpnImportFailed {
     return Intl.message(

@@ -94,12 +94,15 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m29(label) => "Значение «${label}» должно быть URL";
 
-  static String m30(completed, total) =>
+  static String m30(details) =>
+      "Диагностический код (можно безопасно отправить): ${details}";
+
+  static String m31(completed, total) =>
       "Подготовка списков серверов и правил… ${completed}/${total}";
 
-  static String m31(value) => "${value} мс";
+  static String m32(value) => "${value} мс";
 
-  static String m32(count) =>
+  static String m33(count) =>
       "${Intl.plural(count, one: '${count} год назад', few: '${count} года назад', many: '${count} лет назад', other: '${count} года назад')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
@@ -1291,6 +1294,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnImportDescription": MessageLookupByLibrary.simpleMessage(
       "Импортируйте ссылку на подписку от вашего VPN-провайдера.",
     ),
+    "vpnImportDiagnostic": m30,
     "vpnImportDownloading": MessageLookupByLibrary.simpleMessage(
       "Загрузка конфигурации…",
     ),
@@ -1303,7 +1307,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnImportGeodata": MessageLookupByLibrary.simpleMessage(
       "Подготовка географических баз данных…",
     ),
-    "vpnImportProviders": m30,
+    "vpnImportProviders": m31,
     "vpnImportSaving": MessageLookupByLibrary.simpleMessage(
       "Проверка и сохранение конфигурации…",
     ),
@@ -1321,7 +1325,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Введите корректную ссылку на подписку HTTP или HTTPS.",
     ),
     "vpnLatencyFailed": MessageLookupByLibrary.simpleMessage("Ошибка проверки"),
-    "vpnLatencyMs": m31,
+    "vpnLatencyMs": m32,
     "vpnLatencyTesting": MessageLookupByLibrary.simpleMessage("Проверка…"),
     "vpnLatencyTimeout": MessageLookupByLibrary.simpleMessage("Время истекло"),
     "vpnLatencyUnreachable": MessageLookupByLibrary.simpleMessage("Недоступен"),
@@ -1403,7 +1407,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "whitelistMode": MessageLookupByLibrary.simpleMessage(
       "Режим белого списка",
     ),
-    "yearsAgo": m32,
+    "yearsAgo": m33,
     "zhCN": MessageLookupByLibrary.simpleMessage("Упрощённый китайский"),
   };
 }

@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/metacubex/mihomo/adapter"
@@ -75,6 +76,27 @@ var generationPattern = regexp.MustCompile(`^[a-f0-9]{32}$`)
 
 var errStalePreparation = errors.New("prepared configuration is stale or unavailable")
 var errCoreNotInitialized = errors.New("core is not initialized")
+
+type configPreparationError struct {
+	Stage string
+	Err   error
+}
+
+func (e *configPreparationError) Error() string { return e.Err.Error() }
+func (e *configPreparationError) Unwrap() error { return e.Err }
+
+func preparationFailureDetails(err error) map[string]any {
+	details := make(map[string]any)
+	var preparation *configPreparationError
+	if errors.As(err, &preparation) {
+		details["stage"] = preparation.Stage
+	}
+	var errno syscall.Errno
+	if errors.As(err, &errno) {
+		details["osError"] = uint64(errno)
+	}
+	return details
+}
 
 type candidateResourceRequired struct {
 	Name string
@@ -280,7 +302,13 @@ func handlePrepareConfig(params *PrepareConfigParams) (*PreparedConfigResult, er
 	return prepareConfigLocked(params)
 }
 
-func prepareConfigLocked(params *PrepareConfigParams) (*PreparedConfigResult, error) {
+func prepareConfigLocked(params *PrepareConfigParams) (_ *PreparedConfigResult, err error) {
+	stage := "initialization"
+	defer func() {
+		if err != nil {
+			err = &configPreparationError{Stage: stage, Err: err}
+		}
+	}()
 	if params.Revision <= 0 {
 		return nil, errors.New("invalid profile revision")
 	}
@@ -288,10 +316,12 @@ func prepareConfigLocked(params *PrepareConfigParams) (*PreparedConfigResult, er
 	if !initialized {
 		return nil, errCoreNotInitialized
 	}
+	stage = "candidate_path"
 	directory, err := candidateDirectory(home, params.Generation)
 	if err != nil {
 		return nil, err
 	}
+	stage = "reservation"
 	handle, entry, err := reservePreparation(*params)
 	if err != nil {
 		return nil, err
@@ -304,6 +334,7 @@ func prepareConfigLocked(params *PrepareConfigParams) (*PreparedConfigResult, er
 			preparations.Unlock()
 		}
 	}()
+	stage = "candidate_read"
 	path := filepath.Join(directory, "effective.yaml")
 	if params.Probe {
 		path = filepath.Join(directory, "candidate.yaml")
@@ -315,17 +346,21 @@ func prepareConfigLocked(params *PrepareConfigParams) (*PreparedConfigResult, er
 	if err != nil {
 		return nil, err
 	}
+	stage = "config_decode"
 	raw, err := config.UnmarshalRawConfig(buf)
 	if err != nil {
 		return nil, err
 	}
+	stage = "provider_paths"
 	if err := validateCandidateResources(raw, directory); err != nil {
 		return nil, err
 	}
+	stage = "provider_order"
 	providerOrder, err := candidateProviderOrder(buf)
 	if err != nil {
 		return nil, err
 	}
+	stage = "config_parse"
 	var required *candidateResourceRequired
 	prepared, err := config.PrepareRawConfig(raw, config.PrepareOptions{ProviderNamespace: params.Generation, ResolveGeodata: func(name string) (string, error) {
 		path := filepath.Join(directory, "geo", name)
@@ -349,6 +384,7 @@ func prepareConfigLocked(params *PrepareConfigParams) (*PreparedConfigResult, er
 			_ = prepared.Close()
 		}
 	}()
+	stage = "server_inventory"
 	var servers []PreparedServer
 	if err := prepared.Inspect(func(cfg *config.Config) error {
 		servers, err = preparedServers(raw, cfg, providerOrder)

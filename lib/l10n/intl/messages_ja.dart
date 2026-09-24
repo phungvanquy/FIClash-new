@@ -83,12 +83,14 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m29(label) => "${label}はURLである必要があります";
 
-  static String m30(completed, total) =>
+  static String m30(details) => "診断コード（共有しても安全です）：${details}";
+
+  static String m31(completed, total) =>
       "サーバーとルールの一覧を準備中… ${completed}/${total}";
 
-  static String m31(value) => "${value} ミリ秒";
+  static String m32(value) => "${value} ミリ秒";
 
-  static String m32(count) => "${count} 年前";
+  static String m33(count) => "${count} 年前";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -1030,13 +1032,14 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnImportDescription": MessageLookupByLibrary.simpleMessage(
       "VPN プロバイダーのサブスクリプション URL を読み込んでください。",
     ),
+    "vpnImportDiagnostic": m30,
     "vpnImportDownloading": MessageLookupByLibrary.simpleMessage("設定をダウンロード中…"),
     "vpnImportFailed": MessageLookupByLibrary.simpleMessage(
       "設定をインポートできませんでした。保存済みの設定は置き換えられていません。URL と接続を確認して再試行してください。",
     ),
     "vpnImportFinalizing": MessageLookupByLibrary.simpleMessage("設定の更新を完了中…"),
     "vpnImportGeodata": MessageLookupByLibrary.simpleMessage("地理データベースを準備中…"),
-    "vpnImportProviders": m30,
+    "vpnImportProviders": m31,
     "vpnImportSaving": MessageLookupByLibrary.simpleMessage("設定を検証して保存中…"),
     "vpnImportTimedOut": MessageLookupByLibrary.simpleMessage(
       "設定のダウンロードがタイムアウトしました。保存済みの設定は変更されていません。接続を確認して再試行してください。",
@@ -1048,7 +1051,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "有効な HTTP または HTTPS のサブスクリプション URL を入力してください。",
     ),
     "vpnLatencyFailed": MessageLookupByLibrary.simpleMessage("テスト失敗"),
-    "vpnLatencyMs": m31,
+    "vpnLatencyMs": m32,
     "vpnLatencyTesting": MessageLookupByLibrary.simpleMessage("テスト中…"),
     "vpnLatencyTimeout": MessageLookupByLibrary.simpleMessage("タイムアウト"),
     "vpnLatencyUnreachable": MessageLookupByLibrary.simpleMessage("到達できません"),
@@ -1112,7 +1115,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnTip": MessageLookupByLibrary.simpleMessage("変更はVPNの再起動後に有効になります"),
     "webDAVConfiguration": MessageLookupByLibrary.simpleMessage("WebDAV設定"),
     "whitelistMode": MessageLookupByLibrary.simpleMessage("ホワイトリストモード"),
-    "yearsAgo": m32,
+    "yearsAgo": m33,
     "zhCN": MessageLookupByLibrary.simpleMessage("簡体字中国語"),
   };
 }

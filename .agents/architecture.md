@@ -740,6 +740,10 @@ The helper owns its Windows Service Control Manager lifecycle through two elevat
   current executable path, starts it, and waits for the running state.
 - `FlClashHelperService.exe uninstall` stops the service, waits for shutdown, removes its registration, and is also used
   by the Windows package uninstaller.
+- Windows uninstall removes `com.follow\clash` beneath roaming and local AppData for local profiles, plus this install's
+  startup and protocol registrations in loaded user hives. Unloaded user hives are not mounted; exported files are outside
+  this cleanup. Data deletion runs at `usUninstall`, after confirmation, and never during upgrade. The post-install app
+  launch uses the original user's credentials rather than the installer's elevated account.
 
 The Dart layer only launches the helper's `install` command through `ShellExecuteW`; it does not compose `sc.exe`,
 `taskkill`, or `cmd.exe` command lines.

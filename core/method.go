@@ -189,7 +189,7 @@ var methodHandlers = map[CoreMethod]methodHandler{
 					response.failure("resource_required", "Candidate needs a geodata resource", map[string]string{"resource": required.Name})
 					return
 				}
-				response.failure("prepare_failed", err.Error(), nil)
+				response.failure("prepare_failed", err.Error(), preparationFailureDetails(err))
 				return
 			}
 			response.success(result)

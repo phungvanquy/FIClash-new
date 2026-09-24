@@ -282,7 +282,10 @@ jobs:
         working-directory: core
         env:
           CGO_ENABLED: 0
-        run: go test -count=1 -run 'TestFreshCandidateUsesBundledGeodata|TestPrepareAndDiscardAreRevisionScoped' .
+        run: |
+          go test -count=1 -run 'TestFreshCandidateUsesBundledGeodata|TestPrepareAndDiscardAreRevisionScoped|TestPreparationFailureDetails' .
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          go test -c -o "$env:RUNNER_TEMP/preparation.test.exe" .
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -299,6 +302,7 @@ jobs:
           trap 'cp "$RUNNER_TEMP/import-test-pubspec.yaml" pubspec.yaml' EXIT
           python -c "from pathlib import Path; p = Path('pubspec.yaml'); p.write_text(p.read_text().replace('build_assets: true', 'build_assets: false'))"
           flutter test --reporter expanded test/common/request_test.dart test/common/vpn_intake_test.dart test/common/vpn_refresh_test.dart test/common/vpn_staging_test.dart test/common/vpn_coordinator_test.dart test/common/profile_store_test.dart test/providers/vpn_action_test.dart
+          FLCLASH_PREPARATION_TEST_CORE="$RUNNER_TEMP/preparation.test.exe" flutter test --reporter expanded test/integration/vpn_preparation_test.dart
 
   build:
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')))
@@ -412,6 +416,11 @@ jobs:
             printf 'path=%s\n' "${installers[0]}"
             printf 'name=%s\n' "${installers[0]##*/}"
           } >> "$GITHUB_OUTPUT"
+
+      - name: Test Windows install, upgrade and data removal
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: ./tool/windows_installer_test.ps1
 
       - name: Upload test installer
         if: ${{ !(github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) }}

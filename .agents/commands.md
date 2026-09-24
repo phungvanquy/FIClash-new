@@ -166,8 +166,18 @@ cargo test --manifest-path services/helper/Cargo.toml
 cargo test --manifest-path services/helper/Cargo.toml --features windows-service
 ```
 
-The last command requires Windows for meaningful service coverage. Native Android lifecycle edits should at minimum
-compile the modules they touch; use JDK 17 in this checkout:
+The last command requires Windows for meaningful service coverage. Windows CI also compiles the Go test binary and
+sets `FLCLASH_PREPARATION_TEST_CORE` when running `flutter test test/integration/vpn_preparation_test.dart`. That test
+passes real app overrides and staged provider files to Core on a fresh data directory, then stages an update. To run
+it locally, build with `CGO_ENABLED=0 go test -C core -c -o /tmp/preparation.test .` and set the variable to that binary.
+Disable native build hooks as described above for the Flutter test invocation.
+
+The Windows build job runs `tool/windows_installer_test.ps1` on its disposable Actions runner after packaging. It
+checks installation, preservation of profiles on upgrade, and removal of saved data on uninstall, including another
+local profile and a redirected roaming folder. It also checks that exports, junction targets, neighboring apps, and
+protocol registrations belonging to another executable survive.
+
+Native Android lifecycle edits should at minimum compile the modules they touch; use JDK 17 in this checkout:
 
 ```bash
 cd android

@@ -27,13 +27,22 @@ class VpnImportResult {
     final cause = switch (error) {
       DioException(:final type, :final response) =>
         'http=${type.name}, status=${response?.statusCode ?? 'none'}',
-      CoreMethodException(:final code) => 'core=$code',
+      CoreMethodException(:final code, :final details) => [
+        'core=${_diagnosticToken(code)}',
+        if (details is Map && details['stage'] is String)
+          'stage=${_diagnosticToken(details['stage'] as String)}',
+        if (details is Map && details['osError'] is int)
+          'filesystem=${details['osError']}',
+      ].join(', '),
       FileSystemException(:final osError) =>
         'filesystem=${osError?.errorCode ?? 'unknown'}',
       _ => 'error=${error.runtimeType}',
     };
     return 'phase=${phase?.name ?? 'unknown'}, $cause';
   }
+
+  static String _diagnosticToken(String value) =>
+      RegExp(r'^[a-z_]{1,48}$').hasMatch(value) ? value : 'unknown';
 
   bool get timedOut => switch (error) {
     TimeoutException() => true,

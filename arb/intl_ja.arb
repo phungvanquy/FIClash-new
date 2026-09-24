@@ -650,6 +650,7 @@
   "installedAppsPermissionRequired": "アプリ一覧の権限が必要です",
   "installedAppsPermissionDesc": "このシステムでは、許可するまでインストール済みアプリの一覧が提供されません。許可すると、アプリごとのプロキシを設定できます。",
   "installedAppsPermissionDeniedMessage": "アプリ一覧の権限が拒否されたため、インストール済みアプリを取得できません。システム設定から手動で許可してください。",
+  "vpnImportDiagnostic": "診断コード（共有しても安全です）：{details}",
   "vpnImportFailed": "設定をインポートできませんでした。保存済みの設定は置き換えられていません。URL と接続を確認して再試行してください。",
   "vpnRecoveryRequired": "保存済みの設定は保持されていますが、VPN を復旧できませんでした。設定画面から復旧を再試行してください。",
   "vpnServerUnavailableAuto": "選択したサーバーが利用できなくなったため、自動選択に切り替えました。",

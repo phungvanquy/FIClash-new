@@ -52,11 +52,110 @@ begin
   Result := '';
 end;
 
-function InitializeUninstall(): Boolean;
+function ExpandEnvironmentStrings(Source: String; Destination: String; Size: Cardinal): Cardinal;
+  external 'ExpandEnvironmentStringsW@kernel32.dll stdcall';
+
+function DataFileAttributes(Path: String): Cardinal;
+  external 'GetFileAttributesW@kernel32.dll stdcall';
+
+function ExpandedPath(Value: String): String;
+var
+  Size: Cardinal;
 begin
-  UnregisterHelperService;
-  KillProcesses;
-  Result := True;
+  Size := ExpandEnvironmentStrings(Value, '', 0);
+  SetLength(Result, Size);
+  if Size > 0 then
+  begin
+    ExpandEnvironmentStrings(Value, Result, Size);
+    SetLength(Result, Size - 1);
+  end;
+end;
+
+procedure RemoveAppData(Base: String);
+var
+  Directory: String;
+  Attributes: Cardinal;
+begin
+  if Base = '' then Exit;
+  Attributes := DataFileAttributes(AddBackslash(Base) + 'com.follow');
+  if (Attributes = $FFFFFFFF) or ((Attributes and $400) <> 0) then Exit;
+  Directory := AddBackslash(Base) + 'com.follow\clash';
+  if DirExists(Directory) and not DelTree(Directory, True, True, True) then
+    Log('Could not remove app data: ' + Directory);
+  RemoveDir(AddBackslash(Base) + 'com.follow');
+end;
+
+function OwnsCommand(Command: String): Boolean;
+var
+  Executable: String;
+begin
+  Executable := ExpandConstant('{app}\FlClash.exe');
+  Result := (CompareText(Command, Executable) = 0) or
+    (CompareText(Command, '"' + Executable + '"') = 0) or
+    (Pos(Lowercase('"' + Executable + '" '), Lowercase(Command)) = 1);
+end;
+
+procedure RemoveUserRegistration(Root: HKEY; Prefix: String);
+var
+  Schemes: TArrayOfString;
+  Key, Command: String;
+  I: Integer;
+begin
+  Schemes := ['clash', 'clashmeta', 'flclash'];
+  for I := 0 to GetArrayLength(Schemes) - 1 do
+  begin
+    Key := Prefix + 'Software\Classes\' + Schemes[I];
+    if RegQueryStringValue(Root, Key + '\shell\open\command', '', Command) and
+      OwnsCommand(Command) then
+      RegDeleteKeyIncludingSubkeys(Root, Key);
+  end;
+  Key := Prefix + 'Software\Microsoft\Windows\CurrentVersion\Run';
+  if RegQueryStringValue(Root, Key, 'FlClash', Command) and OwnsCommand(Command) then
+  begin
+    RegDeleteValue(Root, Key, 'FlClash');
+    RegDeleteValue(Root, Prefix +
+      'Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run', 'FlClash');
+  end;
+end;
+
+procedure RemoveSavedData;
+var
+  Profiles: TArrayOfString;
+  Profile, Base, Key: String;
+  I: Integer;
+begin
+  RemoveAppData(ExpandConstant('{userappdata}'));
+  RemoveAppData(ExpandConstant('{localappdata}'));
+  RemoveUserRegistration(HKCU, '');
+  if not RegGetSubkeyNames(HKLM,
+    'SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList', Profiles) then Exit;
+  for I := 0 to GetArrayLength(Profiles) - 1 do
+  begin
+    Key := 'SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + Profiles[I];
+    if RegQueryStringValue(HKLM, Key, 'ProfileImagePath', Profile) then
+    begin
+      Profile := ExpandedPath(Profile);
+      if Profile <> '' then
+      begin
+        RemoveAppData(AddBackslash(Profile) + 'AppData\Roaming');
+        RemoveAppData(AddBackslash(Profile) + 'AppData\Local');
+      end;
+    end;
+    Key := Profiles[I] + '\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders';
+    if RegQueryStringValue(HKU, Key, 'AppData', Base) then RemoveAppData(Base);
+    if RegQueryStringValue(HKU, Key, 'Local AppData', Base) then RemoveAppData(Base);
+    RemoveUserRegistration(HKU, Profiles[I] + '\');
+  end;
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if CurUninstallStep = usUninstall then
+  begin
+    UnregisterHelperService;
+    KillProcesses;
+    RemoveSavedData;
+  end;
 end;
 
 [Languages]
@@ -94,7 +193,6 @@ Name: "chineseSimplified"; MessagesFile: {% if locale.file %}{{ locale.file }}{%
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: {% if CREATE_DESKTOP_ICON != true %}unchecked{% else %}checkedonce{% endif %}
 [Files]
 Source: "{{SOURCE_DIR}}\\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [InstallDelete]
 Type: files; Name: "{autoprograms}\\FlClash.lnk"
@@ -104,4 +202,4 @@ Type: files; Name: "{autodesktop}\\FlClash.lnk"
 Name: "{autoprograms}\\{{DISPLAY_NAME}}"; Filename: "{app}\\{{EXECUTABLE_NAME}}"
 Name: "{autodesktop}\\{{DISPLAY_NAME}}"; Filename: "{app}\\{{EXECUTABLE_NAME}}"; Tasks: desktopicon
 [Run]
-Filename: "{app}\\{{EXECUTABLE_NAME}}"; Description: "{cm:LaunchProgram,{{DISPLAY_NAME}}}"; Flags: {% if PRIVILEGES_REQUIRED == 'admin' %}runascurrentuser{% endif %} nowait postinstall skipifsilent
+Filename: "{app}\\{{EXECUTABLE_NAME}}"; Description: "{cm:LaunchProgram,{{DISPLAY_NAME}}}"; Flags: runasoriginaluser nowait postinstall skipifsilent

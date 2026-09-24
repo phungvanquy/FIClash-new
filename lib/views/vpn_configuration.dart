@@ -87,7 +87,7 @@ class _VpnApplySettingsState extends ConsumerState<VpnApplySettings> {
             padding: const EdgeInsets.all(16),
             child: Semantics(
               liveRegion: true,
-              child: Text(
+              child: SelectableText(
                 _error!,
                 style: TextStyle(color: context.colorScheme.error),
               ),
@@ -192,7 +192,7 @@ class _VpnConfigurationSectionState
             padding: const EdgeInsets.all(16),
             child: Semantics(
               liveRegion: true,
-              child: Text(
+              child: SelectableText(
                 _error!,
                 style: TextStyle(color: context.colorScheme.error),
               ),
@@ -249,10 +249,10 @@ class _VpnConfigurationSectionState
                           VpnImportOutcome.cancelled => null,
                           VpnImportOutcome.recoveryRequired =>
                             text.vpnRecoveryRequired,
-                          VpnImportOutcome.failed =>
-                            result.timedOut
-                                ? text.vpnImportTimedOut
-                                : text.vpnImportFailed,
+                          VpnImportOutcome.failed => vpnImportFailureMessage(
+                            result,
+                            text,
+                          ),
                         },
                       );
                     }),

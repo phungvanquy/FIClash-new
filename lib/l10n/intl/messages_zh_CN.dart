@@ -83,11 +83,13 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m29(label) => "${label}必须为URL";
 
-  static String m30(completed, total) => "正在准备节点和规则列表… ${completed}/${total}";
+  static String m30(details) => "诊断代码（可安全分享）：${details}";
 
-  static String m31(value) => "${value} 毫秒";
+  static String m31(completed, total) => "正在准备节点和规则列表… ${completed}/${total}";
 
-  static String m32(count) => "${count} 年前";
+  static String m32(value) => "${value} 毫秒";
+
+  static String m33(count) => "${count} 年前";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -895,13 +897,14 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnImportDescription": MessageLookupByLibrary.simpleMessage(
       "导入 VPN 服务商提供的订阅链接。",
     ),
+    "vpnImportDiagnostic": m30,
     "vpnImportDownloading": MessageLookupByLibrary.simpleMessage("正在下载配置…"),
     "vpnImportFailed": MessageLookupByLibrary.simpleMessage(
       "无法导入配置。已保存的配置未被替换。请检查链接和网络连接后重试。",
     ),
     "vpnImportFinalizing": MessageLookupByLibrary.simpleMessage("正在完成配置更新…"),
     "vpnImportGeodata": MessageLookupByLibrary.simpleMessage("正在准备地理数据库…"),
-    "vpnImportProviders": m30,
+    "vpnImportProviders": m31,
     "vpnImportSaving": MessageLookupByLibrary.simpleMessage("正在校验并保存配置…"),
     "vpnImportTimedOut": MessageLookupByLibrary.simpleMessage(
       "配置下载超时。已保存的配置未被替换。请检查网络连接后重试。",
@@ -913,7 +916,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "请输入有效的 HTTP 或 HTTPS 订阅链接。",
     ),
     "vpnLatencyFailed": MessageLookupByLibrary.simpleMessage("测试失败"),
-    "vpnLatencyMs": m31,
+    "vpnLatencyMs": m32,
     "vpnLatencyTesting": MessageLookupByLibrary.simpleMessage("测试中…"),
     "vpnLatencyTimeout": MessageLookupByLibrary.simpleMessage("超时"),
     "vpnLatencyUnreachable": MessageLookupByLibrary.simpleMessage("无法连接"),
@@ -969,7 +972,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnTip": MessageLookupByLibrary.simpleMessage("重启VPN后改变生效"),
     "webDAVConfiguration": MessageLookupByLibrary.simpleMessage("WebDAV配置"),
     "whitelistMode": MessageLookupByLibrary.simpleMessage("白名单模式"),
-    "yearsAgo": m32,
+    "yearsAgo": m33,
     "zhCN": MessageLookupByLibrary.simpleMessage("中文简体"),
   };
 }

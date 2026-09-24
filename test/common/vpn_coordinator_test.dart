@@ -28,6 +28,16 @@ void main() {
         message: secret,
         details: {'resource': secret},
       ): 'core=prepare_failed',
+      const CoreMethodException(
+        code: 'prepare_failed',
+        message: secret,
+        details: {'stage': 'candidate_read', 'osError': 5, 'path': secret},
+      ): 'core=prepare_failed, stage=candidate_read, filesystem=5',
+      const CoreMethodException(
+        code: secret,
+        message: secret,
+        details: {'stage': secret, 'osError': secret},
+      ): 'core=unknown, stage=unknown',
       const FileSystemException(secret, secret, OSError(secret, 5)):
           'filesystem=5',
       const FormatException(secret): 'error=FormatException',

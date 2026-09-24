@@ -142,7 +142,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(
-        find.text(currentAppLocalizations.vpnImportTimedOut),
+        find.textContaining(currentAppLocalizations.vpnImportTimedOut),
         findsOneWidget,
       );
       expect(find.textContaining('private-url'), findsNothing);

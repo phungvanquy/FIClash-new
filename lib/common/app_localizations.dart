@@ -5,7 +5,16 @@ import 'package:fl_clash/l10n/l10n.dart';
 
 import 'dart:ui';
 
+import 'vpn_coordinator.dart';
+
 final currentAppLocalizations = AppLocalizations.current;
+
+String vpnImportFailureMessage(VpnImportResult result, AppLocalizations text) {
+  final summary = result.timedOut
+      ? text.vpnImportTimedOut
+      : text.vpnImportFailed;
+  return '$summary\n\n${text.vpnImportDiagnostic(result.diagnostic)}';
+}
 
 String? networkErrorMessage(Object error, AppLocalizations appLocalizations) {
   if (error case CoreMethodException(:final code)) {

@@ -98,9 +98,10 @@ class _VpnImportPanelState extends ConsumerState<VpnImportPanel> {
           widget.onImported?.call();
         case VpnImportOutcome.failed:
           setState(
-            () => _error = result.timedOut
-                ? context.appLocalizations.vpnImportTimedOut
-                : context.appLocalizations.vpnImportFailed,
+            () => _error = vpnImportFailureMessage(
+              result,
+              context.appLocalizations,
+            ),
           );
         case VpnImportOutcome.recoveryRequired:
           setState(() => _error = context.appLocalizations.vpnRecoveryRequired);
@@ -221,7 +222,7 @@ class _VpnImportPanelState extends ConsumerState<VpnImportPanel> {
             if (_error != null) ...[
               Semantics(
                 liveRegion: true,
-                child: Text(
+                child: SelectableText(
                   _error!,
                   style: TextStyle(color: context.colorScheme.error),
                 ),

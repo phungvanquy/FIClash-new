@@ -741,7 +741,7 @@ final class VpnActionProvider extends $NotifierProvider<VpnAction, void> {
   }
 }
 
-String _$vpnActionHash() => r'd50e27b2091eb7b6839b35b6de2047c511acd786';
+String _$vpnActionHash() => r'de7d6c934b1826b04a29ecd425d7f7bdb805ee1b';
 
 abstract class _$VpnAction extends $Notifier<void> {
   void build();

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -16,6 +17,39 @@ import (
 
 const candidateGeneration = "0123456789abcdef0123456789abcdef"
 const candidateProxy = "proxies:\n  - {name: Candidate, type: socks5, server: 127.0.0.1, port: 1080}\n"
+
+func TestPreparationFailureDetails(t *testing.T) {
+	t.Run("missing staged file", func(t *testing.T) {
+		directory, params := stagedTestCandidate(t, candidateProxy)
+		if err := os.Remove(filepath.Join(directory, "effective.yaml")); err != nil {
+			t.Fatal(err)
+		}
+		_, err := handlePrepareConfig(params)
+		if !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("missing file error lost: %v", err)
+		}
+		details := preparationFailureDetails(err)
+		if details["stage"] != "candidate_read" || details["osError"] == nil {
+			t.Fatalf("missing file diagnostics: %v", details)
+		}
+	})
+	t.Run("malformed configuration", func(t *testing.T) {
+		_, params := stagedTestCandidate(t, "proxies: [")
+		_, err := handlePrepareConfig(params)
+		if details := preparationFailureDetails(err); !reflect.DeepEqual(details, map[string]any{"stage": "config_decode"}) {
+			t.Fatalf("configuration diagnostics: %v", details)
+		}
+	})
+	t.Run("permission details omit private path", func(t *testing.T) {
+		err := &configPreparationError{Stage: "candidate_read", Err: &os.PathError{
+			Op: "open", Path: "private-subscription-token", Err: syscall.EACCES,
+		}}
+		expected := map[string]any{"stage": "candidate_read", "osError": uint64(syscall.EACCES)}
+		if details := preparationFailureDetails(err); !reflect.DeepEqual(details, expected) {
+			t.Fatalf("unsafe diagnostics: %v", details)
+		}
+	})
+}
 
 func stagedTestCandidate(t *testing.T, yaml string) (string, *PrepareConfigParams) {
 	t.Helper()

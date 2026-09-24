@@ -426,9 +426,7 @@ class VpnAction extends _$VpnAction {
         throw const VpnImportCancelled();
       case VpnImportOutcome.failed:
         throw MessageException(
-          result.timedOut
-              ? currentAppLocalizations.vpnImportTimedOut
-              : currentAppLocalizations.vpnImportFailed,
+          vpnImportFailureMessage(result, currentAppLocalizations),
         );
       case VpnImportOutcome.recoveryRequired:
         throw MessageException(currentAppLocalizations.vpnRecoveryRequired);

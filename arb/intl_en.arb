@@ -650,6 +650,7 @@
   "installedAppsPermissionRequired": "App list permission required",
   "installedAppsPermissionDesc": "This system hides the installed app list until the permission is granted. Authorize it to configure the per-app proxy.",
   "installedAppsPermissionDeniedMessage": "The app list permission was denied, so installed apps cannot be listed. Please grant it manually in system settings.",
+  "vpnImportDiagnostic": "Diagnostic code (safe to share): {details}",
   "vpnImportFailed": "Could not import the configuration. Your saved configuration has not been replaced. Check the URL and connection, then try again.",
   "vpnRecoveryRequired": "Your saved configuration is safe, but the VPN could not be restored. Retry recovery in Settings.",
   "vpnServerUnavailableAuto": "Your selected server is no longer available. Switched to Auto.",
