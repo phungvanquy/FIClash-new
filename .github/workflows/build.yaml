@@ -298,7 +298,7 @@ jobs:
           cp pubspec.yaml "$RUNNER_TEMP/import-test-pubspec.yaml"
           trap 'cp "$RUNNER_TEMP/import-test-pubspec.yaml" pubspec.yaml' EXIT
           python -c "from pathlib import Path; p = Path('pubspec.yaml'); p.write_text(p.read_text().replace('build_assets: true', 'build_assets: false'))"
-          flutter test --reporter expanded test/common/vpn_staging_test.dart test/common/vpn_coordinator_test.dart test/common/profile_store_test.dart test/providers/vpn_action_test.dart
+          flutter test --reporter expanded test/common/request_test.dart test/common/vpn_intake_test.dart test/common/vpn_refresh_test.dart test/common/vpn_staging_test.dart test/common/vpn_coordinator_test.dart test/common/profile_store_test.dart test/providers/vpn_action_test.dart
 
   build:
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')))
@@ -311,7 +311,7 @@ jobs:
           ${{ fromJSON(
             github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') &&
             '[{"platform":"android","os":"ubuntu-latest"},{"platform":"windows","os":"windows-2022","arch":"amd64"},{"platform":"linux","os":"ubuntu-22.04","arch":"amd64"}]' ||
-            '[{"platform":"android","os":"ubuntu-latest"},{"platform":"windows","os":"windows-2022","arch":"amd64"}]'
+            '[{"platform":"android","os":"ubuntu-latest","arch":"arm64","args":"--arch arm64"},{"platform":"windows","os":"windows-2022","arch":"amd64","args":"--targets exe"}]'
           ) }}
 
     steps:
@@ -393,9 +393,39 @@ jobs:
       - name: Setup
         env:
           ANDROID_NDK_HOME: ${{ steps.build-ndk.outputs.ndk-path }}
-        run: dart setup.dart ${{ matrix.platform }} ${{ env.IS_STABLE == 'true' && '--env stable' || '' }} -v
+        run: dart setup.dart ${{ matrix.platform }} ${{ env.IS_STABLE == 'true' && '--env stable' || '' }} ${{ matrix.args }} -v
 
-      - name: Upload
+      - name: Locate test installer
+        if: ${{ !(github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) }}
+        id: test-installer
+        shell: bash
+        env:
+          INSTALLER_EXTENSION: ${{ matrix.platform == 'android' && 'apk' || 'exe' }}
+        run: |
+          shopt -s globstar nullglob
+          installers=(dist/**/*.${INSTALLER_EXTENSION})
+          if [[ "${#installers[@]}" != 1 ]]; then
+            echo "Expected exactly one .$INSTALLER_EXTENSION installer, found ${#installers[@]}." >&2
+            exit 1
+          fi
+          {
+            printf 'path=%s\n' "${installers[0]}"
+            printf 'name=%s\n' "${installers[0]##*/}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload test installer
+        if: ${{ !(github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) }}
+        uses: actions/upload-artifact@v7
+        with:
+          # v7 still uses the supplied name to delete an artifact on reruns.
+          name: ${{ steps.test-installer.outputs.name }}
+          path: ${{ steps.test-installer.outputs.path }}
+          archive: false
+          overwrite: true
+          if-no-files-found: error
+
+      - name: Upload release packages
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v4
         with:
           name: artifact-${{ matrix.platform }}${{ matrix.arch && format('-{0}', matrix.arch) }}

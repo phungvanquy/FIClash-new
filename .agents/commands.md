@@ -257,12 +257,31 @@ dart run tool/check_coverage.dart coverage/lcov.info 75
 Run `flutter analyze` locally before committing when practical.
 
 Pushes to `main` and manual `build` workflow runs produce Android and Windows AMD64
-test artifacts without publishing a release. Download `artifact-android` and
-`artifact-windows-amd64` from the Actions run. Test builds use the `pre` application
+test artifacts without publishing a release. Download the arm64-v8a `.apk` and
+Windows installer `.exe` directly from the Actions run; test builds use
+`actions/upload-artifact@v7` with `archive: false`, so there is no ZIP to extract.
+Android test builds compile only arm64-v8a, and Windows test builds package only
+the installer. Tagged releases retain the full architecture/package matrix.
+Test builds use the `pre` application
 environment and Android debug signing; backing up an installed release before
 testing avoids data loss if its different signing key requires a reinstall.
 `v*` tag pushes also build Linux AMD64 and publish a release/prerelease. Pull
 requests trigger nothing, and other branch pushes run validation only.
+
+GitHub-hosted CI checks out a pushed revision; it cannot see uncommitted local
+changes. Run the verification commands above before committing. To test on
+GitHub before merging, commit and push a temporary branch, then select that
+branch under **Actions → build → Run workflow**, or run:
+
+```bash
+gh workflow run build.yaml --ref your-test-branch
+gh run list --workflow build.yaml --branch your-test-branch
+```
+
+Manual runs build the test installers as well as running validation. They do not
+publish releases. Dispatching `main` reruns its current pushed revision and does
+not upload your local working tree.
+
 Root analysis excludes `plugins/**`, and root tests do not discover nested
 plugin packages, so parallel jobs validate the rest from their own package
 directories: `plugins` (local Flutter packages and the setup build tool), `go`

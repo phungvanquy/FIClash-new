@@ -48,8 +48,18 @@ void main() {
       'linux',
     ]);
     expect(targets[1], [
-      {'platform': 'android', 'os': 'ubuntu-latest'},
-      {'platform': 'windows', 'os': 'windows-2022', 'arch': 'amd64'},
+      {
+        'platform': 'android',
+        'os': 'ubuntu-latest',
+        'arch': 'arm64',
+        'args': '--arch arm64',
+      },
+      {
+        'platform': 'windows',
+        'os': 'windows-2022',
+        'arch': 'amd64',
+        'args': '--targets exe',
+      },
     ]);
     expect(build['strategy']['fail-fast'], isFalse);
   });
@@ -74,13 +84,26 @@ void main() {
       (step) => step['name'] == 'Setup Android Signing',
     );
     final setup = steps.firstWhere((step) => step['name'] == 'Setup');
-    final upload = steps.firstWhere((step) => step['name'] == 'Upload');
+    final upload = steps.firstWhere(
+      (step) => step['name'] == 'Upload test installer',
+    );
+    final releaseUpload = steps.firstWhere(
+      (step) => step['name'] == 'Upload release packages',
+    );
 
     expect(checkout['with']['submodules'], 'recursive');
     expect(signing['if'], "matrix.platform == 'android' && $tagPush");
     expect(setup['run'], startsWith('dart setup.dart '));
-    expect(upload['with']['path'], './dist');
+    expect(setup['run'], contains(r'${{ matrix.args }}'));
+    expect(upload['uses'], 'actions/upload-artifact@v7');
+    expect(upload['if'], '\${{ !($tagPush) }}');
+    expect(upload['with']['archive'], isFalse);
+    expect(upload['with']['name'], r'${{ steps.test-installer.outputs.name }}');
+    expect(upload['with']['path'], r'${{ steps.test-installer.outputs.path }}');
     expect(upload['with']['if-no-files-found'], 'error');
+    expect(releaseUpload['if'], tagPush);
+    expect(releaseUpload['with']['path'], './dist');
+    expect(releaseUpload['with']['name'], startsWith('artifact-'));
     expect(
       steps.any((step) => (step['run'] ?? '').toString().contains('= false')),
       isFalse,
